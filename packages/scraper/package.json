@@ -1,0 +1,41 @@
+{
+  "name": "@acme/scraper",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "dev": "tsc",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false",
+    "scrape": "tsx src/cli.ts",
+    "scrape:whitehouse": "tsx src/cli.ts --spider whitehouse",
+    "scrape:congress": "tsx src/cli.ts --spider congress",
+    "scrape:govtrack": "tsx src/cli.ts --spider govtrack"
+  },
+  "dependencies": {
+    "@acme/db": "workspace:*",
+    "drizzle-orm": "^0.44.5",
+    "playwright": "^1.40.0",
+    "cheerio": "^1.0.0-rc.12",
+    "date-fns": "^3.0.0",
+    "commander": "^11.1.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@acme/eslint-config": "workspace:*",
+    "@acme/prettier-config": "workspace:*",
+    "@acme/tsconfig": "workspace:*",
+    "@types/node": "^22.0.0",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "tsx": "^4.7.0",
+    "typescript": "catalog:"
+  },
+  "prettier": "@acme/prettier-config"
+}
