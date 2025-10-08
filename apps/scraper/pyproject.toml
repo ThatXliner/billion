@@ -1,0 +1,12 @@
+[project]
+name = "execorderscraper"
+version = "0.1.0"
+description = "US Government Bills and Executive Orders Scraper"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "scrapy>=2.13.3",
+    "requests>=2.31.0",
+    "lxml>=4.9.0",
+    "cssselect>=1.2.0",
+]
