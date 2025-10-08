@@ -1,13 +1,15 @@
+import { useCallback, useMemo, useState } from "react";
 import {
-  FlatList,
-  TouchableOpacity,
   Dimensions,
+  FlatList,
   StatusBar,
+  TouchableOpacity,
 } from "react-native";
-import { useState, useCallback, useMemo } from "react";
-import { Text, View } from "@/components/Themed";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import "../../global.css";
+
+import { Text, View } from "~/components/Themed";
+
+import "~/styles.css";
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get("window");
 
@@ -225,9 +227,9 @@ export default function FeedScreen() {
       className="relative w-full"
       style={{ height: screenHeight, backgroundColor: item.backgroundColor }}
     >
-      <View className="flex-1 justify-center items-center">
+      <View className="flex-1 items-center justify-center">
         <Text style={{ fontSize: 96, lineHeight: 120 }}>{item.emoji}</Text>
-        <Text className="text-xl font-bold text-white text-center px-5">
+        <Text className="px-5 text-center text-xl font-bold text-white">
           {item.title}
         </Text>
       </View>
@@ -236,47 +238,47 @@ export default function FeedScreen() {
         className="absolute bottom-0 left-0 right-0 flex-row p-5"
         style={{ paddingBottom: insets.bottom + 80 }}
       >
-        <View className="flex-1 mr-5">
-          <Text className="text-white text-base mb-3 leading-6">
+        <View className="mr-5 flex-1">
+          <Text className="mb-3 text-base leading-6 text-white">
             {item.description}
           </Text>
-          <Text className="text-white text-sm font-semibold opacity-80">
+          <Text className="text-sm font-semibold text-white opacity-80">
             {item.author}
           </Text>
         </View>
 
         <View className="items-center justify-end">
           <TouchableOpacity
-            className="items-center mb-5"
+            className="mb-5 items-center"
             onPress={() => handleLike(item.id)}
           >
             <Text
-              className={`text-3xl mb-1 ${likedVideos.has(item.id) ? "scale-125" : ""}`}
+              className={`mb-1 text-3xl ${likedVideos.has(item.id) ? "scale-125" : ""}`}
             >
               {likedVideos.has(item.id) ? "❤️" : "🤍"}
             </Text>
-            <Text className="text-white text-xs text-center">
+            <Text className="text-center text-xs text-white">
               {item.likes + (likedVideos.has(item.id) ? 1 : 0)}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity className="items-center mb-5">
-            <Text className="text-3xl mb-1">💬</Text>
-            <Text className="text-white text-xs text-center">
+          <TouchableOpacity className="mb-5 items-center">
+            <Text className="mb-1 text-3xl">💬</Text>
+            <Text className="text-center text-xs text-white">
               {item.comments}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity className="items-center mb-5">
-            <Text className="text-3xl mb-1">📤</Text>
-            <Text className="text-white text-xs text-center">
+          <TouchableOpacity className="mb-5 items-center">
+            <Text className="mb-1 text-3xl">📤</Text>
+            <Text className="text-center text-xs text-white">
               {item.shares}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity className="items-center mb-5">
-            <Text className="text-3xl mb-1">🔗</Text>
-            <Text className="text-white text-xs text-center">Watch Short</Text>
+          <TouchableOpacity className="mb-5 items-center">
+            <Text className="mb-1 text-3xl">🔗</Text>
+            <Text className="text-center text-xs text-white">Watch Short</Text>
           </TouchableOpacity>
         </View>
       </View>

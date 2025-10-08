@@ -4,6 +4,7 @@
  */
 
 import { Text as DefaultText, View as RNView } from "react-native";
+import { useColorScheme } from "nativewind";
 
 // import {
 //   LiquidGlassView,
@@ -11,8 +12,7 @@ import { Text as DefaultText, View as RNView } from "react-native";
 //   isLiquidGlassSupported,
 // } from "@callstack/liquid-glass";
 
-import Colors from "@/constants/Colors";
-import { useColorScheme } from "./useColorScheme";
+import Colors from "~/constants/Colors";
 
 type ThemeProps = {
   lightColor?: string;
@@ -27,7 +27,8 @@ export function useThemeColor(
   props: { light?: string; dark?: string },
   colorName: keyof typeof Colors.light & keyof typeof Colors.dark,
 ) {
-  const theme = useColorScheme() ?? "light";
+  const { colorScheme } = useColorScheme();
+  const theme = colorScheme ?? "light";
   const colorFromProps = props[theme];
 
   if (colorFromProps) {

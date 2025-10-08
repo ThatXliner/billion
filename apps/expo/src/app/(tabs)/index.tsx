@@ -1,15 +1,18 @@
+import { useState } from "react";
 import {
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   Dimensions,
   Pressable,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
 } from "react-native";
-import { useState } from "react";
-import { useRouter } from "expo-router";
-import { Text, View } from "@/components/Themed";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import "../../global.css";
+import { useRouter } from "expo-router";
+
+import { Text, View } from "~/components/Themed";
+
+import "~/styles.css";
+
 const { width } = Dimensions.get("window");
 
 interface ContentCard {
@@ -76,7 +79,7 @@ export default function BrowseScreen() {
     onPress: () => void;
   }) => (
     <TouchableOpacity
-      className={`px-4 py-2 mr-3 rounded-2xl ${
+      className={`mr-3 rounded-2xl px-4 py-2 ${
         active ? "bg-blue-500" : "bg-gray-100"
       }`}
       onPress={onPress}
@@ -100,28 +103,28 @@ export default function BrowseScreen() {
         onPress={() => {
           router.push(`/article-detail`);
         }}
-        className={`${lightColor} rounded-xl p-2 mb-4`}
+        className={`${lightColor} mb-4 rounded-xl p-2`}
         // style={styles.neumorphic}
       >
         <View className="flex-row items-center p-2" lightColor={lightColor}>
           <View className="flex-1 pr-3" lightColor={lightColor}>
-            <Text className="text-base font-bold text-gray-800 mb-2">
+            <Text className="mb-2 text-base font-bold text-gray-800">
               {item.title}
             </Text>
-            <Text className="text-sm text-gray-600 leading-5 mb-4">
+            <Text className="mb-4 text-sm leading-5 text-gray-600">
               {item.description}
             </Text>
           </View>
-          <View className="flex-col w-1/3" lightColor={lightColor}>
+          <View className="w-1/3 flex-col" lightColor={lightColor}>
             <TouchableOpacity
-              className="bg-green-600 px-4 py-2 mb-2"
+              className="mb-2 bg-green-600 px-4 py-2"
               // For some reason the `rounded-` class is broken
               style={{ borderRadius: 10 }}
               onPress={() => {
                 router.push(`/article-detail`);
               }}
             >
-              <Text className="text-white text-sm font-medium text-center">
+              <Text className="text-center text-sm font-medium text-white">
                 Watch Short
               </Text>
             </TouchableOpacity>
@@ -132,7 +135,7 @@ export default function BrowseScreen() {
                 router.push(`/article-detail`);
               }}
             >
-              <Text className="text-white text-sm font-medium text-center">
+              <Text className="text-center text-sm font-medium text-white">
                 Read More
               </Text>
             </TouchableOpacity>
@@ -145,13 +148,13 @@ export default function BrowseScreen() {
   return (
     <View className="flex-1 bg-gray-100">
       <View
-        className="px-5 pb-5 bg-white"
+        className="bg-white px-5 pb-5"
         style={{ paddingTop: insets.top + 20 }}
       >
         <Text className="text-2xl font-bold text-gray-800">Browse</Text>
       </View>
 
-      <View className="flex-row px-5 py-4 bg-white border-b border-gray-200">
+      <View className="flex-row border-b border-gray-200 bg-white px-5 py-4">
         <TabButton
           title="All"
           active={selectedTab === "all"}
