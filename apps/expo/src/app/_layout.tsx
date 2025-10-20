@@ -1,3 +1,6 @@
+// ThatXliner: I genuinely have no idea why both
+// this file and the other one (in (tabs)) is required.
+// Surely I'm not doing the provider twice... right??
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { QueryClientProvider } from "@tanstack/react-query";
