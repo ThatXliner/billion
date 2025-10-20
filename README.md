@@ -156,6 +156,8 @@ If there's any issues with dependencies, just add to the project root.
 node-linker=hoisted
 ```
 
+Make sure Next.js is running. Maybe `cp .env.example .env` and update the values (if needed)?
+
 ## Mission
 
 Billion aims to bridge the gap between complex political information and public understanding, making civic engagement more accessible through AI-powered content creation and modern mobile experiences.
