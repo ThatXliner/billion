@@ -33,7 +33,7 @@ const ContentCardComponent = ({ item }: { item: ContentCard }) => {
   return (
     <Pressable
       onPress={() => {
-        router.push(`/article-detail`);
+        router.push(`/article-detail?id=${item.id}`);
       }}
       className={`${lightColor} mb-4 rounded-xl p-2`}
       // style={styles.neumorphic}
@@ -53,7 +53,7 @@ const ContentCardComponent = ({ item }: { item: ContentCard }) => {
             // For some reason the `rounded-` class is broken
             style={{ borderRadius: 10 }}
             onPress={() => {
-              router.push(`/article-detail`);
+              router.push(`/article-detail?id=${item.id}`);
             }}
           >
             <Text className="text-center text-sm font-medium text-white">
@@ -64,7 +64,7 @@ const ContentCardComponent = ({ item }: { item: ContentCard }) => {
             className="bg-orange-500 px-4 py-2"
             style={{ borderRadius: 10 }}
             onPress={() => {
-              router.push(`/article-detail`);
+              router.push(`/article-detail?id=${item.id}`);
             }}
           >
             <Text className="text-center text-sm font-medium text-white">

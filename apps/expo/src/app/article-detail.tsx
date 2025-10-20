@@ -1,16 +1,24 @@
 import { useState } from "react";
-import { ScrollView, TouchableOpacity } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { ActivityIndicator, ScrollView, TouchableOpacity } from "react-native";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
+import { api } from "~/utils/api";
 import { Text, View } from "~/components/Themed";
 
 import "~/styles.css";
 
 export default function ArticleDetailScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
 
   const [selectedTab, setSelectedTab] = useState<"article" | "original">(
     "article",
+  );
+
+  // Fetch content from tRPC
+  const { data: content, isLoading, error } = api.content.getById.useQuery(
+    { id: id ?? "" },
+    { enabled: !!id }
   );
 
   const TabButton = ({
@@ -38,51 +46,56 @@ export default function ArticleDetailScreen() {
     </TouchableOpacity>
   );
 
-  const articleContent = `AI Generated short form video describing the law/bill/action, it's consequences, and views from both sides of the political spectrum.
+  // Handle loading state
+  if (isLoading) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            title: "Loading...",
+            headerBackTitle: "Back",
+          }}
+        />
+        <View className="flex-1 items-center justify-center bg-gray-100">
+          <ActivityIndicator size="large" color="#ec4899" />
+          <Text className="mt-4 text-gray-600">Loading content...</Text>
+        </View>
+      </>
+    );
+  }
 
-This comprehensive analysis breaks down the key components of the proposed legislation and examines its potential impact across different sectors of society.
-
-Key Points:
-• Bipartisan support and opposition
-• Economic implications
-• Social impact considerations
-• Timeline for implementation
-• Public opinion analysis
-
-The algorithm which helps with keeping you interested and helps up to read/watch the next one.
-
-In our app, we can let you view the thing in question in 2 long-form modes:
-- an engaging and visual/heavy AI-generated article (with quotes to the original)
-- the original source, in a better, consistent, and modern reading UI`;
-
-  const originalContent = `[Original Bill Text]
-
-H.R. 1234 - The Healthcare Modernization Act
-
-Section 1. Short Title
-This Act may be cited as the "Healthcare Modernization Act".
-
-Section 2. Findings
-Congress finds the following:
-(1) Healthcare accessibility remains a critical challenge
-(2) Technology can improve patient outcomes
-(3) Cost reduction measures are necessary
-
-Section 3. Healthcare Technology Integration
-(a) IN GENERAL.—The Secretary shall establish a program to integrate modern technology solutions into healthcare delivery systems.
-
-(b) REQUIREMENTS.—The program established under subsection (a) shall include:
-(1) Electronic health record standardization
-(2) Telemedicine infrastructure development
-(3) AI-assisted diagnostic tools
-
-[Continue reading original source...]`;
+  // Handle error state
+  if (error || !content) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            title: "Error",
+            headerBackTitle: "Back",
+          }}
+        />
+        <View className="flex-1 items-center justify-center bg-gray-100 p-5">
+          <Text className="mb-4 text-lg font-semibold text-red-600">
+            {error ? "Failed to load content" : "Content not found"}
+          </Text>
+          <TouchableOpacity
+            className="rounded-lg bg-pink-500 px-8 py-3"
+            onPress={() => router.back()}
+          >
+            <Text className="text-base font-semibold text-white">
+              Go Back
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
       <Stack.Screen
         options={{
-          title: "Article Detail",
+          title: content.title,
           headerBackTitle: "Back",
         }}
       />
@@ -106,7 +119,7 @@ Section 3. Healthcare Technology Integration
         >
           <View className="rounded-xl border border-pink-500 bg-pink-200 p-5">
             <Text className="text-base leading-6 text-gray-800">
-              {selectedTab === "article" ? articleContent : originalContent}
+              {selectedTab === "article" ? content.articleContent : content.originalContent}
             </Text>
           </View>
 

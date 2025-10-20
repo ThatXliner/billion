@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { trpc } from "~/utils/api";
 
 import { Text, View } from "~/components/Themed";
+import { trpc } from "~/utils/api";
 
 import "~/styles.css";
 
