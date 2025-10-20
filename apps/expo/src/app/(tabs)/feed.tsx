@@ -1,15 +1,19 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   FlatList,
   StatusBar,
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { trpc } from "~/utils/api";
 
 import { Text, View } from "~/components/Themed";
 
 import "~/styles.css";
+
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get("window");
 
@@ -26,171 +30,34 @@ interface VideoPost {
   backgroundColor: string;
 }
 
-const videoEmojis = [
-  "📺",
-  "🎬",
-  "🎭",
-  "🎪",
-  "🎨",
-  "🎯",
-  "🎲",
-  "🎸",
-  "🎹",
-  "🎤",
-  "🎧",
-  "🎮",
-  "🕹️",
-  "🎰",
-  "🎳",
-  "🏆",
-  "🏅",
-  "🥇",
-  "🥈",
-  "🥉",
-  "⚡",
-  "🔥",
-  "💎",
-  "⭐",
-  "🌟",
-  "✨",
-  "💫",
-  "🌙",
-  "☀️",
-  "🌈",
-  "🦄",
-  "🚀",
-  "💰",
-  "💸",
-  "🎊",
-  "🎉",
-  "🎈",
-  "🎁",
-  "🏰",
-  "🗽",
-];
-
-const backgroundColors = [
-  "#FF6B6B",
-  "#4ECDC4",
-  "#45B7D1",
-  "#96CEB4",
-  "#FFEAA7",
-  "#DDA0DD",
-  "#98D8C8",
-  "#F7DC6F",
-  "#BB8FCE",
-  "#85C1E9",
-  "#F8C471",
-  "#82E0AA",
-  "#F1948A",
-  "#85C1E9",
-  "#D7BDE2",
-  "#A9DFBF",
-  "#F9E79F",
-  "#D5A6BD",
-  "#AED6F1",
-  "#A3E4D7",
-  "#F4D03F",
-  "#D2B4DE",
-  "#7FB3D3",
-  "#76D7C4",
-  "#F7DC6F",
-  "#BB8FCE",
-  "#85C1E9",
-  "#82E0AA",
-  "#F1948A",
-  "#D7BDE2",
-];
-
-const videoTitles = [
-  "Breaking: Healthcare Reform Bill Explained",
-  "Supreme Court Decision Impact",
-  "Environmental Case Breakdown",
-  "Tax Reform Analysis",
-  "Immigration Policy Update",
-  "Education Bill Discussion",
-  "Infrastructure Investment Plan",
-  "Climate Change Legislation",
-  "Social Security Reform",
-  "Criminal Justice Update",
-  "Trade Agreement Analysis",
-  "Housing Policy Changes",
-  "Energy Independence Bill",
-  "National Security Update",
-  "Economic Recovery Plan",
-];
-
-const videoDescriptions = [
-  "TikTok style short form video describing the law/bill/action, its consequences, and views from both sides of the political spectrum",
-  'Double tap the video to "like" it (causing the algorithm which helps with keeping you interested) and swipe up to read/watch the next one',
-  "In our app, we can let you view the thing in question in 2 long-form modes: an engaging and visual/heavy AI-generated article or the original source",
-  "Comprehensive breakdown of proposed legislation and its potential impacts on different demographics",
-  "Expert analysis with public reaction and legal commentary from multiple perspectives",
-  "Deep dive into policy implications with real-world examples and case studies",
-];
-
-const authors = [
-  "@PoliticsExplained",
-  "@LegalUpdates",
-  "@EcoLegal",
-  "@PolicyWatch",
-  "@LawBreakdown",
-  "@GovAnalysis",
-  "@CitizenInfo",
-  "@PolicyHub",
-  "@LegalInsider",
-  "@BillTracker",
-  "@LawMakers",
-  "@PolicyDeep",
-];
-
-// Generate random video data
-const generateRandomVideo = (index: number): VideoPost => {
-  const randomEmoji =
-    videoEmojis[Math.floor(Math.random() * videoEmojis.length)];
-  const randomColor =
-    backgroundColors[Math.floor(Math.random() * backgroundColors.length)];
-  const randomTitle =
-    videoTitles[Math.floor(Math.random() * videoTitles.length)];
-  const randomDescription =
-    videoDescriptions[Math.floor(Math.random() * videoDescriptions.length)];
-  const randomAuthor = authors[Math.floor(Math.random() * authors.length)];
-  const types: Array<"bill" | "order" | "case" | "general"> = [
-    "bill",
-    "order",
-    "case",
-    "general",
-  ];
-  const randomType = types[Math.floor(Math.random() * types.length)];
-
-  return {
-    id: `video-${index}`,
-    title: randomTitle,
-    description: randomDescription,
-    author: randomAuthor,
-    likes: Math.floor(Math.random() * 50000) + 1000,
-    comments: Math.floor(Math.random() * 2000) + 50,
-    shares: Math.floor(Math.random() * 1000) + 10,
-    type: randomType,
-    emoji: randomEmoji,
-    backgroundColor: randomColor,
-  };
-};
+// All mock data generation has been moved to the tRPC video router
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [likedVideos, setLikedVideos] = useState<Set<string>>(new Set());
-  const [videos, setVideos] = useState<VideoPost[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize with some videos
-  useMemo(() => {
-    const initialVideos = Array.from({ length: 10 }, (_, index) =>
-      generateRandomVideo(index),
-    );
-    setVideos(initialVideos);
-  }, []);
+  // Use infinite query for video feed
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    error,
+  } = useInfiniteQuery({
+    ...trpc.video.getInfinite.infiniteQueryOptions({
+      limit: 10,
+    }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+  });
+
+  // Flatten all pages into a single array of videos
+  const videos = useMemo(
+    () => data?.pages.flatMap((page) => page.videos) ?? [],
+    [data],
+  );
 
   const handleLike = (videoId: string) => {
     const newLikedVideos = new Set(likedVideos);
@@ -202,19 +69,11 @@ export default function FeedScreen() {
     setLikedVideos(newLikedVideos);
   };
 
-  const loadMoreVideos = useCallback(() => {
-    if (isLoading) return;
-
-    setIsLoading(true);
-    // Simulate loading delay (you can remove this in real implementation)
-    setTimeout(() => {
-      const newVideos = Array.from({ length: 5 }, (_, index) =>
-        generateRandomVideo(videos.length + index),
-      );
-      setVideos((prevVideos) => [...prevVideos, ...newVideos]);
-      setIsLoading(false);
-    }, 100);
-  }, [videos.length, isLoading]);
+  const loadMoreVideos = () => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  };
 
   const renderVideoItem = ({
     item,
@@ -284,6 +143,28 @@ export default function FeedScreen() {
       </View>
     </View>
   );
+
+  // Show loading state while fetching initial videos
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-black">
+        <StatusBar hidden />
+        <ActivityIndicator size="large" color="#ffffff" />
+        <Text className="mt-4 text-white">Loading videos...</Text>
+      </View>
+    );
+  }
+
+  // Show error state if fetching failed
+  if (error) {
+    return (
+      <View className="flex-1 items-center justify-center bg-black">
+        <StatusBar hidden />
+        <Text className="text-red-500">Error loading videos</Text>
+        <Text className="mt-2 text-white">Please try again later</Text>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-black">

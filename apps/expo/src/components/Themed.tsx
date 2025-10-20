@@ -21,7 +21,7 @@ type ThemeProps = {
 const DefaultView = RNView;
 // const DefaultView = isLiquidGlassSupported ? LiquidGlassView : RNView;
 export type TextProps = ThemeProps & DefaultText["props"];
-export type ViewProps = ThemeProps & DefaultView["props"];
+export type ViewProps = ThemeProps & React.ComponentProps<typeof DefaultView>;
 
 export function useThemeColor(
   props: { light?: string; dark?: string },
