@@ -74,12 +74,7 @@ export default function FeedScreen() {
     }
   };
 
-  const renderVideoItem = ({
-    item,
-  }: {
-    item: VideoPost;
-    index: number;
-  }) => (
+  const renderVideoItem = ({ item }: { item: VideoPost; index: number }) => (
     <View
       className="relative w-full"
       style={{ height: screenHeight, backgroundColor: item.backgroundColor }}

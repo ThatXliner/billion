@@ -22,18 +22,79 @@ export type VideoPost = z.infer<typeof VideoPostSchema>;
 
 // Constants for random generation
 const videoEmojis = [
-  "📺", "🎬", "🎭", "🎪", "🎨", "🎯", "🎲", "🎸", "🎹", "🎤",
-  "🎧", "🎮", "🕹️", "🎰", "🎳", "🏆", "🏅", "🥇", "🥈", "🥉",
-  "⚡", "🔥", "💎", "⭐", "🌟", "✨", "💫", "🌙", "☀️", "🌈",
-  "🦄", "🚀", "💰", "💸", "🎊", "🎉", "🎈", "🎁", "🏰", "🗽",
+  "📺",
+  "🎬",
+  "🎭",
+  "🎪",
+  "🎨",
+  "🎯",
+  "🎲",
+  "🎸",
+  "🎹",
+  "🎤",
+  "🎧",
+  "🎮",
+  "🕹️",
+  "🎰",
+  "🎳",
+  "🏆",
+  "🏅",
+  "🥇",
+  "🥈",
+  "🥉",
+  "⚡",
+  "🔥",
+  "💎",
+  "⭐",
+  "🌟",
+  "✨",
+  "💫",
+  "🌙",
+  "☀️",
+  "🌈",
+  "🦄",
+  "🚀",
+  "💰",
+  "💸",
+  "🎊",
+  "🎉",
+  "🎈",
+  "🎁",
+  "🏰",
+  "🗽",
 ];
 
 const backgroundColors = [
-  "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD",
-  "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9", "#F8C471", "#82E0AA",
-  "#F1948A", "#85C1E9", "#D7BDE2", "#A9DFBF", "#F9E79F", "#D5A6BD",
-  "#AED6F1", "#A3E4D7", "#F4D03F", "#D2B4DE", "#7FB3D3", "#76D7C4",
-  "#F7DC6F", "#BB8FCE", "#85C1E9", "#82E0AA", "#F1948A", "#D7BDE2",
+  "#FF6B6B",
+  "#4ECDC4",
+  "#45B7D1",
+  "#96CEB4",
+  "#FFEAA7",
+  "#DDA0DD",
+  "#98D8C8",
+  "#F7DC6F",
+  "#BB8FCE",
+  "#85C1E9",
+  "#F8C471",
+  "#82E0AA",
+  "#F1948A",
+  "#85C1E9",
+  "#D7BDE2",
+  "#A9DFBF",
+  "#F9E79F",
+  "#D5A6BD",
+  "#AED6F1",
+  "#A3E4D7",
+  "#F4D03F",
+  "#D2B4DE",
+  "#7FB3D3",
+  "#76D7C4",
+  "#F7DC6F",
+  "#BB8FCE",
+  "#85C1E9",
+  "#82E0AA",
+  "#F1948A",
+  "#D7BDE2",
 ];
 
 const videoTitles = [
@@ -83,19 +144,24 @@ const generateRandomVideo = (index: number): VideoPost => {
   const randomEmoji =
     videoEmojis[Math.floor(Math.random() * videoEmojis.length)] ?? "📺";
   const randomColor =
-    backgroundColors[Math.floor(Math.random() * backgroundColors.length)] ?? "#FF6B6B";
+    backgroundColors[Math.floor(Math.random() * backgroundColors.length)] ??
+    "#FF6B6B";
   const randomTitle =
-    videoTitles[Math.floor(Math.random() * videoTitles.length)] ?? "Breaking News";
+    videoTitles[Math.floor(Math.random() * videoTitles.length)] ??
+    "Breaking News";
   const randomDescription =
-    videoDescriptions[Math.floor(Math.random() * videoDescriptions.length)] ?? "Political update";
-  const randomAuthor = authors[Math.floor(Math.random() * authors.length)] ?? "@PoliticsExplained";
+    videoDescriptions[Math.floor(Math.random() * videoDescriptions.length)] ??
+    "Political update";
+  const randomAuthor =
+    authors[Math.floor(Math.random() * authors.length)] ?? "@PoliticsExplained";
   const types: ("bill" | "order" | "case" | "general")[] = [
     "bill",
     "order",
     "case",
     "general",
   ];
-  const randomType = types[Math.floor(Math.random() * types.length)] ?? "general";
+  const randomType =
+    types[Math.floor(Math.random() * types.length)] ?? "general";
 
   return {
     id: `video-${index}`,
