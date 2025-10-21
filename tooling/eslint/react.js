@@ -3,7 +3,8 @@ import * as reactHooks from "eslint-plugin-react-hooks";
 
 /** @type {Awaited<import('typescript-eslint').Config>} */
 export default [
-  reactHooks.configs.recommended,
+  // @ts-expect-error -- https://github.com/facebook/react/issues/34801
+  reactHooksPlugin.configs.flat.recommended,
   {
     files: ["**/*.ts", "**/*.tsx"],
     plugins: {

@@ -1,10 +1,11 @@
 import React from "react";
 import { Platform } from "react-native";
-import { Link } from "expo-router";
+import { Href, Link } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 
+type HrefString<T = Href> = T extends string ? T : never;
 export function ExternalLink(
-  props: Omit<React.ComponentProps<typeof Link>, "href"> & { href: string },
+  props: Omit<React.ComponentProps<typeof Link>, "href"> & { href: HrefString },
 ) {
   return (
     <Link
