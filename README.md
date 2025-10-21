@@ -156,7 +156,10 @@ If there's any issues with dependencies, just add to the project root.
 node-linker=hoisted
 ```
 
-Make sure Next.js is running. Maybe `cp .env.example .env` and update the values (if needed)?
+- Make sure Next.js is running. Maybe `cp .env.example .env` and update the values (if needed)?
+- "CommandError: No development build (dev.thatxliner.billion) for this project is installed. Please make and install a development build on the device first.
+Learn more: https://docs.expo.dev/development/build/"
+  - In this case, `pnpm clena && pnpm install && cd apps/expo && pnpm ios` before you go back to root and run `pnpm dev`
 
 ## Mission
 
