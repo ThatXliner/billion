@@ -2,10 +2,12 @@ import { useState } from "react";
 import { ActivityIndicator, ScrollView, TouchableOpacity } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
-import { api } from "~/utils/api";
 import { Text, View } from "~/components/Themed";
+import { trpc } from "~/utils/api";
 
 import "~/styles.css";
+
+import { useQuery } from "@tanstack/react-query";
 
 export default function ArticleDetailScreen() {
   const router = useRouter();
@@ -16,10 +18,14 @@ export default function ArticleDetailScreen() {
   );
 
   // Fetch content from tRPC
-  const { data: content, isLoading, error } = api.content.getById.useQuery(
-    { id: id ?? "" },
-    { enabled: !!id }
-  );
+  const {
+    data: content,
+    isLoading,
+    error,
+  } = useQuery({
+    ...trpc.content.getById.queryOptions({ id }),
+    enabled: !!id,
+  });
 
   const TabButton = ({
     title,
@@ -82,9 +88,7 @@ export default function ArticleDetailScreen() {
             className="rounded-lg bg-pink-500 px-8 py-3"
             onPress={() => router.back()}
           >
-            <Text className="text-base font-semibold text-white">
-              Go Back
-            </Text>
+            <Text className="text-base font-semibold text-white">Go Back</Text>
           </TouchableOpacity>
         </View>
       </>
@@ -119,7 +123,9 @@ export default function ArticleDetailScreen() {
         >
           <View className="rounded-xl border border-pink-500 bg-pink-200 p-5">
             <Text className="text-base leading-6 text-gray-800">
-              {selectedTab === "article" ? content.articleContent : content.originalContent}
+              {selectedTab === "article"
+                ? content.articleContent
+                : content.originalContent}
             </Text>
           </View>
 
