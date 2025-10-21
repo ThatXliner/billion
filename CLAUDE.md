@@ -23,6 +23,8 @@ The repository uses Turborepo with pnpm workspaces and follows the `@acme` names
 
 ## Development Commands
 
+Note: when running package-specific commands, prefer `pnpm --filter @acme/<package-name> <command>` over `cd <package directory> && pnpm <command>`.
+
 ### Initial Setup
 
 ```bash
