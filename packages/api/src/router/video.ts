@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 import { publicProcedure } from "../trpc";
 
 // Schema for video post
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const VideoPostSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -80,21 +81,21 @@ const authors = [
 // Generate random video data
 const generateRandomVideo = (index: number): VideoPost => {
   const randomEmoji =
-    videoEmojis[Math.floor(Math.random() * videoEmojis.length)]!;
+    videoEmojis[Math.floor(Math.random() * videoEmojis.length)] ?? "📺";
   const randomColor =
-    backgroundColors[Math.floor(Math.random() * backgroundColors.length)]!;
+    backgroundColors[Math.floor(Math.random() * backgroundColors.length)] ?? "#FF6B6B";
   const randomTitle =
-    videoTitles[Math.floor(Math.random() * videoTitles.length)]!;
+    videoTitles[Math.floor(Math.random() * videoTitles.length)] ?? "Breaking News";
   const randomDescription =
-    videoDescriptions[Math.floor(Math.random() * videoDescriptions.length)]!;
-  const randomAuthor = authors[Math.floor(Math.random() * authors.length)]!;
-  const types: Array<"bill" | "order" | "case" | "general"> = [
+    videoDescriptions[Math.floor(Math.random() * videoDescriptions.length)] ?? "Political update";
+  const randomAuthor = authors[Math.floor(Math.random() * authors.length)] ?? "@PoliticsExplained";
+  const types: ("bill" | "order" | "case" | "general")[] = [
     "bill",
     "order",
     "case",
     "general",
   ];
-  const randomType = types[Math.floor(Math.random() * types.length)]!;
+  const randomType = types[Math.floor(Math.random() * types.length)] ?? "general";
 
   return {
     id: `video-${index}`,

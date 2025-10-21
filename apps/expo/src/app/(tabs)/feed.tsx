@@ -15,7 +15,7 @@ import "~/styles.css";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 
-const { height: screenHeight, width: screenWidth } = Dimensions.get("window");
+const { height: screenHeight } = Dimensions.get("window");
 
 interface VideoPost {
   id: string;
@@ -34,7 +34,6 @@ interface VideoPost {
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [likedVideos, setLikedVideos] = useState<Set<string>>(new Set());
 
   // Use infinite query for video feed
@@ -71,13 +70,12 @@ export default function FeedScreen() {
 
   const loadMoreVideos = () => {
     if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
+      void fetchNextPage();
     }
   };
 
   const renderVideoItem = ({
     item,
-    index,
   }: {
     item: VideoPost;
     index: number;
@@ -181,13 +179,7 @@ export default function FeedScreen() {
         bounces={false}
         onEndReached={loadMoreVideos}
         onEndReachedThreshold={0.5}
-        onMomentumScrollEnd={(event) => {
-          const index = Math.round(
-            event.nativeEvent.contentOffset.y / screenHeight,
-          );
-          setCurrentVideoIndex(index);
-        }}
-        getItemLayout={(data, index) => ({
+        getItemLayout={(_data, index) => ({
           length: screenHeight,
           offset: screenHeight * index,
           index,

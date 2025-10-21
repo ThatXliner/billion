@@ -14,10 +14,10 @@ import { useColorScheme } from "nativewind";
 
 import Colors from "~/constants/Colors";
 
-type ThemeProps = {
+interface ThemeProps {
   lightColor?: string;
   darkColor?: string;
-};
+}
 const DefaultView = RNView;
 // const DefaultView = isLiquidGlassSupported ? LiquidGlassView : RNView;
 export type TextProps = ThemeProps & DefaultText["props"];
@@ -25,7 +25,7 @@ export type ViewProps = ThemeProps & React.ComponentProps<typeof DefaultView>;
 
 export function useThemeColor(
   props: { light?: string; dark?: string },
-  colorName: keyof typeof Colors.light & keyof typeof Colors.dark,
+  colorName: keyof typeof Colors.light,
 ) {
   const { colorScheme } = useColorScheme();
   const theme = colorScheme ?? "light";

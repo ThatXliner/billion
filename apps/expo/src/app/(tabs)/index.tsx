@@ -1,10 +1,8 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   Pressable,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,8 +14,6 @@ import { trpc } from "~/utils/api";
 import "~/styles.css";
 
 import { useQuery } from "@tanstack/react-query";
-
-const { width } = Dimensions.get("window");
 
 interface ContentCard {
   id: string;
@@ -170,8 +166,3 @@ export default function BrowseScreen() {
     </View>
   );
 }
-const styles = StyleSheet.create({
-  neumorphic: {
-    boxShadow: "inset 4px 4px 10px #bcbcbc, inset -4px -4px 10px #ffffff",
-  },
-});

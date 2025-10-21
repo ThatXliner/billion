@@ -15,6 +15,7 @@ const ContentCardSchema = z.object({
 export type ContentCard = z.infer<typeof ContentCardSchema>;
 
 // Schema for detailed content
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ContentDetailSchema = ContentCardSchema.extend({
   articleContent: z.string(),
   originalContent: z.string(),
