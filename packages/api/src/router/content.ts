@@ -1,5 +1,8 @@
 import type { TRPCRouterRecord } from "@trpc/server";
 import { z } from "zod/v4";
+import { desc, eq } from "@acme/db";
+import { db } from "@acme/db/client";
+import { Bill, PresidentialAction, CourtCase } from "@acme/db/schema";
 
 import { publicProcedure } from "../trpc";
 
@@ -242,37 +245,168 @@ This Court has jurisdiction pursuant to...
 ];
 
 export const contentRouter = {
-  // Get all content
-  getAll: publicProcedure.query(() => {
-    return mockContent;
+  // Get all content from database
+  getAll: publicProcedure.query(async () => {
+    const bills = await db.select().from(Bill).orderBy(desc(Bill.createdAt)).limit(20);
+    const presidentialActions = await db.select().from(PresidentialAction).orderBy(desc(PresidentialAction.createdAt)).limit(20);
+    const courtCases = await db.select().from(CourtCase).orderBy(desc(CourtCase.createdAt)).limit(20);
+
+    const allContent: ContentCard[] = [
+      ...bills.map((bill) => ({
+        id: bill.id,
+        title: bill.title,
+        description: bill.description || bill.summary || '',
+        type: 'bill' as const,
+        isAIGenerated: false,
+      })),
+      ...presidentialActions.map((action) => ({
+        id: action.id,
+        title: action.title,
+        description: action.description || '',
+        type: 'order' as const,
+        isAIGenerated: false,
+      })),
+      ...courtCases.map((courtCase) => ({
+        id: courtCase.id,
+        title: courtCase.title,
+        description: courtCase.description || '',
+        type: 'case' as const,
+        isAIGenerated: false,
+      })),
+    ];
+
+    return allContent;
   }),
 
-  // Get content filtered by type
+  // Get content filtered by type from database
   getByType: publicProcedure
     .input(
       z.object({
         type: z.enum(["all", "bill", "order", "case"]).optional(),
       }),
     )
-    .query(({ input }) => {
+    .query(async ({ input }) => {
       if (!input.type || input.type === "all") {
-        return mockContent;
+        const bills = await db.select().from(Bill).orderBy(desc(Bill.createdAt)).limit(20);
+        const presidentialActions = await db.select().from(PresidentialAction).orderBy(desc(PresidentialAction.createdAt)).limit(20);
+        const courtCases = await db.select().from(CourtCase).orderBy(desc(CourtCase.createdAt)).limit(20);
+
+        const allContent: ContentCard[] = [
+          ...bills.map((bill) => ({
+            id: bill.id,
+            title: bill.title,
+            description: bill.description || bill.summary || '',
+            type: 'bill' as const,
+            isAIGenerated: false,
+          })),
+          ...presidentialActions.map((action) => ({
+            id: action.id,
+            title: action.title,
+            description: action.description || '',
+            type: 'order' as const,
+            isAIGenerated: false,
+          })),
+          ...courtCases.map((courtCase) => ({
+            id: courtCase.id,
+            title: courtCase.title,
+            description: courtCase.description || '',
+            type: 'case' as const,
+            isAIGenerated: false,
+          })),
+        ];
+
+        return allContent;
       }
-      return mockContent.filter((item) => item.type === input.type);
+
+      if (input.type === "bill") {
+        const bills = await db.select().from(Bill).orderBy(desc(Bill.createdAt)).limit(50);
+        return bills.map((bill) => ({
+          id: bill.id,
+          title: bill.title,
+          description: bill.description || bill.summary || '',
+          type: 'bill' as const,
+          isAIGenerated: false,
+        }));
+      }
+
+      if (input.type === "order") {
+        const presidentialActions = await db.select().from(PresidentialAction).orderBy(desc(PresidentialAction.createdAt)).limit(50);
+        return presidentialActions.map((action) => ({
+          id: action.id,
+          title: action.title,
+          description: action.description || '',
+          type: 'order' as const,
+          isAIGenerated: false,
+        }));
+      }
+
+      if (input.type === "case") {
+        const courtCases = await db.select().from(CourtCase).orderBy(desc(CourtCase.createdAt)).limit(50);
+        return courtCases.map((courtCase) => ({
+          id: courtCase.id,
+          title: courtCase.title,
+          description: courtCase.description || '',
+          type: 'case' as const,
+          isAIGenerated: false,
+        }));
+      }
+
+      return [];
     }),
 
-  // Get detailed content by ID
+  // Get detailed content by ID from database
   getById: publicProcedure
     .input(
       z.object({
         id: z.string(),
       }),
     )
-    .query(({ input }) => {
-      const content = mockDetailedContent.find((item) => item.id === input.id);
-      if (!content) {
-        throw new Error(`Content with id ${input.id} not found`);
+    .query(async ({ input }) => {
+      // Try to find in bills
+      const bill = await db.select().from(Bill).where(eq(Bill.id, input.id)).limit(1);
+      if (bill.length > 0) {
+        const b = bill[0]!;
+        return {
+          id: b.id,
+          title: b.title,
+          description: b.description || b.summary || '',
+          type: 'bill' as const,
+          isAIGenerated: false,
+          articleContent: b.summary || b.description || 'No summary available',
+          originalContent: b.fullText || 'Full text not available',
+        };
       }
-      return content;
+
+      // Try to find in presidential actions
+      const action = await db.select().from(PresidentialAction).where(eq(PresidentialAction.id, input.id)).limit(1);
+      if (action.length > 0) {
+        const a = action[0]!;
+        return {
+          id: a.id,
+          title: a.title,
+          description: a.description || '',
+          type: 'order' as const,
+          isAIGenerated: false,
+          articleContent: a.description || 'No description available',
+          originalContent: a.fullText || 'Full text not available',
+        };
+      }
+
+      // Try to find in court cases
+      const courtCase = await db.select().from(CourtCase).where(eq(CourtCase.id, input.id)).limit(1);
+      if (courtCase.length > 0) {
+        const c = courtCase[0]!;
+        return {
+          id: c.id,
+          title: c.title,
+          description: c.description || '',
+          type: 'case' as const,
+          isAIGenerated: false,
+          articleContent: c.description || 'No description available',
+          originalContent: c.fullText || 'Full text not available',
+        };
+      }
+
+      throw new Error(`Content with id ${input.id} not found`);
     }),
 } satisfies TRPCRouterRecord;

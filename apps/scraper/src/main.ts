@@ -1,26 +1,48 @@
-// For more information, see https://crawlee.dev/
-import { PlaywrightCrawler } from 'crawlee';
+// Government data scraper for Billion app
+// Scrapes bills, presidential actions, and court cases from government websites
+import dotenv from 'dotenv';
+import { scrapeGovTrack } from './scrapers/govtrack.js';
+import { scrapeWhiteHouse } from './scrapers/whitehouse.js';
+import { scrapeCongress } from './scrapers/congress.js';
 
-// PlaywrightCrawler crawls the web using a headless
-// browser controlled by the Playwright library.
-const crawler = new PlaywrightCrawler({
-    // Use the requestHandler to process each of the crawled pages.
-    async requestHandler({ request, page, enqueueLinks, log, pushData }) {
-        const title = await page.title();
-        log.info(`Title of ${request.loadedUrl} is '${title}'`);
+// Load environment variables
+dotenv.config({ path: '../../.env' });
 
-        // Save results as JSON to ./storage/datasets/default
-        await pushData({ title, url: request.loadedUrl });
+async function main() {
+  console.log('Starting government data scrapers...\n');
 
-        // Extract links from the current page
-        // and add them to the crawling queue.
-        await enqueueLinks();
-    },
-    // Comment this option to scrape the full website.
-    maxRequestsPerCrawl: 20,
-    // Uncomment this option to see the browser window.
-    // headless: false,
-});
+  const args = process.argv.slice(2);
+  const scraperArg = args[0]?.toLowerCase();
 
-// Add first URL to the queue and start the crawl.
-await crawler.run(['https://crawlee.dev']);
+  try {
+    if (!scraperArg || scraperArg === 'all') {
+      // Run all scrapers
+      console.log('Running all scrapers...\n');
+
+      await scrapeGovTrack();
+      console.log('\n---\n');
+
+      await scrapeWhiteHouse();
+      console.log('\n---\n');
+
+      await scrapeCongress();
+      console.log('\n---\n');
+
+      console.log('All scrapers completed successfully!');
+    } else if (scraperArg === 'govtrack') {
+      await scrapeGovTrack();
+    } else if (scraperArg === 'whitehouse') {
+      await scrapeWhiteHouse();
+    } else if (scraperArg === 'congress') {
+      await scrapeCongress();
+    } else {
+      console.error('Invalid scraper name. Available options: govtrack, whitehouse, congress, all');
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error('Error running scrapers:', error);
+    process.exit(1);
+  }
+}
+
+main();

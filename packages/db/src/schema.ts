@@ -22,4 +22,81 @@ export const CreatePostSchema = createInsertSchema(Post, {
   updatedAt: true,
 });
 
+// Bills table for congressional legislation
+export const Bill = pgTable("bill", (t) => ({
+  id: t.uuid().notNull().primaryKey().defaultRandom(),
+  billNumber: t.varchar({ length: 100 }).notNull(), // e.g., "H.R. 1234"
+  title: t.text().notNull(),
+  description: t.text(),
+  sponsor: t.varchar({ length: 256 }),
+  status: t.varchar({ length: 100 }), // e.g., "Introduced", "Passed House", etc.
+  introducedDate: t.timestamp(),
+  congress: t.integer(), // e.g., 118 for 118th Congress
+  chamber: t.varchar({ length: 50 }), // "House" or "Senate"
+  summary: t.text(),
+  fullText: t.text(),
+  url: t.text().notNull(),
+  sourceWebsite: t.varchar({ length: 50 }).notNull(), // "govtrack", "congress.gov"
+  contentHash: t.varchar({ length: 64 }).notNull(), // SHA-256 hash for version tracking
+  versions: t.jsonb().$type<Array<{ hash: string; updatedAt: string; changes: string }>>(), // Version history
+  createdAt: t.timestamp().defaultNow().notNull(),
+  updatedAt: t
+    .timestamp({ mode: "date", withTimezone: true })
+    .$onUpdateFn(() => sql`now()`),
+}));
+
+export const CreateBillSchema = createInsertSchema(Bill).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Presidential Actions table (executive orders, memoranda, proclamations)
+export const PresidentialAction = pgTable("presidential_action", (t) => ({
+  id: t.uuid().notNull().primaryKey().defaultRandom(),
+  title: t.text().notNull(),
+  type: t.varchar({ length: 50 }).notNull(), // "Executive Order", "Memorandum", "Proclamation"
+  issuedDate: t.timestamp().notNull(),
+  description: t.text(),
+  fullText: t.text(),
+  url: t.text().notNull(),
+  contentHash: t.varchar({ length: 64 }).notNull(), // SHA-256 hash for version tracking
+  versions: t.jsonb().$type<Array<{ hash: string; updatedAt: string; changes: string }>>(), // Version history
+  createdAt: t.timestamp().defaultNow().notNull(),
+  updatedAt: t
+    .timestamp({ mode: "date", withTimezone: true })
+    .$onUpdateFn(() => sql`now()`),
+}));
+
+export const CreatePresidentialActionSchema = createInsertSchema(PresidentialAction).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Court Cases table
+export const CourtCase = pgTable("court_case", (t) => ({
+  id: t.uuid().notNull().primaryKey().defaultRandom(),
+  caseNumber: t.varchar({ length: 100 }).notNull(),
+  title: t.text().notNull(),
+  court: t.varchar({ length: 256 }).notNull(), // e.g., "Supreme Court", "9th Circuit"
+  filedDate: t.timestamp(),
+  description: t.text(),
+  status: t.varchar({ length: 100 }), // e.g., "Pending", "Decided"
+  fullText: t.text(),
+  url: t.text().notNull(),
+  contentHash: t.varchar({ length: 64 }).notNull(), // SHA-256 hash for version tracking
+  versions: t.jsonb().$type<Array<{ hash: string; updatedAt: string; changes: string }>>(), // Version history
+  createdAt: t.timestamp().defaultNow().notNull(),
+  updatedAt: t
+    .timestamp({ mode: "date", withTimezone: true })
+    .$onUpdateFn(() => sql`now()`),
+}));
+
+export const CreateCourtCaseSchema = createInsertSchema(CourtCase).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export * from "./auth-schema";

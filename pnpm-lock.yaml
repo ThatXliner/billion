@@ -287,9 +287,15 @@ importers:
 
   apps/scraper:
     dependencies:
+      '@acme/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       crawlee:
         specifier: ^3.0.0
         version: 3.15.1(@types/node@22.18.12)(bufferutil@4.0.9)(playwright@1.56.1)(utf-8-validate@6.0.4)
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.6.1
       playwright:
         specifier: '*'
         version: 1.56.1
@@ -306,8 +312,6 @@ importers:
       typescript:
         specifier: ~5.9.0
         version: 5.9.3
-
-  apps/scraper-python: {}
 
   packages/api:
     dependencies:
@@ -12961,7 +12965,7 @@ snapshots:
 
   dotenv-expand@11.0.7:
     dependencies:
-      dotenv: 16.4.7
+      dotenv: 16.6.1
 
   dotenv@16.0.3: {}
 
