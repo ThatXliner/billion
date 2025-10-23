@@ -3,8 +3,11 @@
  * https://docs.expo.io/guides/color-schemes/
  */
 
-import { Text as DefaultText, View as RNView } from "react-native";
-import { useColorScheme } from "nativewind";
+import {
+  Text as DefaultText,
+  View as RNView,
+  useColorScheme,
+} from "react-native";
 
 // import {
 //   LiquidGlassView,
