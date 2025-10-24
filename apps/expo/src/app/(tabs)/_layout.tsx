@@ -1,8 +1,8 @@
 import React from "react";
+import { useColorScheme } from "react-native";
 import { Tabs } from "expo-router";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { FontAwesome } from "@expo/vector-icons";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { useColorScheme } from "nativewind";
 
 import Colors from "~/constants/Colors";
 import { queryClient } from "~/utils/api";
@@ -16,7 +16,7 @@ function TabBarIcon(props: {
 }
 
 export default function TabLayout() {
-  const { colorScheme } = useColorScheme();
+  const colorScheme = useColorScheme();
 
   return (
     <QueryClientProvider client={queryClient}>
