@@ -45,7 +45,13 @@
   },
   "peerDependencies": {
     "react": "catalog:react19",
+    "react-native": "*",
     "zod": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": true
+    }
   },
   "prettier": "@acme/prettier-config"
 }

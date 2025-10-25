@@ -22,6 +22,7 @@ interface CardProps extends ViewProps {
   pressable?: boolean;
   onPress?: () => void;
   variant?: "default" | "elevated";
+  style?: ViewStyle;
 }
 
 export function Card({
@@ -72,6 +73,7 @@ export function Card({
 
 interface CardHeaderProps extends ViewProps {
   children: React.ReactNode;
+  style?: ViewStyle;
 }
 
 export function CardHeader({ children, style, ...props }: CardHeaderProps) {
@@ -84,6 +86,7 @@ export function CardHeader({ children, style, ...props }: CardHeaderProps) {
 
 interface CardContentProps extends ViewProps {
   children: React.ReactNode;
+  style?: ViewStyle;
 }
 
 export function CardContent({ children, style, ...props }: CardContentProps) {
@@ -96,6 +99,7 @@ export function CardContent({ children, style, ...props }: CardContentProps) {
 
 interface CardFooterProps extends ViewProps {
   children: React.ReactNode;
+  style?: ViewStyle;
 }
 
 export function CardFooter({ children, style, ...props }: CardFooterProps) {
