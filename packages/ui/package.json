@@ -5,12 +5,15 @@
   "exports": {
     ".": "./src/index.ts",
     "./button": "./src/button.tsx",
+    "./button-native": "./src/button-native.tsx",
+    "./card-native": "./src/card-native.tsx",
     "./dropdown-menu": "./src/dropdown-menu.tsx",
     "./field": "./src/field.tsx",
     "./input": "./src/input.tsx",
     "./label": "./src/label.tsx",
     "./separator": "./src/separator.tsx",
     "./theme": "./src/theme.tsx",
+    "./theme-tokens": "./src/theme-tokens.ts",
     "./toast": "./src/toast.tsx"
   },
   "license": "MIT",

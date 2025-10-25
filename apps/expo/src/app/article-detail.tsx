@@ -5,11 +5,20 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 
+import { Button } from "@acme/ui/button-native";
+import {
+  colors,
+  fontSize,
+  fontWeight,
+  radius,
+  spacing,
+} from "@acme/ui/theme-tokens";
+
 import { Text, View } from "~/components/Themed";
-import { colors } from "~/constants/Colors";
 import { trpc } from "~/utils/api";
 
 const TabButton = ({
@@ -21,22 +30,14 @@ const TabButton = ({
   active: boolean;
   onPress: () => void;
 }) => (
-  <TouchableOpacity
-    style={[
-      styles.tabButton,
-      active ? styles.tabButtonActive : styles.tabButtonInactive,
-    ]}
+  <Button
+    variant={active ? "default" : "ghost"}
+    size="sm"
+    style={styles.tabButton}
     onPress={onPress}
   >
-    <Text
-      style={[
-        styles.tabButtonText,
-        active ? styles.tabButtonTextActive : styles.tabButtonTextInactive,
-      ]}
-    >
-      {title}
-    </Text>
-  </TouchableOpacity>
+    {title}
+  </Button>
 );
 export default function ArticleDetailScreen() {
   const router = useRouter();
@@ -67,7 +68,7 @@ export default function ArticleDetailScreen() {
           }}
         />
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.pink500} />
+          <ActivityIndicator size="large" color={colors.blue[500]} />
           <Text style={styles.loadingText}>Loading content...</Text>
         </View>
       </>
@@ -150,103 +151,85 @@ export default function ArticleDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray[100],
   },
   centerContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray[100],
   },
   loadingText: {
-    marginTop: 16,
-    color: colors.gray600,
+    marginTop: spacing[4] * 16,
+    color: colors.gray[600],
   },
   errorContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.gray100,
-    padding: 20,
+    backgroundColor: colors.gray[100],
+    padding: spacing[5] * 16,
   },
   errorTitle: {
-    marginBottom: 16,
-    fontSize: 18,
-    fontWeight: "600",
-    color: colors.red600,
+    marginBottom: spacing[4] * 16,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+    color: colors.red[600],
   },
   errorButton: {
-    borderRadius: 8,
-    backgroundColor: colors.pink500,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
+    borderRadius: radius.md * 16,
+    backgroundColor: colors.blue[500],
+    paddingHorizontal: spacing[8] * 16,
+    paddingVertical: spacing[3] * 16,
   },
   errorButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
     color: colors.white,
   },
   tabContainer: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.gray[200],
     backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: spacing[5] * 16,
+    paddingVertical: spacing[4] * 16,
+    gap: spacing[3] * 16,
   },
   tabButton: {
-    marginRight: 12,
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  tabButtonActive: {
-    backgroundColor: colors.pink500,
-  },
-  tabButtonInactive: {
-    backgroundColor: colors.gray100,
-  },
-  tabButtonText: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  tabButtonTextActive: {
-    color: colors.white,
-  },
-  tabButtonTextInactive: {
-    color: colors.gray600,
+    borderRadius: radius.md * 16,
   },
   scrollView: {
     flex: 1,
-    padding: 20,
+    padding: spacing[5] * 16,
   },
   contentCard: {
-    borderRadius: 12,
+    borderRadius: radius.lg * 16,
     borderWidth: 1,
-    borderColor: colors.pink500,
-    backgroundColor: colors.pink200,
-    padding: 20,
+    borderColor: colors.blue[500],
+    backgroundColor: colors.blue[100],
+    padding: spacing[5] * 16,
   },
   contentText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: colors.gray800,
+    fontSize: fontSize.base,
+    lineHeight: spacing[6] * 16,
+    color: colors.gray[800],
   },
   buttonContainer: {
     alignItems: "center",
   },
   backButton: {
-    marginVertical: 12,
+    marginVertical: spacing[3] * 16,
     width: "100%",
-    borderRadius: 8,
-    backgroundColor: colors.pink500,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
+    borderRadius: radius.md * 16,
+    backgroundColor: colors.blue[500],
+    paddingHorizontal: spacing[8] * 16,
+    paddingVertical: spacing[3] * 16,
   },
   backButtonText: {
     textAlign: "center",
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
     color: colors.white,
   },
 });

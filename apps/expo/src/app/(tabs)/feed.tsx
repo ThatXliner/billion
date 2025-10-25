@@ -10,8 +10,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
+import { colors } from "@acme/ui/theme-tokens";
+
 import { Text, View } from "~/components/Themed";
-import { colors } from "~/constants/Colors";
 import { trpc } from "~/utils/api";
 
 const { height: screenHeight } = Dimensions.get("window");
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   errorText: {
-    color: colors.red500,
+    color: colors.red[500],
   },
   errorSubtext: {
     marginTop: 8,

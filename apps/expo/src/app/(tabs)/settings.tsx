@@ -8,8 +8,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { colors, fontSize, fontWeight, spacing } from "@acme/ui/theme-tokens";
+
 import { Text, View } from "~/components/Themed";
-import { colors } from "~/constants/Colors";
 
 interface SettingsSection {
   title: string;
@@ -214,7 +215,7 @@ export default function SettingsScreen() {
             <Switch
               value={item.value}
               onValueChange={item.onToggle}
-              trackColor={{ false: "#e0e0e0", true: colors.blue700 }}
+              trackColor={{ false: "#e0e0e0", true: colors.blue[500] }}
               thumbColor={colors.white}
             />
           </View>
@@ -293,81 +294,81 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray[100],
   },
   header: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.gray[200],
     backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: spacing[5] * 16,
+    paddingBottom: spacing[5] * 16,
   },
   headerText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: colors.gray800,
+    fontSize: fontSize["2xl"],
+    fontWeight: fontWeight.bold,
+    color: colors.gray[800],
   },
   scrollView: {
     flex: 1,
   },
   section: {
-    marginTop: 32,
+    marginTop: spacing[8] * 16,
   },
   sectionTitle: {
-    marginHorizontal: 20,
-    marginBottom: 12,
-    fontSize: 16,
-    fontWeight: "600",
+    marginHorizontal: spacing[5] * 16,
+    marginBottom: spacing[3] * 16,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    color: colors.gray600,
+    color: colors.gray[600],
   },
   sectionContent: {
     borderBottomWidth: 1,
     borderTopWidth: 1,
-    borderColor: colors.gray200,
+    borderColor: colors.gray[200],
     backgroundColor: colors.white,
   },
   settingsItem: {
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    borderBottomColor: colors.gray[100],
+    paddingHorizontal: spacing[5] * 16,
+    paddingVertical: spacing[4] * 16,
   },
   settingsItemTextContainer: {
     flex: 1,
   },
   settingsItemTitle: {
-    marginBottom: 4,
-    fontSize: 16,
-    fontWeight: "500",
-    color: colors.gray800,
+    marginBottom: spacing[1] * 16,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.medium,
+    color: colors.gray[800],
   },
   settingsItemSubtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.gray600,
+    fontSize: fontSize.sm,
+    lineHeight: spacing[5] * 16,
+    color: colors.gray[600],
   },
   chevron: {
-    marginLeft: 12,
-    fontSize: 20,
-    color: colors.gray300,
+    marginLeft: spacing[3] * 16,
+    fontSize: fontSize.xl,
+    color: colors.gray[300],
   },
   deleteAction: {
     justifyContent: "center",
   },
   deleteText: {
     textAlign: "center",
-    color: colors.red500,
+    color: colors.red[500],
   },
   versionContainer: {
     alignItems: "center",
-    paddingVertical: 40,
+    paddingVertical: spacing[10] * 16,
   },
   versionText: {
-    fontSize: 14,
-    color: colors.gray400,
+    fontSize: fontSize.sm,
+    color: colors.gray[400],
   },
 });

@@ -4,7 +4,8 @@ import { Tabs } from "expo-router";
 import { FontAwesome } from "@expo/vector-icons";
 import { QueryClientProvider } from "@tanstack/react-query";
 
-import Colors from "~/constants/Colors";
+import { colors } from "@acme/ui/theme-tokens";
+
 import { queryClient } from "~/utils/api";
 
 import "../../styles.css";
@@ -19,12 +20,13 @@ function TabBarIcon(props: {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const tintColor = colorScheme === "dark" ? colors.blue[400] : colors.blue[500];
 
   return (
     <QueryClientProvider client={queryClient}>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+          tabBarActiveTintColor: tintColor,
           // Disable the static render of the header on web
           // to prevent a hydration error in React Navigation v6.
           headerShown: false,

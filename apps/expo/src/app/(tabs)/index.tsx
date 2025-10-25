@@ -1,17 +1,25 @@
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-} from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 
+import { Button } from "@acme/ui/button-native";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@acme/ui/card-native";
+import {
+  colors,
+  fontSize,
+  fontWeight,
+  radius,
+  spacing,
+} from "@acme/ui/theme-tokens";
+
 import { Text, View } from "~/components/Themed";
-import { colors } from "~/constants/Colors";
 import { trpc } from "~/utils/api";
 
 interface ContentCard {
@@ -24,40 +32,45 @@ interface ContentCard {
 
 const ContentCardComponent = ({ item }: { item: ContentCard }) => {
   const router = useRouter();
-  const lightColor = colors.blue300;
 
   return (
-    <Pressable
+    <Card
+      variant="elevated"
+      style={styles.card}
+      pressable
       onPress={() => {
         router.push(`/article-detail?id=${item.id}`);
       }}
-      style={styles.card}
     >
-      <View style={styles.cardContent} lightColor={lightColor}>
-        <View style={styles.cardTextContainer} lightColor={lightColor}>
+      <CardContent style={styles.cardContent}>
+        <View style={styles.cardTextContainer}>
           <Text style={styles.cardTitle}>{item.title}</Text>
           <Text style={styles.cardDescription}>{item.description}</Text>
         </View>
-        <View style={styles.cardButtonContainer} lightColor={lightColor}>
-          <TouchableOpacity
+        <View style={styles.cardButtonContainer}>
+          <Button
+            variant="default"
+            size="sm"
             style={styles.watchButton}
             onPress={() => {
               router.push(`/article-detail?id=${item.id}`);
             }}
           >
-            <Text style={styles.buttonText}>Watch Short</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+            Watch Short
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             style={styles.readButton}
             onPress={() => {
               router.push(`/article-detail?id=${item.id}`);
             }}
           >
-            <Text style={styles.buttonText}>Read More</Text>
-          </TouchableOpacity>
+            Read More
+          </Button>
         </View>
-      </View>
-    </Pressable>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -70,22 +83,14 @@ const TabButton = ({
   active: boolean;
   onPress: () => void;
 }) => (
-  <TouchableOpacity
-    style={[
-      styles.tabButton,
-      active ? styles.tabButtonActive : styles.tabButtonInactive,
-    ]}
+  <Button
+    variant={active ? "default" : "ghost"}
+    size="sm"
+    style={styles.tabButton}
     onPress={onPress}
   >
-    <Text
-      style={[
-        styles.tabButtonText,
-        active ? styles.tabButtonTextActive : styles.tabButtonTextInactive,
-      ]}
-    >
-      {title}
-    </Text>
-  </TouchableOpacity>
+    {title}
+  </Button>
 );
 
 export default function BrowseScreen() {
@@ -143,7 +148,7 @@ export default function BrowseScreen() {
       >
         {isLoading ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={colors.blue500} />
+            <ActivityIndicator size="large" color={colors.blue[500]} />
           </View>
         ) : error ? (
           <View style={styles.centerContainer}>
@@ -162,109 +167,72 @@ export default function BrowseScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray100,
   },
   header: {
     backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: spacing[5] * 16,
+    paddingBottom: spacing[5] * 16,
   },
   headerText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: colors.gray800,
+    fontSize: fontSize["2xl"],
+    fontWeight: fontWeight.bold,
+    color: colors.blue[900],
   },
   tabContainer: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.gray[200],
     backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: spacing[5] * 16,
+    paddingVertical: spacing[4] * 16,
+    gap: spacing[3] * 16,
   },
   tabButton: {
-    marginRight: 12,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  tabButtonActive: {
-    backgroundColor: colors.blue500,
-  },
-  tabButtonInactive: {
-    backgroundColor: colors.gray100,
-  },
-  tabButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  tabButtonTextActive: {
-    color: colors.white,
-  },
-  tabButtonTextInactive: {
-    color: colors.gray600,
+    borderRadius: radius.lg * 16,
   },
   scrollView: {
     flex: 1,
-    padding: 20,
+    padding: spacing[5] * 16,
   },
   centerContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 40,
+    paddingVertical: spacing[10] * 16,
   },
   errorText: {
-    color: colors.red500,
+    color: colors.red[500],
+    fontSize: fontSize.base,
   },
   card: {
-    backgroundColor: colors.blue300,
-    marginBottom: 16,
-    borderRadius: 12,
-    padding: 8,
+    marginBottom: spacing[4] * 16,
   },
   cardContent: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 8,
+    gap: spacing[3] * 16,
   },
   cardTextContainer: {
     flex: 1,
-    paddingRight: 12,
   },
   cardTitle: {
-    marginBottom: 8,
-    fontSize: 16,
-    fontWeight: "bold",
-    color: colors.gray800,
+    marginBottom: spacing[2] * 16,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.blue[900],
   },
   cardDescription: {
-    marginBottom: 16,
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.gray600,
+    fontSize: fontSize.sm,
+    lineHeight: spacing[5] * 16,
+    color: colors.gray[600],
   },
   cardButtonContainer: {
     width: "33.333%",
     flexDirection: "column",
+    gap: spacing[2] * 16,
   },
   watchButton: {
-    marginBottom: 8,
-    backgroundColor: colors.green600,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
+    backgroundColor: colors.green[600],
   },
-  readButton: {
-    backgroundColor: colors.orange500,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  buttonText: {
-    textAlign: "center",
-    fontSize: 14,
-    fontWeight: "500",
-    color: colors.white,
-  },
+  readButton: {},
 });
