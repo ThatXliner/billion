@@ -8,9 +8,17 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
-import { colors } from "@acme/ui/theme-tokens";
+import { Button } from "@acme/ui/button-native";
+import {
+  colors,
+  fontSize,
+  fontWeight,
+  radius,
+  spacing,
+} from "@acme/ui/theme-tokens";
 
 import { Text, View } from "~/components/Themed";
 import { trpc } from "~/utils/api";
@@ -26,12 +34,12 @@ interface VideoPost {
   comments: number;
   shares: number;
   type: "bill" | "order" | "case" | "general";
-  emoji: string;
-  backgroundColor: string;
+  articlePreview: string;
 }
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [likedVideos, setLikedVideos] = useState<Set<string>>(new Set());
 
   // Use infinite query for video feed
@@ -72,26 +80,64 @@ export default function FeedScreen() {
     }
   };
 
+  const getTypeBadgeColor = (type: VideoPost["type"]) => {
+    switch (type) {
+      case "bill":
+        return colors.blue[500];
+      case "order":
+        return colors.blue[700];
+      case "case":
+        return colors.blue[600];
+      default:
+        return colors.gray[600];
+    }
+  };
+
   const renderVideoItem = ({ item }: { item: VideoPost; index: number }) => (
-    <View
-      style={[
-        styles.videoContainer,
-        { height: screenHeight, backgroundColor: item.backgroundColor },
-      ]}
-    >
-      <View style={styles.videoCenter}>
-        <Text style={styles.emoji}>{item.emoji}</Text>
-        <Text style={styles.videoTitle}>{item.title}</Text>
+    <View style={[styles.videoContainer, { height: screenHeight }]}>
+      {/* Content Card */}
+      <View style={styles.contentCard}>
+        {/* Type Badge */}
+        <View
+          style={[
+            styles.typeBadge,
+            { backgroundColor: getTypeBadgeColor(item.type) },
+          ]}
+        >
+          <Text style={styles.typeBadgeText}>{item.type.toUpperCase()}</Text>
+        </View>
+
+        {/* Title */}
+        <Text style={styles.cardTitle}>{item.title}</Text>
+
+        {/* Description */}
+        <Text style={styles.cardDescription}>{item.description}</Text>
+
+        {/* Article Preview */}
+        <Text style={styles.articlePreview}>{item.articlePreview}</Text>
+
+        {/* Author */}
+        <Text style={styles.author}>{item.author}</Text>
+
+        {/* Read Full Article Button */}
+        <Button
+          variant="default"
+          size="lg"
+          style={styles.readButton}
+          onPress={() => {
+            // Extract original content ID from feed ID (format: "1-0", "2-1", etc.)
+            const contentId = item.id.split("-")[0];
+            router.push(`/article-detail?id=${contentId}`);
+          }}
+        >
+          Read Full Article
+        </Button>
       </View>
 
+      {/* Action Buttons */}
       <View
         style={[styles.bottomOverlay, { paddingBottom: insets.bottom + 80 }]}
       >
-        <View style={styles.descriptionContainer}>
-          <Text style={styles.description}>{item.description}</Text>
-          <Text style={styles.author}>{item.author}</Text>
-        </View>
-
         <View style={styles.actionsContainer}>
           <TouchableOpacity
             style={styles.actionButton}
@@ -118,11 +164,6 @@ export default function FeedScreen() {
           <TouchableOpacity style={styles.actionButton}>
             <Text style={styles.actionIcon}>📤</Text>
             <Text style={styles.actionText}>{item.shares}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionIcon}>🔗</Text>
-            <Text style={styles.actionText}>Watch Short</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -182,91 +223,122 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.black,
+    backgroundColor: colors.gray[100],
   },
   loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.black,
+    backgroundColor: colors.gray[100],
   },
   loadingText: {
-    marginTop: 16,
-    color: colors.white,
+    marginTop: spacing[4] * 16,
+    color: colors.gray[600],
+    fontSize: fontSize.base,
   },
   errorText: {
     color: colors.red[500],
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
   },
   errorSubtext: {
-    marginTop: 8,
-    color: colors.white,
+    marginTop: spacing[2] * 16,
+    color: colors.gray[600],
+    fontSize: fontSize.base,
   },
   videoContainer: {
     position: "relative",
     width: "100%",
-    height: "100%",
-  },
-  videoCenter: {
-    flex: 1,
-    alignItems: "center",
+    backgroundColor: colors.gray[100],
+    padding: spacing[5] * 16,
     justifyContent: "center",
   },
-  emoji: {
-    fontSize: 96,
-    lineHeight: 120,
+  contentCard: {
+    backgroundColor: colors.white,
+    borderRadius: radius.xl * 16,
+    padding: spacing[6] * 16,
+    shadowColor: colors.blue[900],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
-  videoTitle: {
-    paddingHorizontal: 20,
-    textAlign: "center",
-    fontSize: 20,
-    fontWeight: "bold",
+  typeBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: spacing[3] * 16,
+    paddingVertical: spacing[1] * 16,
+    borderRadius: radius.md * 16,
+    marginBottom: spacing[4] * 16,
+  },
+  typeBadgeText: {
     color: colors.white,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    letterSpacing: 0.5,
+  },
+  cardTitle: {
+    fontSize: fontSize["3xl"],
+    fontWeight: fontWeight.bold,
+    color: colors.blue[900],
+    marginBottom: spacing[3] * 16,
+    lineHeight: fontSize["3xl"] * 1.2,
+  },
+  cardDescription: {
+    fontSize: fontSize.base,
+    color: colors.gray[700],
+    marginBottom: spacing[4] * 16,
+    lineHeight: fontSize.base * 1.5,
+  },
+  articlePreview: {
+    fontSize: fontSize.sm,
+    color: colors.gray[600],
+    marginBottom: spacing[4] * 16,
+    lineHeight: fontSize.sm * 1.6,
+    fontStyle: "italic",
+  },
+  author: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.blue[600],
+    marginBottom: spacing[5] * 16,
+  },
+  readButton: {
+    width: "100%",
   },
   bottomOverlay: {
     position: "absolute",
     bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    padding: 20,
-  },
-  descriptionContainer: {
-    marginRight: 20,
-    flex: 1,
-  },
-  description: {
-    marginBottom: 12,
-    fontSize: 16,
-    lineHeight: 24,
-    color: colors.white,
-  },
-  author: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.white,
-    opacity: 0.8,
+    right: spacing[5] * 16,
+    alignItems: "flex-end",
   },
   actionsContainer: {
     alignItems: "center",
     justifyContent: "flex-end",
   },
   actionButton: {
-    marginBottom: 20,
+    marginBottom: spacing[4] * 16,
     alignItems: "center",
+    backgroundColor: colors.white,
+    borderRadius: radius.full * 16,
+    padding: spacing[2] * 16,
     minWidth: 50,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   actionIcon: {
-    marginBottom: 4,
-    fontSize: 30,
-    lineHeight: 36,
+    marginBottom: spacing[1] * 16,
+    fontSize: fontSize["2xl"],
   },
   actionIconLiked: {
     transform: [{ scale: 1.25 }],
   },
   actionText: {
     textAlign: "center",
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.white,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.gray[700],
   },
 });
