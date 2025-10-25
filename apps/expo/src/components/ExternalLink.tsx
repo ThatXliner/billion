@@ -1,6 +1,7 @@
-import React from "react";
+import type React from "react";
 import { Platform } from "react-native";
-import { Href, Link } from "expo-router";
+import type { Href} from "expo-router";
+import { Link } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 
 type HrefString<T = Href> = T extends string ? T : never;

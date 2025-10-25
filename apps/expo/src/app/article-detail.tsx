@@ -12,6 +12,32 @@ import { Text, View } from "~/components/Themed";
 import { colors } from "~/constants/Colors";
 import { trpc } from "~/utils/api";
 
+const TabButton = ({
+  title,
+  active,
+  onPress,
+}: {
+  title: string;
+  active: boolean;
+  onPress: () => void;
+}) => (
+  <TouchableOpacity
+    style={[
+      styles.tabButton,
+      active ? styles.tabButtonActive : styles.tabButtonInactive,
+    ]}
+    onPress={onPress}
+  >
+    <Text
+      style={[
+        styles.tabButtonText,
+        active ? styles.tabButtonTextActive : styles.tabButtonTextInactive,
+      ]}
+    >
+      {title}
+    </Text>
+  </TouchableOpacity>
+);
 export default function ArticleDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -29,33 +55,6 @@ export default function ArticleDetailScreen() {
     ...trpc.content.getById.queryOptions({ id }),
     enabled: !!id,
   });
-
-  const TabButton = ({
-    title,
-    active,
-    onPress,
-  }: {
-    title: string;
-    active: boolean;
-    onPress: () => void;
-  }) => (
-    <TouchableOpacity
-      style={[
-        styles.tabButton,
-        active ? styles.tabButtonActive : styles.tabButtonInactive,
-      ]}
-      onPress={onPress}
-    >
-      <Text
-        style={[
-          styles.tabButtonText,
-          active ? styles.tabButtonTextActive : styles.tabButtonTextInactive,
-        ]}
-      >
-        {title}
-      </Text>
-    </TouchableOpacity>
-  );
 
   // Handle loading state
   if (isLoading) {

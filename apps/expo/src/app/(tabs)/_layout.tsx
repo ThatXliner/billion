@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 import { useColorScheme } from "react-native";
 import { Tabs } from "expo-router";
 import { FontAwesome } from "@expo/vector-icons";
@@ -8,8 +8,6 @@ import Colors from "~/constants/Colors";
 import { queryClient } from "~/utils/api";
 
 import "../../styles.css";
-
-import { SafeAreaView } from "react-native-safe-area-context";
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
