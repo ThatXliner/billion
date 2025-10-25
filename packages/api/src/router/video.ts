@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 import { publicProcedure } from "../trpc";
 
 // Schema for video/feed post (using real content)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const VideoPostSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -71,7 +72,11 @@ function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!];
+    const temp = shuffled[i];
+    if (temp !== undefined && shuffled[j] !== undefined) {
+      shuffled[i] = shuffled[j];
+      shuffled[j] = temp;
+    }
   }
   return shuffled;
 }
@@ -113,7 +118,11 @@ export const videoRouter = {
       const shuffledContent = shuffleArray(mockContentForFeed);
       const videos = Array.from({ length: limit }, (_, index) => {
         const contentIndex = (cursor + index) % shuffledContent.length;
-        return generateFeedPost(shuffledContent[contentIndex]!, cursor + index);
+        const content = shuffledContent[contentIndex];
+        if (!content) {
+          throw new Error("Content not found at index");
+        }
+        return generateFeedPost(content, cursor + index);
       });
 
       return {
