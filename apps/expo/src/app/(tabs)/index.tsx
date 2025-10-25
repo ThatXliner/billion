@@ -1,8 +1,14 @@
-import { useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet } from "react-native";
+import { useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
+import Fuse from "fuse.js";
 
 import { Button } from "@acme/ui/button-native";
 import { Card, CardContent } from "@acme/ui/card-native";
@@ -101,7 +107,8 @@ export default function BrowseScreen() {
   const [selectedTab, setSelectedTab] = useState<
     "all" | "bill" | "order" | "case"
   >("all");
-  // verifyInstallation();
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Fetch content from tRPC
   const {
     data: content,
@@ -113,13 +120,41 @@ export default function BrowseScreen() {
     }),
   );
 
-  const filteredContent = content ?? [];
+  // Configure Fuse.js for fuzzy search
+  const fuse = useMemo(() => {
+    if (!content) return null;
+    return new Fuse(content, {
+      keys: ["title", "description"],
+      threshold: 0.3, // Lower = more strict matching
+      includeScore: true,
+    });
+  }, [content]);
+
+  // Filter content based on search query
+  const filteredContent = useMemo(() => {
+    if (!content) return [];
+    if (!searchQuery.trim()) return content;
+    if (!fuse) return content;
+
+    const results = fuse.search(searchQuery);
+    return results.map((result) => result.item);
+  }, [content, searchQuery, fuse]);
 
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-        {/*<Text className="text-2xl text-red-500">Browse</Text>*/}
         <Text style={styles.headerText}>Browse</Text>
+
+        {/* Search Input */}
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search bills, cases, and orders..."
+          placeholderTextColor={colors.gray[400]}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          clearButtonMode="while-editing"
+          returnKeyType="search"
+        />
       </View>
 
       <View style={styles.tabContainer}>
@@ -157,10 +192,25 @@ export default function BrowseScreen() {
           <View style={styles.centerContainer}>
             <Text style={styles.errorText}>Error loading content</Text>
           </View>
+        ) : filteredContent.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <Text style={styles.emptyText}>No results found</Text>
+            <Text style={styles.emptySubtext}>
+              Try adjusting your search terms
+            </Text>
+          </View>
         ) : (
-          filteredContent.map((item) => (
-            <ContentCardComponent key={item.id} item={item} />
-          ))
+          <>
+            {searchQuery.trim() && (
+              <Text style={styles.resultsText}>
+                Found {filteredContent.length} result
+                {filteredContent.length !== 1 ? "s" : ""}
+              </Text>
+            )}
+            {filteredContent.map((item) => (
+              <ContentCardComponent key={item.id} item={item} />
+            ))}
+          </>
         )}
       </ScrollView>
     </View>
@@ -180,6 +230,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize["2xl"],
     fontWeight: fontWeight.bold,
     color: colors.blue[900],
+    marginBottom: spacing[4] * 16,
+  },
+  searchInput: {
+    backgroundColor: colors.gray[50],
+    borderWidth: 1,
+    borderColor: colors.gray[200],
+    borderRadius: radius.lg * 16,
+    paddingHorizontal: spacing[4] * 16,
+    paddingVertical: spacing[3] * 16,
+    fontSize: fontSize.base,
+    color: colors.gray[800],
   },
   tabContainer: {
     flexDirection: "row",
@@ -206,6 +267,22 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.red[500],
     fontSize: fontSize.base,
+  },
+  emptyText: {
+    color: colors.gray[700],
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+  },
+  emptySubtext: {
+    marginTop: spacing[2] * 16,
+    color: colors.gray[500],
+    fontSize: fontSize.sm,
+  },
+  resultsText: {
+    color: colors.gray[600],
+    fontSize: fontSize.sm,
+    marginBottom: spacing[3] * 16,
+    fontWeight: fontWeight.medium,
   },
   card: {
     marginBottom: spacing[4] * 16,
