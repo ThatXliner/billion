@@ -1,19 +1,27 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
-  TouchableOpacity,
+  StyleSheet,
+  TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
+import Fuse from "fuse.js";
+
+import { Button } from "@acme/ui/button-native";
+import { Card, CardContent } from "@acme/ui/card-native";
+import {
+  colors,
+  fontSize,
+  fontWeight,
+  radius,
+  spacing,
+} from "@acme/ui/theme-tokens";
 
 import { Text, View } from "~/components/Themed";
 import { trpc } from "~/utils/api";
-
-import "~/styles.css";
-
-import { useQuery } from "@tanstack/react-query";
 
 interface ContentCard {
   id: string;
@@ -22,56 +30,59 @@ interface ContentCard {
   type: "bill" | "order" | "case" | "general";
   isAIGenerated: boolean;
 }
+
 const ContentCardComponent = ({ item }: { item: ContentCard }) => {
   const router = useRouter();
-  const lightColor = "bg-blue-300";
-  // const lightColor = "bg-gray-200";
+
   return (
-    <Pressable
+    <Card
+      variant="elevated"
+      style={styles.card}
+      pressable
       onPress={() => {
         router.push(`/article-detail?id=${item.id}`);
       }}
-      className={`${lightColor} mb-4 rounded-xl p-2`}
-      // style={styles.neumorphic}
     >
-      <View className="flex-row items-center p-2" lightColor={lightColor}>
-        <View className="flex-1 pr-3" lightColor={lightColor}>
-          <Text className="mb-2 text-base font-bold text-gray-800">
-            {item.title}
-          </Text>
-          <Text className="mb-4 text-sm leading-5 text-gray-600">
-            {item.description}
-          </Text>
+      <CardContent style={styles.cardContent}>
+        <View
+          style={styles.cardTextContainer}
+          lightColor="transparent"
+          darkColor="transparent"
+        >
+          <Text style={styles.cardTitle}>{item.title}</Text>
+          <Text style={styles.cardDescription}>{item.description}</Text>
         </View>
-        <View className="w-1/3 flex-col" lightColor={lightColor}>
-          <TouchableOpacity
-            className="mb-2 bg-green-600 px-4 py-2"
-            // For some reason the `rounded-` class is broken
-            style={{ borderRadius: 10 }}
+        <View
+          style={styles.cardButtonContainer}
+          lightColor="transparent"
+          darkColor="transparent"
+        >
+          <Button
+            variant="default"
+            size="sm"
+            style={styles.watchButton}
             onPress={() => {
               router.push(`/article-detail?id=${item.id}`);
             }}
           >
-            <Text className="text-center text-sm font-medium text-white">
-              Watch Short
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="bg-orange-500 px-4 py-2"
-            style={{ borderRadius: 10 }}
+            Watch Short
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            style={styles.readButton}
             onPress={() => {
               router.push(`/article-detail?id=${item.id}`);
             }}
           >
-            <Text className="text-center text-sm font-medium text-white">
-              Read More
-            </Text>
-          </TouchableOpacity>
+            Read More
+          </Button>
         </View>
-      </View>
-    </Pressable>
+      </CardContent>
+    </Card>
   );
 };
+
 const TabButton = ({
   title,
   active,
@@ -81,20 +92,14 @@ const TabButton = ({
   active: boolean;
   onPress: () => void;
 }) => (
-  <TouchableOpacity
-    className={`mr-3 rounded-2xl px-4 py-2 ${
-      active ? "bg-blue-500" : "bg-gray-100"
-    }`}
+  <Button
+    variant={active ? "default" : "ghost"}
+    size="sm"
+    style={styles.tabButton}
     onPress={onPress}
   >
-    <Text
-      className={`text-sm font-medium ${
-        active ? "text-white" : "text-gray-600"
-      }`}
-    >
-      {title}
-    </Text>
-  </TouchableOpacity>
+    {title}
+  </Button>
 );
 
 export default function BrowseScreen() {
@@ -102,6 +107,7 @@ export default function BrowseScreen() {
   const [selectedTab, setSelectedTab] = useState<
     "all" | "bill" | "order" | "case"
   >("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch content from tRPC
   const {
@@ -114,18 +120,44 @@ export default function BrowseScreen() {
     }),
   );
 
-  const filteredContent = content ?? [];
+  // Configure Fuse.js for fuzzy search
+  const fuse = useMemo(() => {
+    if (!content) return null;
+    return new Fuse(content, {
+      keys: ["title", "description"],
+      threshold: 0.3, // Lower = more strict matching
+      includeScore: true,
+    });
+  }, [content]);
+
+  // Filter content based on search query
+  const filteredContent = useMemo(() => {
+    if (!content) return [];
+    if (!searchQuery.trim()) return content;
+    if (!fuse) return content;
+
+    const results = fuse.search(searchQuery);
+    return results.map((result) => result.item);
+  }, [content, searchQuery, fuse]);
 
   return (
-    <View className="flex-1 bg-gray-100">
-      <View
-        className="bg-white px-5 pb-5"
-        style={{ paddingTop: insets.top + 20 }}
-      >
-        <Text className="text-2xl font-bold text-gray-800">Browse</Text>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+        <Text style={styles.headerText}>Browse</Text>
+
+        {/* Search Input */}
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search bills, cases, and orders..."
+          placeholderTextColor={colors.gray[400]}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          clearButtonMode="while-editing"
+          returnKeyType="search"
+        />
       </View>
 
-      <View className="flex-row border-b border-gray-200 bg-white px-5 py-4">
+      <View style={styles.tabContainer}>
         <TabButton
           title="All"
           active={selectedTab === "all"}
@@ -148,21 +180,139 @@ export default function BrowseScreen() {
         />
       </View>
 
-      <ScrollView className="flex-1 p-5" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {isLoading ? (
-          <View className="flex-1 items-center justify-center py-10">
-            <ActivityIndicator size="large" color="#3b82f6" />
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={colors.blue[500]} />
           </View>
         ) : error ? (
-          <View className="flex-1 items-center justify-center py-10">
-            <Text className="text-red-500">Error loading content</Text>
+          <View style={styles.centerContainer}>
+            <Text style={styles.errorText}>Error loading content</Text>
+          </View>
+        ) : filteredContent.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <Text style={styles.emptyText}>No results found</Text>
+            <Text style={styles.emptySubtext}>
+              Try adjusting your search terms
+            </Text>
           </View>
         ) : (
-          filteredContent.map((item) => (
-            <ContentCardComponent key={item.id} item={item} />
-          ))
+          <>
+            {searchQuery.trim() && (
+              <Text style={styles.resultsText}>
+                Found {filteredContent.length} result
+                {filteredContent.length !== 1 ? "s" : ""}
+              </Text>
+            )}
+            {filteredContent.map((item) => (
+              <ContentCardComponent key={item.id} item={item} />
+            ))}
+          </>
         )}
       </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing[5] * 16,
+    paddingBottom: spacing[5] * 16,
+  },
+  headerText: {
+    fontSize: fontSize["2xl"],
+    fontWeight: fontWeight.bold,
+    color: colors.blue[900],
+    marginBottom: spacing[4] * 16,
+  },
+  searchInput: {
+    backgroundColor: colors.gray[50],
+    borderWidth: 1,
+    borderColor: colors.gray[200],
+    borderRadius: radius.lg * 16,
+    paddingHorizontal: spacing[4] * 16,
+    paddingVertical: spacing[3] * 16,
+    fontSize: fontSize.base,
+    color: colors.gray[800],
+  },
+  tabContainer: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray[200],
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing[5] * 16,
+    paddingVertical: spacing[4] * 16,
+    gap: spacing[3] * 16,
+  },
+  tabButton: {
+    borderRadius: radius.lg * 16,
+  },
+  scrollView: {
+    flex: 1,
+    padding: spacing[5] * 16,
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing[10] * 16,
+  },
+  errorText: {
+    color: colors.red[500],
+    fontSize: fontSize.base,
+  },
+  emptyText: {
+    color: colors.gray[700],
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+  },
+  emptySubtext: {
+    marginTop: spacing[2] * 16,
+    color: colors.gray[500],
+    fontSize: fontSize.sm,
+  },
+  resultsText: {
+    color: colors.gray[600],
+    fontSize: fontSize.sm,
+    marginBottom: spacing[3] * 16,
+    fontWeight: fontWeight.medium,
+  },
+  card: {
+    marginBottom: spacing[4] * 16,
+  },
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3] * 16,
+  },
+  cardTextContainer: {
+    flex: 1,
+  },
+  cardTitle: {
+    marginBottom: spacing[2] * 16,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.blue[900],
+  },
+  cardDescription: {
+    fontSize: fontSize.sm,
+    lineHeight: spacing[5] * 16,
+    color: colors.gray[600],
+  },
+  cardButtonContainer: {
+    width: "33.333%",
+    flexDirection: "column",
+    gap: spacing[3] * 16,
+  },
+  watchButton: {
+    backgroundColor: colors.green[600],
+  },
+  readButton: {},
+});

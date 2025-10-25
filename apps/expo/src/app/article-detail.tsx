@@ -1,14 +1,43 @@
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, TouchableOpacity } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
+
+import { Button } from "@acme/ui/button-native";
+import {
+  colors,
+  fontSize,
+  fontWeight,
+  radius,
+  spacing,
+} from "@acme/ui/theme-tokens";
 
 import { Text, View } from "~/components/Themed";
 import { trpc } from "~/utils/api";
 
-import "~/styles.css";
-
-import { useQuery } from "@tanstack/react-query";
-
+const TabButton = ({
+  title,
+  active,
+  onPress,
+}: {
+  title: string;
+  active: boolean;
+  onPress: () => void;
+}) => (
+  <Button
+    variant={active ? "default" : "ghost"}
+    size="sm"
+    style={styles.tabButton}
+    onPress={onPress}
+  >
+    {title}
+  </Button>
+);
 export default function ArticleDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,31 +56,6 @@ export default function ArticleDetailScreen() {
     enabled: !!id,
   });
 
-  const TabButton = ({
-    title,
-    active,
-    onPress,
-  }: {
-    title: string;
-    active: boolean;
-    onPress: () => void;
-  }) => (
-    <TouchableOpacity
-      className={`mr-3 rounded-lg px-5 py-3 ${
-        active ? "bg-pink-500" : "bg-gray-100"
-      }`}
-      onPress={onPress}
-    >
-      <Text
-        className={`text-base font-medium ${
-          active ? "text-white" : "text-gray-600"
-        }`}
-      >
-        {title}
-      </Text>
-    </TouchableOpacity>
-  );
-
   // Handle loading state
   if (isLoading) {
     return (
@@ -62,9 +66,9 @@ export default function ArticleDetailScreen() {
             headerBackTitle: "Back",
           }}
         />
-        <View className="flex-1 items-center justify-center bg-gray-100">
-          <ActivityIndicator size="large" color="#ec4899" />
-          <Text className="mt-4 text-gray-600">Loading content...</Text>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.blue[500]} />
+          <Text style={styles.loadingText}>Loading content...</Text>
         </View>
       </>
     );
@@ -80,15 +84,15 @@ export default function ArticleDetailScreen() {
             headerBackTitle: "Back",
           }}
         />
-        <View className="flex-1 items-center justify-center bg-gray-100 p-5">
-          <Text className="mb-4 text-lg font-semibold text-red-600">
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>
             {error ? "Failed to load content" : "Content not found"}
           </Text>
           <TouchableOpacity
-            className="rounded-lg bg-pink-500 px-8 py-3"
+            style={styles.errorButton}
             onPress={() => router.back()}
           >
-            <Text className="text-base font-semibold text-white">Go Back</Text>
+            <Text style={styles.errorButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </>
@@ -103,8 +107,8 @@ export default function ArticleDetailScreen() {
           headerBackTitle: "Back",
         }}
       />
-      <View className="flex-1 bg-gray-100">
-        <View className="flex-row border-b border-gray-200 bg-white px-5 py-4">
+      <View style={styles.container}>
+        <View style={styles.tabContainer}>
           <TabButton
             title="Article"
             active={selectedTab === "article"}
@@ -118,25 +122,23 @@ export default function ArticleDetailScreen() {
         </View>
 
         <ScrollView
-          className="h-full flex-1 p-5"
+          style={styles.scrollView}
           showsVerticalScrollIndicator={false}
         >
-          <View className="rounded-xl border border-pink-500 bg-pink-200 p-5">
-            <Text className="text-base leading-6 text-gray-800">
+          <View style={styles.contentCard}>
+            <Text style={styles.contentText}>
               {selectedTab === "article"
                 ? content.articleContent
                 : content.originalContent}
             </Text>
           </View>
 
-          <View className="items-center">
+          <View style={styles.buttonContainer}>
             <TouchableOpacity
-              className="my-3 w-full rounded-lg bg-pink-500 px-8 py-3"
+              style={styles.backButton}
               onPress={() => router.back()}
             >
-              <Text className="text-center text-base font-semibold text-white">
-                Back
-              </Text>
+              <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -144,3 +146,89 @@ export default function ArticleDetailScreen() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.gray[100],
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.gray[100],
+  },
+  loadingText: {
+    marginTop: spacing[4] * 16,
+    color: colors.gray[600],
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.gray[100],
+    padding: spacing[5] * 16,
+  },
+  errorTitle: {
+    marginBottom: spacing[4] * 16,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+    color: colors.red[600],
+  },
+  errorButton: {
+    borderRadius: radius.md * 16,
+    backgroundColor: colors.blue[500],
+    paddingHorizontal: spacing[8] * 16,
+    paddingVertical: spacing[3] * 16,
+  },
+  errorButtonText: {
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
+    color: colors.white,
+  },
+  tabContainer: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray[200],
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing[5] * 16,
+    paddingVertical: spacing[4] * 16,
+    gap: spacing[3] * 16,
+  },
+  tabButton: {
+    borderRadius: radius.md * 16,
+  },
+  scrollView: {
+    flex: 1,
+    padding: spacing[5] * 16,
+  },
+  contentCard: {
+    borderRadius: radius.lg * 16,
+    borderWidth: 1,
+    borderColor: colors.blue[500],
+    backgroundColor: colors.blue[100],
+    padding: spacing[5] * 16,
+  },
+  contentText: {
+    fontSize: fontSize.base,
+    lineHeight: spacing[6] * 16,
+    color: colors.gray[800],
+  },
+  buttonContainer: {
+    alignItems: "center",
+  },
+  backButton: {
+    marginVertical: spacing[3] * 16,
+    width: "100%",
+    borderRadius: radius.md * 16,
+    backgroundColor: colors.blue[500],
+    paddingHorizontal: spacing[8] * 16,
+    paddingVertical: spacing[3] * 16,
+  },
+  backButtonText: {
+    textAlign: "center",
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
+    color: colors.white,
+  },
+});

@@ -1,6 +1,7 @@
 import { cx } from "class-variance-authority";
 import { twMerge } from "tailwind-merge";
 
-const cn = (...inputs: Parameters<typeof cx>) => twMerge(cx(inputs));
+export const cn = (...inputs: Parameters<typeof cx>) => twMerge(cx(inputs));
 
-export { cn };
+// Export theme tokens for React Native
+export * from "./theme-tokens";

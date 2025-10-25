@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 
 import { publicProcedure } from "../trpc";
 
-// Schema for video post
+// Schema for video/feed post (using real content)
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const VideoPostSchema = z.object({
   id: z.string(),
@@ -14,166 +14,91 @@ const VideoPostSchema = z.object({
   comments: z.number(),
   shares: z.number(),
   type: z.enum(["bill", "order", "case", "general"]),
-  emoji: z.string(),
-  backgroundColor: z.string(),
+  articlePreview: z.string(), // Preview of article content
 });
 
 export type VideoPost = z.infer<typeof VideoPostSchema>;
 
-// Constants for random generation
-const videoEmojis = [
-  "📺",
-  "🎬",
-  "🎭",
-  "🎪",
-  "🎨",
-  "🎯",
-  "🎲",
-  "🎸",
-  "🎹",
-  "🎤",
-  "🎧",
-  "🎮",
-  "🕹️",
-  "🎰",
-  "🎳",
-  "🏆",
-  "🏅",
-  "🥇",
-  "🥈",
-  "🥉",
-  "⚡",
-  "🔥",
-  "💎",
-  "⭐",
-  "🌟",
-  "✨",
-  "💫",
-  "🌙",
-  "☀️",
-  "🌈",
-  "🦄",
-  "🚀",
-  "💰",
-  "💸",
-  "🎊",
-  "🎉",
-  "🎈",
-  "🎁",
-  "🏰",
-  "🗽",
-];
-
-const backgroundColors = [
-  "#FF6B6B",
-  "#4ECDC4",
-  "#45B7D1",
-  "#96CEB4",
-  "#FFEAA7",
-  "#DDA0DD",
-  "#98D8C8",
-  "#F7DC6F",
-  "#BB8FCE",
-  "#85C1E9",
-  "#F8C471",
-  "#82E0AA",
-  "#F1948A",
-  "#85C1E9",
-  "#D7BDE2",
-  "#A9DFBF",
-  "#F9E79F",
-  "#D5A6BD",
-  "#AED6F1",
-  "#A3E4D7",
-  "#F4D03F",
-  "#D2B4DE",
-  "#7FB3D3",
-  "#76D7C4",
-  "#F7DC6F",
-  "#BB8FCE",
-  "#85C1E9",
-  "#82E0AA",
-  "#F1948A",
-  "#D7BDE2",
-];
-
-const videoTitles = [
-  "Breaking: Healthcare Reform Bill Explained",
-  "Supreme Court Decision Impact",
-  "Environmental Case Breakdown",
-  "Tax Reform Analysis",
-  "Immigration Policy Update",
-  "Education Bill Discussion",
-  "Infrastructure Investment Plan",
-  "Climate Change Legislation",
-  "Social Security Reform",
-  "Criminal Justice Update",
-  "Trade Agreement Analysis",
-  "Housing Policy Changes",
-  "Energy Independence Bill",
-  "National Security Update",
-  "Economic Recovery Plan",
-];
-
-const videoDescriptions = [
-  "TikTok style short form video describing the law/bill/action, its consequences, and views from both sides of the political spectrum",
-  'Double tap the video to "like" it (causing the algorithm which helps with keeping you interested) and swipe up to read/watch the next one',
-  "In our app, we can let you view the thing in question in 2 long-form modes: an engaging and visual/heavy AI-generated article or the original source",
-  "Comprehensive breakdown of proposed legislation and its potential impacts on different demographics",
-  "Expert analysis with public reaction and legal commentary from multiple perspectives",
-  "Deep dive into policy implications with real-world examples and case studies",
+// Import mock content from content router
+// In a real app, this would be from a shared database
+const mockContentForFeed = [
+  {
+    id: "1",
+    title: "AI Generated Short Form",
+    description:
+      "Video describing the law/bill/action, its consequences, and views from both sides of the political spectrum",
+    type: "bill" as const,
+    articlePreview:
+      "This comprehensive analysis breaks down the key components of the proposed legislation and examines its potential impact across different sectors of society.",
+  },
+  {
+    id: "2",
+    title: "Healthcare Reform Bill Analysis",
+    description:
+      "Comprehensive breakdown of the proposed healthcare legislation and its potential impacts on different demographics",
+    type: "bill" as const,
+    articlePreview:
+      "The proposed Healthcare Reform Bill represents one of the most significant legislative efforts to modernize the American healthcare system in decades.",
+  },
+  {
+    id: "3",
+    title: "Supreme Court Order Update",
+    description:
+      "Recent court ruling on constitutional matters with expert legal commentary and public reaction",
+    type: "order" as const,
+    articlePreview:
+      "In a 6-3 ruling, the Supreme Court has clarified the scope of constitutional protections in the digital age, establishing new precedents for privacy rights.",
+  },
+  {
+    id: "4",
+    title: "Environmental Case Study",
+    description:
+      "Ongoing legal case about environmental protection policies and corporate responsibility",
+    type: "case" as const,
+    articlePreview:
+      "Multiple state attorneys general have brought suit against major corporations, alleging decades of environmental harm and misleading public statements.",
+  },
 ];
 
 const authors = [
-  "@PoliticsExplained",
   "@LegalUpdates",
-  "@EcoLegal",
   "@PolicyWatch",
-  "@LawBreakdown",
   "@GovAnalysis",
   "@CitizenInfo",
-  "@PolicyHub",
-  "@LegalInsider",
-  "@BillTracker",
-  "@LawMakers",
-  "@PolicyDeep",
 ];
 
-// Generate random video data
-const generateRandomVideo = (index: number): VideoPost => {
-  const randomEmoji =
-    videoEmojis[Math.floor(Math.random() * videoEmojis.length)] ?? "📺";
-  const randomColor =
-    backgroundColors[Math.floor(Math.random() * backgroundColors.length)] ??
-    "#FF6B6B";
-  const randomTitle =
-    videoTitles[Math.floor(Math.random() * videoTitles.length)] ??
-    "Breaking News";
-  const randomDescription =
-    videoDescriptions[Math.floor(Math.random() * videoDescriptions.length)] ??
-    "Political update";
+// Shuffle array utility
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = shuffled[i];
+    if (temp !== undefined && shuffled[j] !== undefined) {
+      shuffled[i] = shuffled[j];
+      shuffled[j] = temp;
+    }
+  }
+  return shuffled;
+}
+
+// Generate feed post from content
+const generateFeedPost = (
+  content: (typeof mockContentForFeed)[number],
+  index: number,
+): VideoPost => {
   const randomAuthor =
-    authors[Math.floor(Math.random() * authors.length)] ?? "@PoliticsExplained";
-  const types: ("bill" | "order" | "case" | "general")[] = [
-    "bill",
-    "order",
-    "case",
-    "general",
-  ];
-  const randomType =
-    types[Math.floor(Math.random() * types.length)] ?? "general";
+    authors[Math.floor(Math.random() * authors.length)] ?? "@LegalUpdates";
 
   return {
-    id: `video-${index}`,
-    title: randomTitle,
-    description: randomDescription,
+    id: `${content.id}-${index}`, // Make ID unique by including index
+    title: content.title,
+    description: content.description,
     author: randomAuthor,
     likes: Math.floor(Math.random() * 50000) + 1000,
     comments: Math.floor(Math.random() * 2000) + 50,
     shares: Math.floor(Math.random() * 1000) + 10,
-    type: randomType,
-    emoji: randomEmoji,
-    backgroundColor: randomColor,
+    type: content.type,
+    articlePreview: content.articlePreview,
   };
 };
 
@@ -188,9 +113,17 @@ export const videoRouter = {
     )
     .query(({ input }) => {
       const { limit, cursor = 0 } = input;
-      const videos = Array.from({ length: limit }, (_, index) =>
-        generateRandomVideo(cursor + index),
-      );
+
+      // Create a repeating shuffled feed by cycling through content
+      const shuffledContent = shuffleArray(mockContentForFeed);
+      const videos = Array.from({ length: limit }, (_, index) => {
+        const contentIndex = (cursor + index) % shuffledContent.length;
+        const content = shuffledContent[contentIndex];
+        if (!content) {
+          throw new Error("Content not found at index");
+        }
+        return generateFeedPost(content, cursor + index);
+      });
 
       return {
         videos,

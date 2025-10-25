@@ -1,10 +1,16 @@
 import { useState } from "react";
-import { Alert, ScrollView, Switch, TouchableOpacity } from "react-native";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  TouchableOpacity,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Text, View } from "~/components/Themed";
+import { colors, fontSize, fontWeight, spacing } from "@acme/ui/theme-tokens";
 
-import "~/styles.css";
+import { Text, View } from "~/components/Themed";
 
 interface SettingsSection {
   title: string;
@@ -201,23 +207,25 @@ export default function SettingsScreen() {
         return (
           <View
             key={item.id}
-            className="flex-row items-center border-b border-gray-100 px-5 py-4"
+            style={styles.settingsItem}
+            lightColor="transparent"
+            darkColor="transparent"
           >
-            <View className="flex-1">
-              <Text className="mb-1 text-base font-medium text-gray-800">
-                {item.title}
-              </Text>
+            <View
+              style={styles.settingsItemTextContainer}
+              lightColor="transparent"
+              darkColor="transparent"
+            >
+              <Text style={styles.settingsItemTitle}>{item.title}</Text>
               {item.subtitle && (
-                <Text className="text-sm leading-5 text-gray-600">
-                  {item.subtitle}
-                </Text>
+                <Text style={styles.settingsItemSubtitle}>{item.subtitle}</Text>
               )}
             </View>
             <Switch
               value={item.value}
               onValueChange={item.onToggle}
-              trackColor={{ false: "#e0e0e0", true: "#007AFF" }}
-              thumbColor={item.value ? "#fff" : "#fff"}
+              trackColor={{ false: "#e0e0e0", true: colors.blue[500] }}
+              thumbColor={colors.white}
             />
           </View>
         );
@@ -226,20 +234,20 @@ export default function SettingsScreen() {
         return (
           <TouchableOpacity
             key={item.id}
-            className="flex-row items-center border-b border-gray-100 px-5 py-4"
+            style={styles.settingsItem}
             onPress={item.onPress}
           >
-            <View className="flex-1">
-              <Text className="mb-1 text-base font-medium text-gray-800">
-                {item.title}
-              </Text>
+            <View
+              style={styles.settingsItemTextContainer}
+              lightColor="transparent"
+              darkColor="transparent"
+            >
+              <Text style={styles.settingsItemTitle}>{item.title}</Text>
               {item.subtitle && (
-                <Text className="text-sm leading-5 text-gray-600">
-                  {item.subtitle}
-                </Text>
+                <Text style={styles.settingsItemSubtitle}>{item.subtitle}</Text>
               )}
             </View>
-            <Text className="ml-3 text-xl text-gray-300">›</Text>
+            <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>
         );
 
@@ -247,17 +255,17 @@ export default function SettingsScreen() {
         return (
           <TouchableOpacity
             key={item.id}
-            className={`flex-row items-center border-b border-gray-100 px-5 py-4 ${
-              item.id === "delete" ? "justify-center" : ""
-            }`}
+            style={[
+              styles.settingsItem,
+              item.id === "delete" && styles.deleteAction,
+            ]}
             onPress={item.onPress}
           >
             <Text
-              className={`text-base font-medium ${
-                item.id === "delete"
-                  ? "text-center text-red-500"
-                  : "text-gray-800"
-              }`}
+              style={[
+                styles.settingsItemTitle,
+                item.id === "delete" && styles.deleteText,
+              ]}
             >
               {item.title}
             </Text>
@@ -270,30 +278,123 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-gray-100">
-      <View
-        className="border-b border-gray-200 bg-white px-5 pb-5"
-        style={{ paddingTop: insets.top + 20 }}
-      >
-        <Text className="text-2xl font-bold text-gray-800">Settings</Text>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+        <Text style={styles.headerText}>Settings</Text>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {settingsSections.map((section) => (
-          <View key={section.title} className="mt-8">
-            <Text className="mx-5 mb-3 text-base font-semibold uppercase tracking-wide text-gray-600">
-              {section.title}
-            </Text>
-            <View className="border-b border-t border-gray-200 bg-white">
+          <View
+            key={section.title}
+            style={styles.section}
+            lightColor="transparent"
+            darkColor="transparent"
+          >
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <View
+              style={styles.sectionContent}
+              lightColor={colors.white}
+              darkColor={colors.navy[700]}
+            >
               {section.items.map(renderSettingsItem)}
             </View>
           </View>
         ))}
 
-        <View className="items-center py-10">
-          <Text className="text-sm text-gray-400">Version 1.0.0</Text>
+        <View
+          style={styles.versionContainer}
+          lightColor="transparent"
+          darkColor="transparent"
+        >
+          <Text style={styles.versionText}>Version 1.0.0</Text>
         </View>
       </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.gray[100],
+  },
+  header: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray[200],
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing[5] * 16,
+    paddingBottom: spacing[5] * 16,
+  },
+  headerText: {
+    fontSize: fontSize["2xl"],
+    fontWeight: fontWeight.bold,
+    color: colors.gray[800],
+  },
+  scrollView: {
+    flex: 1,
+  },
+  section: {
+    marginTop: spacing[8] * 16,
+  },
+  sectionTitle: {
+    marginHorizontal: spacing[5] * 16,
+    marginBottom: spacing[3] * 16,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    color: colors.gray[600],
+  },
+  sectionContent: {
+    borderBottomWidth: 1,
+    borderTopWidth: 1,
+    borderColor: colors.gray[200],
+    backgroundColor: colors.white,
+  },
+  settingsItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray[100],
+    paddingHorizontal: spacing[5] * 16,
+    paddingVertical: spacing[4] * 16,
+  },
+  settingsItemTextContainer: {
+    flex: 1,
+  },
+  settingsItemTitle: {
+    marginBottom: spacing[1] * 16,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.medium,
+    color: colors.gray[800],
+  },
+  settingsItemSubtitle: {
+    fontSize: fontSize.sm,
+    lineHeight: spacing[5] * 16,
+    color: colors.gray[600],
+  },
+  chevron: {
+    marginLeft: spacing[3] * 16,
+    fontSize: fontSize.xl,
+    color: colors.gray[300],
+  },
+  deleteAction: {
+    justifyContent: "center",
+  },
+  deleteText: {
+    textAlign: "center",
+    color: colors.red[500],
+  },
+  versionContainer: {
+    alignItems: "center",
+    paddingVertical: spacing[10] * 16,
+  },
+  versionText: {
+    fontSize: fontSize.sm,
+    color: colors.gray[400],
+  },
+});

@@ -1,11 +1,14 @@
-import React from "react";
+import type React from "react";
+import { useColorScheme } from "react-native";
 import { Tabs } from "expo-router";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { FontAwesome } from "@expo/vector-icons";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { useColorScheme } from "nativewind";
 
-import Colors from "~/constants/Colors";
+import { colors } from "@acme/ui/theme-tokens";
+
 import { queryClient } from "~/utils/api";
+
+import "../../styles.css";
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -16,18 +19,21 @@ function TabBarIcon(props: {
 }
 
 export default function TabLayout() {
-  const { colorScheme } = useColorScheme();
+  const colorScheme = useColorScheme();
+  const tintColor =
+    colorScheme === "dark" ? colors.blue[400] : colors.blue[500];
 
   return (
     <QueryClientProvider client={queryClient}>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+          tabBarActiveTintColor: tintColor,
           // Disable the static render of the header on web
           // to prevent a hydration error in React Navigation v6.
           headerShown: false,
         }}
       >
+        {/*<SafeAreaView>*/}
         <Tabs.Screen
           name="index"
           options={{
@@ -54,6 +60,7 @@ export default function TabLayout() {
             headerShown: false,
           }}
         />
+        {/*</SafeAreaView>*/}
       </Tabs>
     </QueryClientProvider>
   );

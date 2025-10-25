@@ -3,38 +3,36 @@
  * https://docs.expo.io/guides/color-schemes/
  */
 
-import { Text as DefaultText, View as RNView } from "react-native";
-import { useColorScheme } from "nativewind";
+import {
+  Text as DefaultText,
+  View as RNView,
+  useColorScheme,
+} from "react-native";
 
-// import {
-//   LiquidGlassView,
-//   LiquidGlassContainerView,
-//   isLiquidGlassSupported,
-// } from "@callstack/liquid-glass";
-
-import Colors from "~/constants/Colors";
+import { darkTheme, lightTheme } from "@acme/ui/theme-tokens";
 
 interface ThemeProps {
   lightColor?: string;
   darkColor?: string;
 }
 const DefaultView = RNView;
-// const DefaultView = isLiquidGlassSupported ? LiquidGlassView : RNView;
 export type TextProps = ThemeProps & DefaultText["props"];
 export type ViewProps = ThemeProps & React.ComponentProps<typeof DefaultView>;
 
+type ThemeColorKey = keyof typeof lightTheme;
+
 export function useThemeColor(
   props: { light?: string; dark?: string },
-  colorName: keyof typeof Colors.light,
+  colorName: ThemeColorKey,
 ) {
-  const { colorScheme } = useColorScheme();
-  const theme = colorScheme ?? "light";
-  const colorFromProps = props[theme];
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === "dark" ? darkTheme : lightTheme;
+  const colorFromProps = colorScheme === "dark" ? props.dark : props.light;
 
   if (colorFromProps) {
     return colorFromProps;
   } else {
-    return Colors[theme][colorName];
+    return theme[colorName];
   }
 }
 
