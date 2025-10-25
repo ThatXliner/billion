@@ -165,15 +165,17 @@ export function PostCard(props: {
   );
 
   return (
-    <div className="bg-card [box-shadow:var(--shadow-sm)] flex flex-row rounded-lg p-4 transition-all hover:[box-shadow:var(--shadow-md)]">
+    <div className="bg-card flex flex-row rounded-lg p-4 [box-shadow:var(--shadow-sm)] transition-all hover:[box-shadow:var(--shadow-md)]">
       <div className="grow">
         <h2 className="text-primary text-2xl font-bold">{props.post.title}</h2>
-        <p className="text-card-foreground mt-2 text-sm">{props.post.content}</p>
+        <p className="text-card-foreground mt-2 text-sm">
+          {props.post.content}
+        </p>
       </div>
       <div>
         <Button
           variant="ghost"
-          className="text-primary cursor-pointer text-sm font-bold uppercase hover:bg-accent/50"
+          className="text-primary hover:bg-accent/50 cursor-pointer text-sm font-bold uppercase"
           onClick={() => deletePost.mutate(props.post.id)}
         >
           Delete
@@ -186,7 +188,7 @@ export function PostCard(props: {
 export function PostCardSkeleton(props: { pulse?: boolean }) {
   const { pulse = true } = props;
   return (
-    <div className="bg-card [box-shadow:var(--shadow-sm)] flex flex-row rounded-lg p-4">
+    <div className="bg-card flex flex-row rounded-lg p-4 [box-shadow:var(--shadow-sm)]">
       <div className="grow">
         <h2
           className={cn(

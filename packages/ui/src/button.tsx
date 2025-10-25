@@ -10,13 +10,13 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm active:[box-shadow:var(--shadow-inset-sm)] active:scale-[0.98]",
+          "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm active:scale-[0.98] active:[box-shadow:var(--shadow-inset-sm)]",
         destructive:
-          "bg-destructive hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60 shadow-sm active:[box-shadow:var(--shadow-inset-sm)] active:scale-[0.98] text-white",
+          "bg-destructive hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60 text-white shadow-sm active:scale-[0.98] active:[box-shadow:var(--shadow-inset-sm)]",
         outline:
-          "bg-background hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 shadow-sm active:[box-shadow:var(--shadow-inset-sm)] active:scale-[0.98] border",
+          "bg-background hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 border shadow-sm active:scale-[0.98] active:[box-shadow:var(--shadow-inset-sm)]",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm active:[box-shadow:var(--shadow-inset-sm)] active:scale-[0.98]",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm active:scale-[0.98] active:[box-shadow:var(--shadow-inset-sm)]",
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 active:bg-accent/80",
         link: "text-primary underline-offset-4 hover:underline",

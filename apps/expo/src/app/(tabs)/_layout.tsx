@@ -20,7 +20,8 @@ function TabBarIcon(props: {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const tintColor = colorScheme === "dark" ? colors.blue[400] : colors.blue[500];
+  const tintColor =
+    colorScheme === "dark" ? colors.blue[400] : colors.blue[500];
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -5,12 +5,7 @@ import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@acme/ui/button-native";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@acme/ui/card-native";
+import { Card, CardContent } from "@acme/ui/card-native";
 import {
   colors,
   fontSize,

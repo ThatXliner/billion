@@ -35,14 +35,11 @@
   --radius: 0.75rem;
   /* Neumorphic shadows - subtle dual-light-source */
   --shadow-2xs:
-    2px 2px 4px rgba(163, 177, 198, 0.4),
-    -2px -2px 4px rgba(255, 255, 255, 0.8);
+    2px 2px 4px rgba(163, 177, 198, 0.4), -2px -2px 4px rgba(255, 255, 255, 0.8);
   --shadow-xs:
-    3px 3px 6px rgba(163, 177, 198, 0.4),
-    -3px -3px 6px rgba(255, 255, 255, 0.8);
+    3px 3px 6px rgba(163, 177, 198, 0.4), -3px -3px 6px rgba(255, 255, 255, 0.8);
   --shadow-sm:
-    4px 4px 8px rgba(163, 177, 198, 0.5),
-    -4px -4px 8px rgba(255, 255, 255, 0.9);
+    4px 4px 8px rgba(163, 177, 198, 0.5), -4px -4px 8px rgba(255, 255, 255, 0.9);
   --shadow:
     5px 5px 10px rgba(163, 177, 198, 0.5),
     -5px -5px 10px rgba(255, 255, 255, 0.9);
@@ -50,8 +47,7 @@
     6px 6px 12px rgba(163, 177, 198, 0.55),
     -6px -6px 12px rgba(255, 255, 255, 0.95);
   --shadow-lg:
-    8px 8px 16px rgba(163, 177, 198, 0.6),
-    -8px -8px 16px rgba(255, 255, 255, 1);
+    8px 8px 16px rgba(163, 177, 198, 0.6), -8px -8px 16px rgba(255, 255, 255, 1);
   --shadow-xl:
     10px 10px 20px rgba(163, 177, 198, 0.65),
     -10px -10px 20px rgba(255, 255, 255, 1);
@@ -105,29 +101,21 @@
     --radius: 0.75rem;
     /* Dark mode neumorphic shadows - higher opacity */
     --shadow-2xs:
-      2px 2px 4px rgba(0, 0, 0, 0.6),
-      -2px -2px 4px rgba(35, 60, 90, 0.3);
+      2px 2px 4px rgba(0, 0, 0, 0.6), -2px -2px 4px rgba(35, 60, 90, 0.3);
     --shadow-xs:
-      3px 3px 6px rgba(0, 0, 0, 0.6),
-      -3px -3px 6px rgba(35, 60, 90, 0.3);
+      3px 3px 6px rgba(0, 0, 0, 0.6), -3px -3px 6px rgba(35, 60, 90, 0.3);
     --shadow-sm:
-      4px 4px 8px rgba(0, 0, 0, 0.7),
-      -4px -4px 8px rgba(35, 60, 90, 0.35);
+      4px 4px 8px rgba(0, 0, 0, 0.7), -4px -4px 8px rgba(35, 60, 90, 0.35);
     --shadow:
-      5px 5px 10px rgba(0, 0, 0, 0.7),
-      -5px -5px 10px rgba(35, 60, 90, 0.35);
+      5px 5px 10px rgba(0, 0, 0, 0.7), -5px -5px 10px rgba(35, 60, 90, 0.35);
     --shadow-md:
-      6px 6px 12px rgba(0, 0, 0, 0.75),
-      -6px -6px 12px rgba(35, 60, 90, 0.4);
+      6px 6px 12px rgba(0, 0, 0, 0.75), -6px -6px 12px rgba(35, 60, 90, 0.4);
     --shadow-lg:
-      8px 8px 16px rgba(0, 0, 0, 0.8),
-      -8px -8px 16px rgba(35, 60, 90, 0.45);
+      8px 8px 16px rgba(0, 0, 0, 0.8), -8px -8px 16px rgba(35, 60, 90, 0.45);
     --shadow-xl:
-      10px 10px 20px rgba(0, 0, 0, 0.85),
-      -10px -10px 20px rgba(35, 60, 90, 0.5);
+      10px 10px 20px rgba(0, 0, 0, 0.85), -10px -10px 20px rgba(35, 60, 90, 0.5);
     --shadow-2xl:
-      12px 12px 24px rgba(0, 0, 0, 0.9),
-      -12px -12px 24px rgba(35, 60, 90, 0.55);
+      12px 12px 24px rgba(0, 0, 0, 0.9), -12px -12px 24px rgba(35, 60, 90, 0.55);
     /* Inset shadows for dark mode */
     --shadow-inset:
       inset 3px 3px 6px rgba(0, 0, 0, 0.7),
