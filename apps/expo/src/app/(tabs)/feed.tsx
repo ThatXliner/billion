@@ -94,15 +94,25 @@ export default function FeedScreen() {
   };
 
   const renderVideoItem = ({ item }: { item: VideoPost; index: number }) => (
-    <View style={[styles.videoContainer, { height: screenHeight }]}>
+    <View
+      style={[styles.videoContainer, { height: screenHeight }]}
+      lightColor={colors.white}
+      darkColor={colors.navy[900]}
+    >
       {/* Content Card */}
-      <View style={styles.contentCard}>
+      <View
+        style={styles.contentCard}
+        lightColor={colors.white}
+        darkColor={colors.navy[700]}
+      >
         {/* Type Badge */}
         <View
           style={[
             styles.typeBadge,
             { backgroundColor: getTypeBadgeColor(item.type) },
           ]}
+          lightColor="transparent"
+          darkColor="transparent"
         >
           <Text style={styles.typeBadgeText}>{item.type.toUpperCase()}</Text>
         </View>
@@ -137,8 +147,14 @@ export default function FeedScreen() {
       {/* Action Buttons */}
       <View
         style={[styles.bottomOverlay, { paddingBottom: insets.bottom + 80 }]}
+        lightColor="transparent"
+        darkColor="transparent"
       >
-        <View style={styles.actionsContainer}>
+        <View
+          style={styles.actionsContainer}
+          lightColor="transparent"
+          darkColor="transparent"
+        >
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => handleLike(item.id)}
