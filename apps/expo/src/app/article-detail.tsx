@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 
 import { Text, View } from "~/components/Themed";
-import { trpc } from "~/utils/api";
 import { colors } from "~/constants/Colors";
+import { trpc } from "~/utils/api";
 
 export default function ArticleDetailScreen() {
   const router = useRouter();
@@ -35,10 +40,18 @@ export default function ArticleDetailScreen() {
     onPress: () => void;
   }) => (
     <TouchableOpacity
-      style={[styles.tabButton, active ? styles.tabButtonActive : styles.tabButtonInactive]}
+      style={[
+        styles.tabButton,
+        active ? styles.tabButtonActive : styles.tabButtonInactive,
+      ]}
       onPress={onPress}
     >
-      <Text style={[styles.tabButtonText, active ? styles.tabButtonTextActive : styles.tabButtonTextInactive]}>
+      <Text
+        style={[
+          styles.tabButtonText,
+          active ? styles.tabButtonTextActive : styles.tabButtonTextInactive,
+        ]}
+      >
         {title}
       </Text>
     </TouchableOpacity>
@@ -126,9 +139,7 @@ export default function ArticleDetailScreen() {
               style={styles.backButton}
               onPress={() => router.back()}
             >
-              <Text style={styles.backButtonText}>
-                Back
-              </Text>
+              <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

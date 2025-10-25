@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Switch, TouchableOpacity } from "react-native";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  TouchableOpacity,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Text, View } from "~/components/Themed";
@@ -263,7 +269,10 @@ export default function SettingsScreen() {
         <Text style={styles.headerText}>Settings</Text>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {settingsSections.map((section) => (
           <View key={section.title} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
