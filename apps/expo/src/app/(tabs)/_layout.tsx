@@ -7,6 +7,10 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import Colors from "~/constants/Colors";
 import { queryClient } from "~/utils/api";
 
+import "../../styles.css";
+
+import { SafeAreaView } from "react-native-safe-area-context";
+
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>["name"];
@@ -28,6 +32,7 @@ export default function TabLayout() {
           headerShown: false,
         }}
       >
+        {/*<SafeAreaView>*/}
         <Tabs.Screen
           name="index"
           options={{
@@ -54,6 +59,7 @@ export default function TabLayout() {
             headerShown: false,
           }}
         />
+        {/*</SafeAreaView>*/}
       </Tabs>
     </QueryClientProvider>
   );

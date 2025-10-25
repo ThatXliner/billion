@@ -93,7 +93,7 @@ export default function BrowseScreen() {
   const [selectedTab, setSelectedTab] = useState<
     "all" | "bill" | "order" | "case"
   >("all");
-
+  // verifyInstallation();
   // Fetch content from tRPC
   const {
     data: content,
@@ -110,8 +110,8 @@ export default function BrowseScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-        <Text className="text-2xl">Browse</Text>
-        {/*<Text style={styles.headerText}>Browse</Text>*/}
+        {/*<Text className="text-2xl text-red-500">Browse</Text>*/}
+        <Text style={styles.headerText}>Browse</Text>
       </View>
 
       <View style={styles.tabContainer}>

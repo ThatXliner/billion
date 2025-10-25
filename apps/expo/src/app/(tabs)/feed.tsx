@@ -11,8 +11,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { Text, View } from "~/components/Themed";
-import { trpc } from "~/utils/api";
 import { colors } from "~/constants/Colors";
+import { trpc } from "~/utils/api";
 
 const { height: screenHeight } = Dimensions.get("window");
 
@@ -73,14 +73,19 @@ export default function FeedScreen() {
 
   const renderVideoItem = ({ item }: { item: VideoPost; index: number }) => (
     <View
-      style={[styles.videoContainer, { height: screenHeight, backgroundColor: item.backgroundColor }]}
+      style={[
+        styles.videoContainer,
+        { height: screenHeight, backgroundColor: item.backgroundColor },
+      ]}
     >
       <View style={styles.videoCenter}>
         <Text style={styles.emoji}>{item.emoji}</Text>
         <Text style={styles.videoTitle}>{item.title}</Text>
       </View>
 
-      <View style={[styles.bottomOverlay, { paddingBottom: insets.bottom + 80 }]}>
+      <View
+        style={[styles.bottomOverlay, { paddingBottom: insets.bottom + 80 }]}
+      >
         <View style={styles.descriptionContainer}>
           <Text style={styles.description}>{item.description}</Text>
           <Text style={styles.author}>{item.author}</Text>
@@ -91,7 +96,12 @@ export default function FeedScreen() {
             style={styles.actionButton}
             onPress={() => handleLike(item.id)}
           >
-            <Text style={[styles.actionIcon, likedVideos.has(item.id) && styles.actionIconLiked]}>
+            <Text
+              style={[
+                styles.actionIcon,
+                likedVideos.has(item.id) && styles.actionIconLiked,
+              ]}
+            >
               {likedVideos.has(item.id) ? "❤️" : "🤍"}
             </Text>
             <Text style={styles.actionText}>
@@ -193,6 +203,7 @@ const styles = StyleSheet.create({
   videoContainer: {
     position: "relative",
     width: "100%",
+    height: "100%",
   },
   videoCenter: {
     flex: 1,
@@ -241,10 +252,12 @@ const styles = StyleSheet.create({
   actionButton: {
     marginBottom: 20,
     alignItems: "center",
+    minWidth: 50,
   },
   actionIcon: {
     marginBottom: 4,
     fontSize: 30,
+    lineHeight: 36,
   },
   actionIconLiked: {
     transform: [{ scale: 1.25 }],
@@ -252,6 +265,7 @@ const styles = StyleSheet.create({
   actionText: {
     textAlign: "center",
     fontSize: 12,
+    lineHeight: 16,
     color: colors.white,
   },
 });
