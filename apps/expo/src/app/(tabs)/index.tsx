@@ -38,11 +38,19 @@ const ContentCardComponent = ({ item }: { item: ContentCard }) => {
       }}
     >
       <CardContent style={styles.cardContent}>
-        <View style={styles.cardTextContainer}>
+        <View
+          style={styles.cardTextContainer}
+          lightColor="transparent"
+          darkColor="transparent"
+        >
           <Text style={styles.cardTitle}>{item.title}</Text>
           <Text style={styles.cardDescription}>{item.description}</Text>
         </View>
-        <View style={styles.cardButtonContainer}>
+        <View
+          style={styles.cardButtonContainer}
+          lightColor="transparent"
+          darkColor="transparent"
+        >
           <Button
             variant="default"
             size="sm"

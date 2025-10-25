@@ -205,8 +205,17 @@ export default function SettingsScreen() {
     switch (item.type) {
       case "toggle":
         return (
-          <View key={item.id} style={styles.settingsItem}>
-            <View style={styles.settingsItemTextContainer}>
+          <View
+            key={item.id}
+            style={styles.settingsItem}
+            lightColor="transparent"
+            darkColor="transparent"
+          >
+            <View
+              style={styles.settingsItemTextContainer}
+              lightColor="transparent"
+              darkColor="transparent"
+            >
               <Text style={styles.settingsItemTitle}>{item.title}</Text>
               {item.subtitle && (
                 <Text style={styles.settingsItemSubtitle}>{item.subtitle}</Text>
@@ -228,7 +237,11 @@ export default function SettingsScreen() {
             style={styles.settingsItem}
             onPress={item.onPress}
           >
-            <View style={styles.settingsItemTextContainer}>
+            <View
+              style={styles.settingsItemTextContainer}
+              lightColor="transparent"
+              darkColor="transparent"
+            >
               <Text style={styles.settingsItemTitle}>{item.title}</Text>
               {item.subtitle && (
                 <Text style={styles.settingsItemSubtitle}>{item.subtitle}</Text>
@@ -275,15 +288,28 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {settingsSections.map((section) => (
-          <View key={section.title} style={styles.section}>
+          <View
+            key={section.title}
+            style={styles.section}
+            lightColor="transparent"
+            darkColor="transparent"
+          >
             <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.sectionContent}>
+            <View
+              style={styles.sectionContent}
+              lightColor={colors.white}
+              darkColor={colors.navy[700]}
+            >
               {section.items.map(renderSettingsItem)}
             </View>
           </View>
         ))}
 
-        <View style={styles.versionContainer}>
+        <View
+          style={styles.versionContainer}
+          lightColor="transparent"
+          darkColor="transparent"
+        >
           <Text style={styles.versionText}>Version 1.0.0</Text>
         </View>
       </ScrollView>
