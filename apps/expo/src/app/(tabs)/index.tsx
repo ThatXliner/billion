@@ -3,17 +3,16 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
+  StyleSheet,
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 
 import { Text, View } from "~/components/Themed";
+import { colors } from "~/constants/Colors";
 import { trpc } from "~/utils/api";
-
-import "~/styles.css";
-
-import { useQuery } from "@tanstack/react-query";
 
 interface ContentCard {
   id: string;
@@ -22,56 +21,46 @@ interface ContentCard {
   type: "bill" | "order" | "case" | "general";
   isAIGenerated: boolean;
 }
+
 const ContentCardComponent = ({ item }: { item: ContentCard }) => {
   const router = useRouter();
-  const lightColor = "bg-blue-300";
-  // const lightColor = "bg-gray-200";
+  const lightColor = colors.blue300;
+
   return (
     <Pressable
       onPress={() => {
         router.push(`/article-detail?id=${item.id}`);
       }}
-      className={`${lightColor} mb-4 rounded-xl p-2`}
-      // style={styles.neumorphic}
+      style={styles.card}
     >
-      <View className="flex-row items-center p-2" lightColor={lightColor}>
-        <View className="flex-1 pr-3" lightColor={lightColor}>
-          <Text className="mb-2 text-base font-bold text-gray-800">
-            {item.title}
-          </Text>
-          <Text className="mb-4 text-sm leading-5 text-gray-600">
-            {item.description}
-          </Text>
+      <View style={styles.cardContent} lightColor={lightColor}>
+        <View style={styles.cardTextContainer} lightColor={lightColor}>
+          <Text style={styles.cardTitle}>{item.title}</Text>
+          <Text style={styles.cardDescription}>{item.description}</Text>
         </View>
-        <View className="w-1/3 flex-col" lightColor={lightColor}>
+        <View style={styles.cardButtonContainer} lightColor={lightColor}>
           <TouchableOpacity
-            className="mb-2 bg-green-600 px-4 py-2"
-            // For some reason the `rounded-` class is broken
-            style={{ borderRadius: 10 }}
+            style={styles.watchButton}
             onPress={() => {
               router.push(`/article-detail?id=${item.id}`);
             }}
           >
-            <Text className="text-center text-sm font-medium text-white">
-              Watch Short
-            </Text>
+            <Text style={styles.buttonText}>Watch Short</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className="bg-orange-500 px-4 py-2"
-            style={{ borderRadius: 10 }}
+            style={styles.readButton}
             onPress={() => {
               router.push(`/article-detail?id=${item.id}`);
             }}
           >
-            <Text className="text-center text-sm font-medium text-white">
-              Read More
-            </Text>
+            <Text style={styles.buttonText}>Read More</Text>
           </TouchableOpacity>
         </View>
       </View>
     </Pressable>
   );
 };
+
 const TabButton = ({
   title,
   active,
@@ -82,15 +71,17 @@ const TabButton = ({
   onPress: () => void;
 }) => (
   <TouchableOpacity
-    className={`mr-3 rounded-2xl px-4 py-2 ${
-      active ? "bg-blue-500" : "bg-gray-100"
-    }`}
+    style={[
+      styles.tabButton,
+      active ? styles.tabButtonActive : styles.tabButtonInactive,
+    ]}
     onPress={onPress}
   >
     <Text
-      className={`text-sm font-medium ${
-        active ? "text-white" : "text-gray-600"
-      }`}
+      style={[
+        styles.tabButtonText,
+        active ? styles.tabButtonTextActive : styles.tabButtonTextInactive,
+      ]}
     >
       {title}
     </Text>
@@ -102,7 +93,7 @@ export default function BrowseScreen() {
   const [selectedTab, setSelectedTab] = useState<
     "all" | "bill" | "order" | "case"
   >("all");
-
+  // verifyInstallation();
   // Fetch content from tRPC
   const {
     data: content,
@@ -117,15 +108,13 @@ export default function BrowseScreen() {
   const filteredContent = content ?? [];
 
   return (
-    <View className="flex-1 bg-gray-100">
-      <View
-        className="bg-white px-5 pb-5"
-        style={{ paddingTop: insets.top + 20 }}
-      >
-        <Text className="text-2xl font-bold text-gray-800">Browse</Text>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+        {/*<Text className="text-2xl text-red-500">Browse</Text>*/}
+        <Text style={styles.headerText}>Browse</Text>
       </View>
 
-      <View className="flex-row border-b border-gray-200 bg-white px-5 py-4">
+      <View style={styles.tabContainer}>
         <TabButton
           title="All"
           active={selectedTab === "all"}
@@ -148,14 +137,17 @@ export default function BrowseScreen() {
         />
       </View>
 
-      <ScrollView className="flex-1 p-5" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {isLoading ? (
-          <View className="flex-1 items-center justify-center py-10">
-            <ActivityIndicator size="large" color="#3b82f6" />
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={colors.blue500} />
           </View>
         ) : error ? (
-          <View className="flex-1 items-center justify-center py-10">
-            <Text className="text-red-500">Error loading content</Text>
+          <View style={styles.centerContainer}>
+            <Text style={styles.errorText}>Error loading content</Text>
           </View>
         ) : (
           filteredContent.map((item) => (
@@ -166,3 +158,113 @@ export default function BrowseScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.gray100,
+  },
+  header: {
+    backgroundColor: colors.white,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  headerText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: colors.gray800,
+  },
+  tabContainer: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+    backgroundColor: colors.white,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  tabButton: {
+    marginRight: 12,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  tabButtonActive: {
+    backgroundColor: colors.blue500,
+  },
+  tabButtonInactive: {
+    backgroundColor: colors.gray100,
+  },
+  tabButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  tabButtonTextActive: {
+    color: colors.white,
+  },
+  tabButtonTextInactive: {
+    color: colors.gray600,
+  },
+  scrollView: {
+    flex: 1,
+    padding: 20,
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  errorText: {
+    color: colors.red500,
+  },
+  card: {
+    backgroundColor: colors.blue300,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 8,
+  },
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 8,
+  },
+  cardTextContainer: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  cardTitle: {
+    marginBottom: 8,
+    fontSize: 16,
+    fontWeight: "bold",
+    color: colors.gray800,
+  },
+  cardDescription: {
+    marginBottom: 16,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.gray600,
+  },
+  cardButtonContainer: {
+    width: "33.333%",
+    flexDirection: "column",
+  },
+  watchButton: {
+    marginBottom: 8,
+    backgroundColor: colors.green600,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  readButton: {
+    backgroundColor: colors.orange500,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  buttonText: {
+    textAlign: "center",
+    fontSize: 14,
+    fontWeight: "500",
+    color: colors.white,
+  },
+});

@@ -4,16 +4,15 @@ import {
   Dimensions,
   FlatList,
   StatusBar,
+  StyleSheet,
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { Text, View } from "~/components/Themed";
+import { colors } from "~/constants/Colors";
 import { trpc } from "~/utils/api";
-
-import "~/styles.css";
-
-import { useInfiniteQuery } from "@tanstack/react-query";
 
 const { height: screenHeight } = Dimensions.get("window");
 
@@ -29,8 +28,6 @@ interface VideoPost {
   emoji: string;
   backgroundColor: string;
 }
-
-// All mock data generation has been moved to the tRPC video router
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
@@ -76,61 +73,55 @@ export default function FeedScreen() {
 
   const renderVideoItem = ({ item }: { item: VideoPost; index: number }) => (
     <View
-      className="relative w-full"
-      style={{ height: screenHeight, backgroundColor: item.backgroundColor }}
+      style={[
+        styles.videoContainer,
+        { height: screenHeight, backgroundColor: item.backgroundColor },
+      ]}
     >
-      <View className="flex-1 items-center justify-center">
-        <Text style={{ fontSize: 96, lineHeight: 120 }}>{item.emoji}</Text>
-        <Text className="px-5 text-center text-xl font-bold text-white">
-          {item.title}
-        </Text>
+      <View style={styles.videoCenter}>
+        <Text style={styles.emoji}>{item.emoji}</Text>
+        <Text style={styles.videoTitle}>{item.title}</Text>
       </View>
 
       <View
-        className="absolute bottom-0 left-0 right-0 flex-row p-5"
-        style={{ paddingBottom: insets.bottom + 80 }}
+        style={[styles.bottomOverlay, { paddingBottom: insets.bottom + 80 }]}
       >
-        <View className="mr-5 flex-1">
-          <Text className="mb-3 text-base leading-6 text-white">
-            {item.description}
-          </Text>
-          <Text className="text-sm font-semibold text-white opacity-80">
-            {item.author}
-          </Text>
+        <View style={styles.descriptionContainer}>
+          <Text style={styles.description}>{item.description}</Text>
+          <Text style={styles.author}>{item.author}</Text>
         </View>
 
-        <View className="items-center justify-end">
+        <View style={styles.actionsContainer}>
           <TouchableOpacity
-            className="mb-5 items-center"
+            style={styles.actionButton}
             onPress={() => handleLike(item.id)}
           >
             <Text
-              className={`mb-1 text-3xl ${likedVideos.has(item.id) ? "scale-125" : ""}`}
+              style={[
+                styles.actionIcon,
+                likedVideos.has(item.id) && styles.actionIconLiked,
+              ]}
             >
               {likedVideos.has(item.id) ? "❤️" : "🤍"}
             </Text>
-            <Text className="text-center text-xs text-white">
+            <Text style={styles.actionText}>
               {item.likes + (likedVideos.has(item.id) ? 1 : 0)}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity className="mb-5 items-center">
-            <Text className="mb-1 text-3xl">💬</Text>
-            <Text className="text-center text-xs text-white">
-              {item.comments}
-            </Text>
+          <TouchableOpacity style={styles.actionButton}>
+            <Text style={styles.actionIcon}>💬</Text>
+            <Text style={styles.actionText}>{item.comments}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity className="mb-5 items-center">
-            <Text className="mb-1 text-3xl">📤</Text>
-            <Text className="text-center text-xs text-white">
-              {item.shares}
-            </Text>
+          <TouchableOpacity style={styles.actionButton}>
+            <Text style={styles.actionIcon}>📤</Text>
+            <Text style={styles.actionText}>{item.shares}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity className="mb-5 items-center">
-            <Text className="mb-1 text-3xl">🔗</Text>
-            <Text className="text-center text-xs text-white">Watch Short</Text>
+          <TouchableOpacity style={styles.actionButton}>
+            <Text style={styles.actionIcon}>🔗</Text>
+            <Text style={styles.actionText}>Watch Short</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -140,10 +131,10 @@ export default function FeedScreen() {
   // Show loading state while fetching initial videos
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-black">
+      <View style={styles.loadingContainer}>
         <StatusBar hidden />
-        <ActivityIndicator size="large" color="#ffffff" />
-        <Text className="mt-4 text-white">Loading videos...</Text>
+        <ActivityIndicator size="large" color={colors.white} />
+        <Text style={styles.loadingText}>Loading videos...</Text>
       </View>
     );
   }
@@ -151,16 +142,16 @@ export default function FeedScreen() {
   // Show error state if fetching failed
   if (error) {
     return (
-      <View className="flex-1 items-center justify-center bg-black">
+      <View style={styles.loadingContainer}>
         <StatusBar hidden />
-        <Text className="text-red-500">Error loading videos</Text>
-        <Text className="mt-2 text-white">Please try again later</Text>
+        <Text style={styles.errorText}>Error loading videos</Text>
+        <Text style={styles.errorSubtext}>Please try again later</Text>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-black">
+    <View style={styles.container}>
       <StatusBar hidden />
       <FlatList
         data={videos}
@@ -186,3 +177,95 @@ export default function FeedScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.black,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.black,
+  },
+  loadingText: {
+    marginTop: 16,
+    color: colors.white,
+  },
+  errorText: {
+    color: colors.red500,
+  },
+  errorSubtext: {
+    marginTop: 8,
+    color: colors.white,
+  },
+  videoContainer: {
+    position: "relative",
+    width: "100%",
+    height: "100%",
+  },
+  videoCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emoji: {
+    fontSize: 96,
+    lineHeight: 120,
+  },
+  videoTitle: {
+    paddingHorizontal: 20,
+    textAlign: "center",
+    fontSize: 20,
+    fontWeight: "bold",
+    color: colors.white,
+  },
+  bottomOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    padding: 20,
+  },
+  descriptionContainer: {
+    marginRight: 20,
+    flex: 1,
+  },
+  description: {
+    marginBottom: 12,
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.white,
+  },
+  author: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.white,
+    opacity: 0.8,
+  },
+  actionsContainer: {
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  actionButton: {
+    marginBottom: 20,
+    alignItems: "center",
+    minWidth: 50,
+  },
+  actionIcon: {
+    marginBottom: 4,
+    fontSize: 30,
+    lineHeight: 36,
+  },
+  actionIconLiked: {
+    transform: [{ scale: 1.25 }],
+  },
+  actionText: {
+    textAlign: "center",
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.white,
+  },
+});

@@ -38,6 +38,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   experiments: {
     tsconfigPaths: true,
     typedRoutes: true,
+    reactCanary: true,
+    reactCompiler: true,
   },
   plugins: [
     "expo-router",
@@ -55,9 +57,4 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
   ],
-  extra: {
-    eas: {
-      projectId: "c38bc8f8-f82c-4a45-b819-d62bd366ac8b",
-    },
-  },
 });

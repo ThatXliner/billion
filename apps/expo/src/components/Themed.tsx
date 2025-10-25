@@ -3,8 +3,11 @@
  * https://docs.expo.io/guides/color-schemes/
  */
 
-import { Text as DefaultText, View as RNView } from "react-native";
-import { useColorScheme } from "nativewind";
+import {
+  Text as DefaultText,
+  View as RNView,
+  useColorScheme,
+} from "react-native";
 
 // import {
 //   LiquidGlassView,
@@ -27,9 +30,9 @@ export function useThemeColor(
   props: { light?: string; dark?: string },
   colorName: keyof typeof Colors.light,
 ) {
-  const { colorScheme } = useColorScheme();
+  const colorScheme = useColorScheme();
   const theme = colorScheme ?? "light";
-  const colorFromProps = props[theme];
+  const colorFromProps = theme === "light" ? props.light : props.dark;
 
   if (colorFromProps) {
     return colorFromProps;

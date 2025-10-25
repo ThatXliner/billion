@@ -1,14 +1,43 @@
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, TouchableOpacity } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-
-import { Text, View } from "~/components/Themed";
-import { trpc } from "~/utils/api";
-
-import "~/styles.css";
-
 import { useQuery } from "@tanstack/react-query";
 
+import { Text, View } from "~/components/Themed";
+import { colors } from "~/constants/Colors";
+import { trpc } from "~/utils/api";
+
+const TabButton = ({
+  title,
+  active,
+  onPress,
+}: {
+  title: string;
+  active: boolean;
+  onPress: () => void;
+}) => (
+  <TouchableOpacity
+    style={[
+      styles.tabButton,
+      active ? styles.tabButtonActive : styles.tabButtonInactive,
+    ]}
+    onPress={onPress}
+  >
+    <Text
+      style={[
+        styles.tabButtonText,
+        active ? styles.tabButtonTextActive : styles.tabButtonTextInactive,
+      ]}
+    >
+      {title}
+    </Text>
+  </TouchableOpacity>
+);
 export default function ArticleDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,31 +56,6 @@ export default function ArticleDetailScreen() {
     enabled: !!id,
   });
 
-  const TabButton = ({
-    title,
-    active,
-    onPress,
-  }: {
-    title: string;
-    active: boolean;
-    onPress: () => void;
-  }) => (
-    <TouchableOpacity
-      className={`mr-3 rounded-lg px-5 py-3 ${
-        active ? "bg-pink-500" : "bg-gray-100"
-      }`}
-      onPress={onPress}
-    >
-      <Text
-        className={`text-base font-medium ${
-          active ? "text-white" : "text-gray-600"
-        }`}
-      >
-        {title}
-      </Text>
-    </TouchableOpacity>
-  );
-
   // Handle loading state
   if (isLoading) {
     return (
@@ -62,9 +66,9 @@ export default function ArticleDetailScreen() {
             headerBackTitle: "Back",
           }}
         />
-        <View className="flex-1 items-center justify-center bg-gray-100">
-          <ActivityIndicator size="large" color="#ec4899" />
-          <Text className="mt-4 text-gray-600">Loading content...</Text>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.pink500} />
+          <Text style={styles.loadingText}>Loading content...</Text>
         </View>
       </>
     );
@@ -80,15 +84,15 @@ export default function ArticleDetailScreen() {
             headerBackTitle: "Back",
           }}
         />
-        <View className="flex-1 items-center justify-center bg-gray-100 p-5">
-          <Text className="mb-4 text-lg font-semibold text-red-600">
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>
             {error ? "Failed to load content" : "Content not found"}
           </Text>
           <TouchableOpacity
-            className="rounded-lg bg-pink-500 px-8 py-3"
+            style={styles.errorButton}
             onPress={() => router.back()}
           >
-            <Text className="text-base font-semibold text-white">Go Back</Text>
+            <Text style={styles.errorButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </>
@@ -103,8 +107,8 @@ export default function ArticleDetailScreen() {
           headerBackTitle: "Back",
         }}
       />
-      <View className="flex-1 bg-gray-100">
-        <View className="flex-row border-b border-gray-200 bg-white px-5 py-4">
+      <View style={styles.container}>
+        <View style={styles.tabContainer}>
           <TabButton
             title="Article"
             active={selectedTab === "article"}
@@ -118,25 +122,23 @@ export default function ArticleDetailScreen() {
         </View>
 
         <ScrollView
-          className="h-full flex-1 p-5"
+          style={styles.scrollView}
           showsVerticalScrollIndicator={false}
         >
-          <View className="rounded-xl border border-pink-500 bg-pink-200 p-5">
-            <Text className="text-base leading-6 text-gray-800">
+          <View style={styles.contentCard}>
+            <Text style={styles.contentText}>
               {selectedTab === "article"
                 ? content.articleContent
                 : content.originalContent}
             </Text>
           </View>
 
-          <View className="items-center">
+          <View style={styles.buttonContainer}>
             <TouchableOpacity
-              className="my-3 w-full rounded-lg bg-pink-500 px-8 py-3"
+              style={styles.backButton}
               onPress={() => router.back()}
             >
-              <Text className="text-center text-base font-semibold text-white">
-                Back
-              </Text>
+              <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -144,3 +146,107 @@ export default function ArticleDetailScreen() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.gray100,
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.gray100,
+  },
+  loadingText: {
+    marginTop: 16,
+    color: colors.gray600,
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.gray100,
+    padding: 20,
+  },
+  errorTitle: {
+    marginBottom: 16,
+    fontSize: 18,
+    fontWeight: "600",
+    color: colors.red600,
+  },
+  errorButton: {
+    borderRadius: 8,
+    backgroundColor: colors.pink500,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+  },
+  errorButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.white,
+  },
+  tabContainer: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+    backgroundColor: colors.white,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  tabButton: {
+    marginRight: 12,
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  tabButtonActive: {
+    backgroundColor: colors.pink500,
+  },
+  tabButtonInactive: {
+    backgroundColor: colors.gray100,
+  },
+  tabButtonText: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  tabButtonTextActive: {
+    color: colors.white,
+  },
+  tabButtonTextInactive: {
+    color: colors.gray600,
+  },
+  scrollView: {
+    flex: 1,
+    padding: 20,
+  },
+  contentCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.pink500,
+    backgroundColor: colors.pink200,
+    padding: 20,
+  },
+  contentText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.gray800,
+  },
+  buttonContainer: {
+    alignItems: "center",
+  },
+  backButton: {
+    marginVertical: 12,
+    width: "100%",
+    borderRadius: 8,
+    backgroundColor: colors.pink500,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+  },
+  backButtonText: {
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.white,
+  },
+});
