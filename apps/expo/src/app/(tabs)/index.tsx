@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   cardButtonContainer: {
     width: "33.333%",
     flexDirection: "column",
-    gap: spacing[2] * 16,
+    gap: spacing[3] * 16,
   },
   watchButton: {
     backgroundColor: colors.green[600],
