@@ -1,5 +1,8 @@
 import type { TRPCRouterRecord } from "@trpc/server";
 import { z } from "zod/v4";
+import { desc } from "@acme/db";
+import { db } from "@acme/db/client";
+import { Bill, GovernmentContent, CourtCase } from "@acme/db/schema";
 
 import { publicProcedure } from "../trpc";
 
@@ -111,11 +114,44 @@ export const videoRouter = {
         cursor: z.number().optional(), // Cursor is the index of the last video
       }),
     )
-    .query(({ input }) => {
+    .query(async ({ input }) => {
       const { limit, cursor = 0 } = input;
 
+      // Fetch real content from database
+      const bills = await db.select().from(Bill).orderBy(desc(Bill.createdAt)).limit(20);
+      const governmentContent = await db.select().from(GovernmentContent).orderBy(desc(GovernmentContent.createdAt)).limit(20);
+      const courtCases = await db.select().from(CourtCase).orderBy(desc(CourtCase.createdAt)).limit(20);
+
+      // Convert database content to feed format
+      const dbContentForFeed = [
+        ...bills.map((bill) => ({
+          id: bill.id,
+          title: bill.title,
+          description: bill.description || bill.summary || 'No description available',
+          type: 'bill' as const,
+          articlePreview: bill.summary || bill.description || 'No preview available',
+        })),
+        ...governmentContent.map((content) => ({
+          id: content.id,
+          title: content.title,
+          description: content.description || 'No description available',
+          type: 'general' as const,
+          articlePreview: content.description || content.fullText?.substring(0, 200) || 'No preview available',
+        })),
+        ...courtCases.map((courtCase) => ({
+          id: courtCase.id,
+          title: courtCase.title,
+          description: courtCase.description || 'No description available',
+          type: 'case' as const,
+          articlePreview: courtCase.description || 'No preview available',
+        })),
+      ];
+
+      // Combine mock content with database content
+      const allContent = [...mockContentForFeed, ...dbContentForFeed];
+
       // Create a repeating shuffled feed by cycling through content
-      const shuffledContent = shuffleArray(mockContentForFeed);
+      const shuffledContent = shuffleArray(allContent);
       const videos = Array.from({ length: limit }, (_, index) => {
         const contentIndex = (cursor + index) % shuffledContent.length;
         const content = shuffledContent[contentIndex];
