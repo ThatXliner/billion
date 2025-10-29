@@ -15,6 +15,7 @@
   "devDependencies": {
     "@apify/tsconfig": "^0.1.0",
     "@types/node": "^22.18.12",
+    "@types/turndown": "^5.0.6",
     "tsx": "^4.4.0",
     "typescript": "~5.9.0"
   },
