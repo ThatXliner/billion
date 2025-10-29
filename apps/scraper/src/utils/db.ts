@@ -32,61 +32,38 @@ export async function upsertBill(billData: {
   });
   const contentHash = createContentHash(contentForHash);
 
-  // Check if bill already exists
-  const existing = await db
-    .select()
-    .from(Bill)
-    .where(
-      and(
-        eq(Bill.billNumber, billData.billNumber),
-        eq(Bill.sourceWebsite, billData.sourceWebsite)
-      )
-    )
-    .limit(1);
-
-  if (existing.length > 0) {
-    const existingBill = existing[0]!;
-
-    // If content hash is the same, no update needed
-    if (existingBill.contentHash === contentHash) {
-      console.log(`Bill ${billData.billNumber} unchanged, skipping update`);
-      return existingBill;
-    }
-
-    // Content has changed, update with version tracking
-    const versions = existingBill.versions || [];
-    versions.push({
-      hash: existingBill.contentHash,
-      updatedAt: existingBill.updatedAt?.toISOString() || new Date().toISOString(),
-      changes: 'Content updated',
-    });
-
-    const [updated] = await db
-      .update(Bill)
-      .set({
-        ...billData,
-        contentHash,
-        versions,
-      })
-      .where(eq(Bill.id, existingBill.id))
-      .returning();
-
-    console.log(`Bill ${billData.billNumber} updated with new version`);
-    return updated;
-  }
-
-  // Insert new bill
-  const [newBill] = await db
+  const [result] = await db
     .insert(Bill)
     .values({
       ...billData,
       contentHash,
       versions: [],
     })
+    .onConflictDoUpdate({
+      target: [Bill.billNumber, Bill.sourceWebsite],
+      set: (excluded) => {
+        // Only update if content hash has changed
+        // This requires a subquery approach or we need to handle version tracking differently
+        return {
+          title: excluded.title,
+          description: excluded.description,
+          sponsor: excluded.sponsor,
+          status: excluded.status,
+          introducedDate: excluded.introducedDate,
+          congress: excluded.congress,
+          chamber: excluded.chamber,
+          summary: excluded.summary,
+          fullText: excluded.fullText,
+          url: excluded.url,
+          contentHash: excluded.contentHash,
+          updatedAt: new Date(),
+        };
+      },
+    })
     .returning();
 
-  console.log(`Bill ${billData.billNumber} inserted`);
-  return newBill;
+  console.log(`Bill ${billData.billNumber} upserted`);
+  return result;
 }
 
 // Insert or update government content with version tracking
@@ -106,56 +83,30 @@ export async function upsertGovernmentContent(contentData: {
   });
   const contentHash = createContentHash(contentForHash);
 
-  // Check if content already exists (by URL as unique identifier)
-  const existing = await db
-    .select()
-    .from(GovernmentContent)
-    .where(eq(GovernmentContent.url, contentData.url))
-    .limit(1);
-
-  if (existing.length > 0) {
-    const existingContent = existing[0]!;
-
-    // If content hash is the same, no update needed
-    if (existingContent.contentHash === contentHash) {
-      console.log(`Government content "${contentData.title}" unchanged, skipping update`);
-      return existingContent;
-    }
-
-    // Content has changed, update with version tracking
-    const versions = existingContent.versions || [];
-    versions.push({
-      hash: existingContent.contentHash,
-      updatedAt: existingContent.updatedAt?.toISOString() || new Date().toISOString(),
-      changes: 'Content updated',
-    });
-
-    const [updated] = await db
-      .update(GovernmentContent)
-      .set({
-        ...contentData,
-        contentHash,
-        versions,
-      })
-      .where(eq(GovernmentContent.id, existingContent.id))
-      .returning();
-
-    console.log(`Government content "${contentData.title}" updated with new version`);
-    return updated;
-  }
-
-  // Insert new content
-  const [newContent] = await db
+  const [result] = await db
     .insert(GovernmentContent)
     .values({
       ...contentData,
       contentHash,
       versions: [],
     })
+    .onConflictDoUpdate({
+      target: GovernmentContent.url,
+      set: {
+        title: contentData.title,
+        type: contentData.type,
+        publishedDate: contentData.publishedDate,
+        description: contentData.description,
+        fullText: contentData.fullText,
+        source: contentData.source,
+        contentHash,
+        updatedAt: new Date(),
+      },
+    })
     .returning();
 
-  console.log(`Government content "${contentData.title}" inserted`);
-  return newContent;
+  console.log(`Government content "${contentData.title}" upserted`);
+  return result;
 }
 
 // Legacy function name for backward compatibility
@@ -195,54 +146,29 @@ export async function upsertCourtCase(caseData: {
   });
   const contentHash = createContentHash(contentForHash);
 
-  // Check if case already exists
-  const existing = await db
-    .select()
-    .from(CourtCase)
-    .where(eq(CourtCase.caseNumber, caseData.caseNumber))
-    .limit(1);
-
-  if (existing.length > 0) {
-    const existingCase = existing[0]!;
-
-    // If content hash is the same, no update needed
-    if (existingCase.contentHash === contentHash) {
-      console.log(`Court case ${caseData.caseNumber} unchanged, skipping update`);
-      return existingCase;
-    }
-
-    // Content has changed, update with version tracking
-    const versions = existingCase.versions || [];
-    versions.push({
-      hash: existingCase.contentHash,
-      updatedAt: existingCase.updatedAt?.toISOString() || new Date().toISOString(),
-      changes: 'Content updated',
-    });
-
-    const [updated] = await db
-      .update(CourtCase)
-      .set({
-        ...caseData,
-        contentHash,
-        versions,
-      })
-      .where(eq(CourtCase.id, existingCase.id))
-      .returning();
-
-    console.log(`Court case ${caseData.caseNumber} updated with new version`);
-    return updated;
-  }
-
-  // Insert new case
-  const [newCase] = await db
+  const [result] = await db
     .insert(CourtCase)
     .values({
       ...caseData,
       contentHash,
       versions: [],
     })
+    .onConflictDoUpdate({
+      target: CourtCase.caseNumber,
+      set: {
+        title: caseData.title,
+        court: caseData.court,
+        filedDate: caseData.filedDate,
+        description: caseData.description,
+        status: caseData.status,
+        fullText: caseData.fullText,
+        url: caseData.url,
+        contentHash,
+        updatedAt: new Date(),
+      },
+    })
     .returning();
 
-  console.log(`Court case ${caseData.caseNumber} inserted`);
-  return newCase;
+  console.log(`Court case ${caseData.caseNumber} upserted`);
+  return result;
 }
