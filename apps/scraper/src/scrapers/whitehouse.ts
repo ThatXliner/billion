@@ -1,12 +1,45 @@
+import { openai } from "@ai-sdk/openai";
+import { generateText } from "ai";
 import { CheerioCrawler } from "crawlee";
 import TurndownService from "turndown";
-import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
 
 import { upsertPresidentialAction } from "../utils/db.js";
 
+// Convert all-caps text to title case
+function toTitleCase(text: string): string {
+  // Check if text is mostly uppercase (more than 50% uppercase letters)
+  const uppercaseCount = (text.match(/[A-Z]/g) || []).length;
+  const letterCount = (text.match(/[a-zA-Z]/g) || []).length;
+
+  if (letterCount === 0 || uppercaseCount / letterCount < 0.5) {
+    // Not mostly uppercase, return as-is
+    return text;
+  }
+
+  // Convert to title case
+  return text
+    .toLowerCase()
+    .split(' ')
+    .map(word => {
+      // Don't capitalize small words in the middle
+      const smallWords = ['a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'in', 'nor', 'of', 'on', 'or', 'so', 'the', 'to', 'up', 'yet'];
+
+      // Always capitalize first letter of first word
+      if (word.length === 0) return word;
+
+      // Capitalize first letter, keep rest lowercase
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ')
+    // Always capitalize first word
+    .replace(/^./, (char) => char.toUpperCase());
+}
+
 // Generate AI summary using OpenAI
-async function generateSummary(title: string, content: string): Promise<string> {
+async function generateSummary(
+  title: string,
+  content: string,
+): Promise<string> {
   try {
     const { text } = await generateText({
       model: openai("gpt-4o-mini"),
@@ -17,7 +50,6 @@ Title: ${title}
 Content: ${content.substring(0, 2000)}
 
 Summary (max 100 characters):`,
-      maxTokens: 50,
     });
 
     // Ensure it's under 100 characters
@@ -44,11 +76,12 @@ export async function scrapeWhiteHouse() {
       log.info(`Scraping ${request.loadedUrl}`);
 
       // Handle the main news listing page
-      if (request.url.includes("/news") &&
-          (request.url.endsWith("/news") ||
-           request.url.endsWith("/news/") ||
-           request.url.includes("/news/page/"))) {
-
+      if (
+        request.url.includes("/news") &&
+        (request.url.endsWith("/news") ||
+          request.url.endsWith("/news/") ||
+          request.url.includes("/news/page/"))
+      ) {
         // Extract article links using the specified selector
         $(".wp-block-post-title > a").each((_, element) => {
           const href = $(element).attr("href");
@@ -57,13 +90,13 @@ export async function scrapeWhiteHouse() {
           }
         });
 
-        log.info(
-          `Found ${collectedLinks.size} total article links so far`,
-        );
+        log.info(`Found ${collectedLinks.size} total article links so far`);
 
         // If we need more articles, find and queue the next page
         if (collectedLinks.size < maxArticles) {
-          const nextPageLink = $(".wp-block-query-pagination-next").attr("href");
+          const nextPageLink = $(".wp-block-query-pagination-next").attr(
+            "href",
+          );
 
           if (nextPageLink) {
             log.info(`Queuing next page: ${nextPageLink}`);
@@ -84,6 +117,9 @@ export async function scrapeWhiteHouse() {
           if (!headline) {
             headline = $("h1").first().text().trim() || "Untitled Article";
           }
+
+          // Convert all-caps titles to title case
+          headline = toTitleCase(headline);
 
           // Extract date from the specified selector
           const dateStr =
