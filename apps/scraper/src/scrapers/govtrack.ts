@@ -1,101 +1,88 @@
-import { PlaywrightCrawler, Dataset } from 'crawlee';
-import { upsertBill } from '../utils/db.js';
+import { CheerioCrawler } from "crawlee";
+
+import { upsertBill } from "../utils/db.js";
 
 export async function scrapeGovTrack() {
-  console.log('Starting GovTrack scraper...');
+  console.log("Starting GovTrack scraper...");
 
-  const crawler = new PlaywrightCrawler({
-    async requestHandler({ request, page, log }) {
+  const collectedLinks = new Set<string>();
+  const maxBills = 20;
+
+  const crawler = new CheerioCrawler({
+    async requestHandler({ request, $, log, crawler }) {
       log.info(`Scraping ${request.loadedUrl}`);
 
-      // Wait for the page to load
-      await page.waitForLoadState('networkidle');
-
       // Handle the main listing page
-      if (request.url.includes('/congress/bills')) {
-        // Extract bill links from the status page
-        const billLinks = await page.$$eval('a[href*="/congress/bills/"]', (links) =>
-          links
-            .map((link) => (link as HTMLAnchorElement).href)
-            .filter((href) => /\/congress\/bills\/\d+\/[a-z]+\d+/.test(href))
-            .slice(0, 20) // Limit to first 20 bills for testing
-        );
+      if (request.url.includes("/congress/bills") &&
+          (request.url.endsWith("/congress/bills") ||
+           request.url.endsWith("/congress/bills/") ||
+           request.url.includes("#docket"))) {
+        // Extract bill links from the listing page
+        $('a[href*="/congress/bills/"]').each((_, element) => {
+          const href = $(element).attr("href");
+          if (href && /\/congress\/bills\/\d+\/[a-z]+\d+/.test(href)) {
+            // Convert relative URLs to absolute
+            const fullUrl = href.startsWith("http")
+              ? href
+              : `https://www.govtrack.us${href}`;
 
-        log.info(`Found ${billLinks.length} bill links`);
-
-        // Return bill links to be processed
-        await Dataset.pushData({
-          type: 'billLinks',
-          links: billLinks,
+            if (collectedLinks.size < maxBills) {
+              collectedLinks.add(fullUrl);
+            }
+          }
         });
+
+        log.info(`Found ${collectedLinks.size} total bill links so far`);
       }
       // Handle individual bill pages
       else if (/\/congress\/bills\/\d+\/[a-z]+\d+/.test(request.url)) {
         try {
-          // Extract bill information
-          const billNumber = await page
-            .locator('h1')
-            .first()
-            .textContent()
-            .then((text) => text?.trim().split(':')[0]?.trim() || '');
-
-          const title = await page
-            .locator('h1')
-            .first()
-            .textContent()
-            .then((text) => {
-              const parts = text?.trim().split(':');
-              return parts && parts.length > 1 ? parts.slice(1).join(':').trim() : text?.trim() || '';
-            });
+          // Extract bill number and title from h1
+          const h1Text = $("h1").first().text().trim();
+          const h1Parts = h1Text.split(":");
+          const billNumber = h1Parts[0]?.trim() || "";
+          const title = h1Parts.length > 1
+            ? h1Parts.slice(1).join(":").trim()
+            : h1Text;
 
           // Extract sponsor
-          const sponsor = await page
-            .locator('text=Sponsor:')
-            .locator('..')
-            .textContent()
-            .then((text) => text?.replace('Sponsor:', '').trim())
-            .catch(() => undefined);
+          let sponsor: string | undefined;
+          $("p, div").each((_, element) => {
+            const text = $(element).text();
+            if (text.includes("Sponsor:")) {
+              sponsor = text.replace("Sponsor:", "").trim();
+              return false; // break
+            }
+          });
 
           // Extract status
-          const status = await page
-            .locator('.bill-status')
-            .first()
-            .textContent()
-            .then((text) => text?.trim())
-            .catch(() => 'Unknown');
+          const status = $(".bill-status").first().text().trim() || "Unknown";
 
           // Extract introduced date
-          const introducedDateStr = await page
-            .locator('text=Introduced:')
-            .locator('..')
-            .textContent()
-            .then((text) => text?.replace('Introduced:', '').trim())
-            .catch(() => undefined);
-
-          const introducedDate = introducedDateStr ? new Date(introducedDateStr) : undefined;
+          let introducedDate: Date | undefined;
+          $("p, div").each((_, element) => {
+            const text = $(element).text();
+            if (text.includes("Introduced:")) {
+              const dateStr = text.replace("Introduced:", "").trim();
+              introducedDate = new Date(dateStr);
+              return false; // break
+            }
+          });
 
           // Extract congress number from URL
           const congressMatch = request.url.match(/\/congress\/bills\/(\d+)\//);
           const congress = congressMatch ? parseInt(congressMatch[1]!) : undefined;
 
           // Extract chamber (house/senate) from bill number
-          const chamber = billNumber.toLowerCase().startsWith('h.') ? 'House' : 'Senate';
+          const chamber = billNumber.toLowerCase().startsWith("h.")
+            ? "House"
+            : "Senate";
 
           // Extract summary
-          const summary = await page
-            .locator('.summary')
-            .first()
-            .textContent()
-            .then((text) => text?.trim())
-            .catch(() => undefined);
+          const summary = $(".summary").first().text().trim() || undefined;
 
           // Try to get full text (may not always be available)
-          const fullText = await page
-            .locator('.bill-text')
-            .first()
-            .textContent()
-            .then((text) => text?.trim())
-            .catch(() => undefined);
+          const fullText = $(".bill-text").first().text().trim() || undefined;
 
           const billData = {
             billNumber,
@@ -109,7 +96,7 @@ export async function scrapeGovTrack() {
             summary,
             fullText,
             url: request.url,
-            sourceWebsite: 'govtrack',
+            sourceWebsite: "govtrack",
           };
 
           log.info(`Scraped bill: ${billNumber} - ${title}`);
@@ -122,22 +109,20 @@ export async function scrapeGovTrack() {
       }
     },
     maxRequestsPerCrawl: 50, // Limit for testing
-    headless: true,
     requestHandlerTimeoutSecs: 60,
   });
 
-  // Start with the bills status page
-  await crawler.run(['https://www.govtrack.us/congress/bills/#bystatus']);
+  // Start by crawling the bills listing page to collect bill links
+  await crawler.run(["https://www.govtrack.us/congress/bills/#docket"]);
 
-  // Get the bill links from the dataset
-  const dataset = await Dataset.open();
-  const data = await dataset.getData();
-  const billLinksData = data.items.find((item: any) => item.type === 'billLinks');
+  console.log(
+    `Collected ${collectedLinks.size} bill links, now scraping bills...`,
+  );
 
-  if (billLinksData && Array.isArray(billLinksData.links)) {
-    // Now scrape each bill page
-    await crawler.run(billLinksData.links);
+  // Now scrape each collected bill
+  if (collectedLinks.size > 0) {
+    await crawler.run([...collectedLinks].slice(0, maxBills));
   }
 
-  console.log('GovTrack scraper completed');
+  console.log("GovTrack scraper completed");
 }
