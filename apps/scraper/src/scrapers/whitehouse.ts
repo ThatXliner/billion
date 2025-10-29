@@ -1,54 +1,42 @@
-import { CheerioCrawler, Dataset } from "crawlee";
+import { CheerioCrawler } from "crawlee";
 
 import { upsertPresidentialAction } from "../utils/db.js";
 
 export async function scrapeWhiteHouse() {
   console.log("Starting White House scraper...");
 
+  const collectedLinks = new Set<string>();
+  const maxArticles = 20;
+
   const crawler = new CheerioCrawler({
-    async requestHandler({ request, $, log }) {
+    async requestHandler({ request, $, log, crawler }) {
       log.info(`Scraping ${request.loadedUrl}`);
 
       // Handle the main news listing page
-      if (request.url.includes("/news")) {
+      if (request.url.includes("/news") &&
+          (request.url.endsWith("/news") ||
+           request.url.endsWith("/news/") ||
+           request.url.includes("/news/page/"))) {
+
         // Extract article links using the specified selector
-        const articleLinks: string[] = [];
         $(".wp-block-post-title > a").each((_, element) => {
           const href = $(element).attr("href");
-          if (href) {
-            articleLinks.push(href);
+          if (href && collectedLinks.size < maxArticles) {
+            collectedLinks.add(href);
           }
         });
 
         log.info(
-          `Found ${articleLinks.length} article links on ${request.url}`,
+          `Found ${collectedLinks.size} total article links so far`,
         );
 
-        // Return article links to be processed
-        await Dataset.pushData({
-          type: "articleLinks",
-          links: articleLinks,
-        });
-        const dataset = await Dataset.open();
-        const data = await dataset.getData();
-
-        // Get all article links collected so far
-        const allLinks = data.items
-          .filter((item: any) => item.type === "articleLinks")
-          .flatMap((item: any) => item.links);
-
-        // If we have fewer than 20 articles, try to find the next page
-        if (allLinks.length < 20) {
-          const nextPageLink = $(".wp-block-query-pagination-next").attr(
-            "href",
-          );
+        // If we need more articles, find and queue the next page
+        if (collectedLinks.size < maxArticles) {
+          const nextPageLink = $(".wp-block-query-pagination-next").attr("href");
 
           if (nextPageLink) {
-            log.info(`Found next page: ${nextPageLink}`);
-            await Dataset.pushData({
-              type: "paginationLinks",
-              links: [nextPageLink],
-            });
+            log.info(`Queuing next page: ${nextPageLink}`);
+            await crawler.addRequests([nextPageLink]);
           }
         }
       }
@@ -142,60 +130,16 @@ export async function scrapeWhiteHouse() {
     requestHandlerTimeoutSecs: 60,
   });
 
-  // Start with the news listing page
+  // Start by crawling the news listing page to collect article links
   await crawler.run(["https://www.whitehouse.gov/news/"]);
 
-  // Get the article links from the dataset
-  let dataset = await Dataset.open();
-  let data = await dataset.getData();
-
-  // Check if we need to crawl pagination pages
-  let paginationLinksData = data.items.find(
-    (item: any) => item.type === "paginationLinks",
-  );
-
-  while (paginationLinksData && Array.isArray(paginationLinksData.links)) {
-    // Crawl the next page
-    await crawler.run(paginationLinksData.links);
-
-    // Refresh dataset to check for more pagination
-    dataset = await Dataset.open();
-    data = await dataset.getData();
-
-    // Get all article links collected so far
-    const allLinks = data.items
-      .filter((item: any) => item.type === "articleLinks")
-      .flatMap((item: any) => item.links);
-
-    // Stop if we have 20 or more articles
-    if (allLinks.length >= 20) {
-      break;
-    }
-
-    // // Look for the next pagination link in the newly added items
-    // const newPaginationData = data.items
-    //   .filter((item: any) => item.type === "paginationLinks")
-    //   .slice(-1)[0]; // Get the most recent pagination data
-
-    // paginationLinksData = newPaginationData;
-  }
-
-  // Get all unique article links (limit to 20)
-  const allArticleLinks = [
-    ...new Set(
-      data.items
-        .filter((item: any) => item.type === "articleLinks")
-        .flatMap((item: any) => item.links),
-    ),
-  ].slice(0, 20);
-
   console.log(
-    `Collected ${allArticleLinks.length} article links, now scraping articles...`,
+    `Collected ${collectedLinks.size} article links, now scraping articles...`,
   );
 
-  if (allArticleLinks.length > 0) {
-    // Now scrape each article page
-    await crawler.run(allArticleLinks);
+  // Now scrape each collected article
+  if (collectedLinks.size > 0) {
+    await crawler.run([...collectedLinks].slice(0, maxArticles));
   }
 
   console.log("White House scraper completed");
