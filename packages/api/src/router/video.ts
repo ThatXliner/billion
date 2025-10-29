@@ -1,8 +1,9 @@
 import type { TRPCRouterRecord } from "@trpc/server";
 import { z } from "zod/v4";
+
 import { desc } from "@acme/db";
 import { db } from "@acme/db/client";
-import { Bill, GovernmentContent, CourtCase } from "@acme/db/schema";
+import { Bill, CourtCase, GovernmentContent } from "@acme/db/schema";
 
 import { publicProcedure } from "../trpc";
 
@@ -21,12 +22,15 @@ const VideoPostSchema = z.object({
 });
 
 export type VideoPost = z.infer<typeof VideoPostSchema>;
-
 // Import mock content from content router
 // In a real app, this would be from a shared database
 const mockContentForFeed = [
   {
     id: "1",
+    likes: 69,
+    comments: 69,
+    shares: 69,
+    author: "Mock",
     title: "AI Generated Short Form",
     description:
       "Video describing the law/bill/action, its consequences, and views from both sides of the political spectrum",
@@ -36,6 +40,10 @@ const mockContentForFeed = [
   },
   {
     id: "2",
+    likes: 69,
+    comments: 69,
+    shares: 69,
+    author: "Mock",
     title: "Healthcare Reform Bill Analysis",
     description:
       "Comprehensive breakdown of the proposed healthcare legislation and its potential impacts on different demographics",
@@ -45,6 +53,10 @@ const mockContentForFeed = [
   },
   {
     id: "3",
+    likes: 69,
+    comments: 69,
+    shares: 69,
+    author: "Mock",
     title: "Supreme Court Order Update",
     description:
       "Recent court ruling on constitutional matters with expert legal commentary and public reaction",
@@ -54,6 +66,10 @@ const mockContentForFeed = [
   },
   {
     id: "4",
+    likes: 69,
+    comments: 69,
+    shares: 69,
+    author: "Mock",
     title: "Environmental Case Study",
     description:
       "Ongoing legal case about environmental protection policies and corporate responsibility",
@@ -61,7 +77,7 @@ const mockContentForFeed = [
     articlePreview:
       "Multiple state attorneys general have brought suit against major corporations, alleging decades of environmental harm and misleading public statements.",
   },
-];
+] satisfies VideoPost[];
 
 const authors = [
   "@LegalUpdates",
@@ -85,10 +101,7 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 // Generate feed post from content
-const generateFeedPost = (
-  content: (typeof mockContentForFeed)[number],
-  index: number,
-): VideoPost => {
+const generateFeedPost = (content: VideoPost, index: number): VideoPost => {
   const randomAuthor =
     authors[Math.floor(Math.random() * authors.length)] ?? "@LegalUpdates";
 
@@ -118,37 +131,69 @@ export const videoRouter = {
       const { limit, cursor = 0 } = input;
 
       // Fetch real content from database
-      const bills = await db.select().from(Bill).orderBy(desc(Bill.createdAt)).limit(20);
-      const governmentContent = await db.select().from(GovernmentContent).orderBy(desc(GovernmentContent.createdAt)).limit(20);
-      const courtCases = await db.select().from(CourtCase).orderBy(desc(CourtCase.createdAt)).limit(20);
+      const bills = await db
+        .select()
+        .from(Bill)
+        .orderBy(desc(Bill.createdAt))
+        .limit(20);
+      const governmentContent = await db
+        .select()
+        .from(GovernmentContent)
+        .orderBy(desc(GovernmentContent.createdAt))
+        .limit(20);
+      const courtCases = await db
+        .select()
+        .from(CourtCase)
+        .orderBy(desc(CourtCase.createdAt))
+        .limit(20);
 
       // Convert database content to feed format
       const dbContentForFeed = [
         ...bills.map((bill) => ({
           id: bill.id,
           title: bill.title,
-          description: bill.description || bill.summary || 'No description available',
-          type: 'bill' as const,
-          articlePreview: bill.summary || bill.description || 'No preview available',
+          author: "govtrack.com",
+          likes: 0,
+          shares: 0,
+          comments: 0,
+          description:
+            bill.description ?? bill.summary ?? "No description available",
+          type: "bill" as const,
+          articlePreview:
+            bill.summary ?? bill.description ?? "No preview available",
         })),
         ...governmentContent.map((content) => ({
           id: content.id,
           title: content.title,
-          description: content.description || 'No description available',
-          type: 'general' as const,
-          articlePreview: content.description || content.fullText?.substring(0, 200) || 'No preview available',
+          description: content.description ?? "No description available",
+          type: "general" as const,
+          author: "whitehouse.gov",
+          likes: 0,
+          shares: 0,
+          comments: 0,
+          articlePreview:
+            content.description ??
+            content.fullText?.substring(0, 200) ??
+            "No preview available",
         })),
         ...courtCases.map((courtCase) => ({
           id: courtCase.id,
+          author: "congress?",
+          likes: 0,
+          shares: 0,
+          comments: 0,
           title: courtCase.title,
-          description: courtCase.description || 'No description available',
-          type: 'case' as const,
-          articlePreview: courtCase.description || 'No preview available',
+          description: courtCase.description ?? "No description available",
+          type: "case" as const,
+          articlePreview: courtCase.description ?? "No preview available",
         })),
-      ];
+      ] satisfies VideoPost[];
 
       // Combine mock content with database content
-      const allContent = [...mockContentForFeed, ...dbContentForFeed];
+      const allContent = [
+        ...mockContentForFeed,
+        ...dbContentForFeed,
+      ] satisfies VideoPost[];
 
       // Create a repeating shuffled feed by cycling through content
       const shuffledContent = shuffleArray(allContent);

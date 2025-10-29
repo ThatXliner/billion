@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
+import type { VideoPost } from "@acme/api";
 import { Button } from "@acme/ui/button-native";
 import {
   colors,
@@ -24,19 +25,6 @@ import { Text, View } from "~/components/Themed";
 import { trpc } from "~/utils/api";
 
 const { height: screenHeight } = Dimensions.get("window");
-
-interface VideoPost {
-  id: string;
-  title: string;
-  description: string;
-  author: string;
-  likes: number;
-  comments: number;
-  shares: number;
-  type: "bill" | "order" | "case" | "general";
-  articlePreview: string;
-}
-
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
