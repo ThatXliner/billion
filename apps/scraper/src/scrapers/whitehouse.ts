@@ -1,9 +1,7 @@
-import { openai } from "@ai-sdk/openai";
-import { generateText } from "ai";
 import { CheerioCrawler } from "crawlee";
 import TurndownService from "turndown";
 
-import { upsertPresidentialAction } from "../utils/db.js";
+import { generateAISummary, upsertPresidentialAction } from "../utils/db";
 
 // Convert all-caps text to title case
 function toTitleCase(text: string): string {
@@ -17,48 +15,43 @@ function toTitleCase(text: string): string {
   }
 
   // Convert to title case
-  return text
-    .toLowerCase()
-    .split(' ')
-    .map(word => {
-      // Don't capitalize small words in the middle
-      const smallWords = ['a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'in', 'nor', 'of', 'on', 'or', 'so', 'the', 'to', 'up', 'yet'];
+  return (
+    text
+      .toLowerCase()
+      .split(" ")
+      .map((word) => {
+        // Don't capitalize small words in the middle
+        const smallWords = [
+          "a",
+          "an",
+          "and",
+          "as",
+          "at",
+          "but",
+          "by",
+          "for",
+          "in",
+          "nor",
+          "of",
+          "on",
+          "or",
+          "so",
+          "the",
+          "to",
+          "up",
+          "yet",
+        ];
 
-      // Always capitalize first letter of first word
-      if (word.length === 0) return word;
+        // Always capitalize first letter of first word
+        if (word.length === 0) return word;
 
-      // Capitalize first letter, keep rest lowercase
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    })
-    .join(' ')
-    // Always capitalize first word
-    .replace(/^./, (char) => char.toUpperCase());
-}
-
-// Generate AI summary using OpenAI
-async function generateSummary(
-  title: string,
-  content: string,
-): Promise<string> {
-  try {
-    const { text } = await generateText({
-      model: openai("gpt-4o-mini"),
-      prompt: `Generate a concise, engaging summary (max 100 characters) for this government content. Focus on the key action or impact.
-
-Title: ${title}
-
-Content: ${content.substring(0, 2000)}
-
-Summary (max 100 characters):`,
-    });
-
-    // Ensure it's under 100 characters
-    return text.trim().substring(0, 100);
-  } catch (error) {
-    console.error("Error generating AI summary:", error);
-    // Fallback to simple truncation
-    return content.substring(0, 97) + "...";
-  }
+        // Capitalize first letter, keep rest lowercase
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join(" ")
+      // Always capitalize first word
+      .replace(/^./, (char) => char.toUpperCase())
+  );
 }
 
 export async function scrapeWhiteHouse() {
@@ -176,7 +169,7 @@ export async function scrapeWhiteHouse() {
 
           // Generate AI summary (max 100 characters)
           log.info(`Generating AI summary for: ${headline}`);
-          const aiSummary = await generateSummary(headline, fullTextMarkdown);
+          const aiSummary = await generateAISummary(headline, fullTextMarkdown);
 
           const contentData = {
             title: headline,
