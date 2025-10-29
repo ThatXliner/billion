@@ -5,6 +5,8 @@
   "description": "This is an example of a Crawlee project.",
   "dependencies": {
     "@acme/db": "workspace:*",
+    "@ai-sdk/openai": "^2.0.57",
+    "ai": "^5.0.82",
     "crawlee": "^3.0.0",
     "dotenv": "^16.4.7",
     "playwright": "*",

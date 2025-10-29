@@ -1,7 +1,33 @@
 import { CheerioCrawler } from "crawlee";
 import TurndownService from "turndown";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
 
 import { upsertPresidentialAction } from "../utils/db.js";
+
+// Generate AI summary using OpenAI
+async function generateSummary(title: string, content: string): Promise<string> {
+  try {
+    const { text } = await generateText({
+      model: openai("gpt-4o-mini"),
+      prompt: `Generate a concise, engaging summary (max 100 characters) for this government content. Focus on the key action or impact.
+
+Title: ${title}
+
+Content: ${content.substring(0, 2000)}
+
+Summary (max 100 characters):`,
+      maxTokens: 50,
+    });
+
+    // Ensure it's under 100 characters
+    return text.trim().substring(0, 100);
+  } catch (error) {
+    console.error("Error generating AI summary:", error);
+    // Fallback to simple truncation
+    return content.substring(0, 97) + "...";
+  }
+}
 
 export async function scrapeWhiteHouse() {
   console.log("Starting White House scraper...");
@@ -112,17 +138,22 @@ export async function scrapeWhiteHouse() {
             contentType = "Presidential Action";
           }
 
+          // Generate AI summary (max 100 characters)
+          log.info(`Generating AI summary for: ${headline}`);
+          const aiSummary = await generateSummary(headline, fullTextMarkdown);
+
           const contentData = {
             title: headline,
             type: contentType,
             publishedDate: issuedDate,
-            description: fullTextMarkdown?.substring(0, 500), // First 500 chars as description
+            description: aiSummary, // AI-generated summary (max 100 chars)
             fullText: fullTextMarkdown,
             url: request.url,
             source: "whitehouse.gov",
           };
 
           log.info(`Scraped ${contentType}: ${headline}`);
+          log.info(`AI Summary: ${aiSummary}`);
 
           // Save to database
           await upsertPresidentialAction(contentData);

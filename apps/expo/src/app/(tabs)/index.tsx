@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
+  TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -92,14 +93,22 @@ const TabButton = ({
   active: boolean;
   onPress: () => void;
 }) => (
-  <Button
-    variant={active ? "default" : "ghost"}
-    size="sm"
-    style={styles.tabButton}
+  <TouchableOpacity
+    style={[
+      styles.tabButton,
+      active ? styles.tabButtonActive : styles.tabButtonInactive,
+    ]}
     onPress={onPress}
   >
-    {title}
-  </Button>
+    <Text
+      style={[
+        styles.tabButtonText,
+        active ? styles.tabButtonTextActive : styles.tabButtonTextInactive,
+      ]}
+    >
+      {title}
+    </Text>
+  </TouchableOpacity>
 );
 
 export default function BrowseScreen() {
@@ -157,12 +166,7 @@ export default function BrowseScreen() {
         />
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabContainer}
-        contentContainerStyle={styles.tabContentContainer}
-      >
+      <View style={styles.tabContainer}>
         <TabButton
           title="All"
           active={selectedTab === "all"}
@@ -188,7 +192,7 @@ export default function BrowseScreen() {
           active={selectedTab === "general"}
           onPress={() => setSelectedTab("general")}
         />
-      </ScrollView>
+      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -253,18 +257,36 @@ const styles = StyleSheet.create({
     color: colors.gray[800],
   },
   tabContainer: {
+    flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: colors.gray[200],
     backgroundColor: colors.white,
-  },
-  tabContentContainer: {
-    flexDirection: "row",
     paddingHorizontal: spacing[5] * 16,
-    paddingVertical: spacing[2] * 16,
+    paddingVertical: spacing[3] * 16,
     gap: spacing[2] * 16,
   },
   tabButton: {
-    borderRadius: radius.lg * 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  tabButtonActive: {
+    backgroundColor: colors.blue[500],
+  },
+  tabButtonInactive: {
+    backgroundColor: colors.gray[100],
+    borderWidth: 1,
+    borderColor: colors.gray[200],
+  },
+  tabButtonText: {
+    fontSize: 14,
+    fontWeight: fontWeight.medium,
+  },
+  tabButtonTextActive: {
+    color: colors.white,
+  },
+  tabButtonTextInactive: {
+    color: colors.gray[600],
   },
   scrollView: {
     flex: 1,
