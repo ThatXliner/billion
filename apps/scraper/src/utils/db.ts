@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { eq, and } from '@acme/db';
 import { db } from '@acme/db/client';
-import { Bill, PresidentialAction, CourtCase } from '@acme/db/schema';
+import { Bill, GovernmentContent, CourtCase } from '@acme/db/schema';
 
 // Utility to create a hash of content for version tracking
 export function createContentHash(content: string): string {
@@ -89,72 +89,91 @@ export async function upsertBill(billData: {
   return newBill;
 }
 
-// Insert or update a presidential action with version tracking
-export async function upsertPresidentialAction(actionData: {
+// Insert or update government content with version tracking
+export async function upsertGovernmentContent(contentData: {
   title: string;
   type: string;
-  issuedDate: Date;
+  publishedDate: Date;
   description?: string;
   fullText?: string;
   url: string;
+  source?: string;
 }) {
   const contentForHash = JSON.stringify({
-    title: actionData.title,
-    description: actionData.description,
-    fullText: actionData.fullText,
+    title: contentData.title,
+    description: contentData.description,
+    fullText: contentData.fullText,
   });
   const contentHash = createContentHash(contentForHash);
 
-  // Check if action already exists (by URL as unique identifier)
+  // Check if content already exists (by URL as unique identifier)
   const existing = await db
     .select()
-    .from(PresidentialAction)
-    .where(eq(PresidentialAction.url, actionData.url))
+    .from(GovernmentContent)
+    .where(eq(GovernmentContent.url, contentData.url))
     .limit(1);
 
   if (existing.length > 0) {
-    const existingAction = existing[0]!;
+    const existingContent = existing[0]!;
 
     // If content hash is the same, no update needed
-    if (existingAction.contentHash === contentHash) {
-      console.log(`Presidential action "${actionData.title}" unchanged, skipping update`);
-      return existingAction;
+    if (existingContent.contentHash === contentHash) {
+      console.log(`Government content "${contentData.title}" unchanged, skipping update`);
+      return existingContent;
     }
 
     // Content has changed, update with version tracking
-    const versions = existingAction.versions || [];
+    const versions = existingContent.versions || [];
     versions.push({
-      hash: existingAction.contentHash,
-      updatedAt: existingAction.updatedAt?.toISOString() || new Date().toISOString(),
+      hash: existingContent.contentHash,
+      updatedAt: existingContent.updatedAt?.toISOString() || new Date().toISOString(),
       changes: 'Content updated',
     });
 
     const [updated] = await db
-      .update(PresidentialAction)
+      .update(GovernmentContent)
       .set({
-        ...actionData,
+        ...contentData,
         contentHash,
         versions,
       })
-      .where(eq(PresidentialAction.id, existingAction.id))
+      .where(eq(GovernmentContent.id, existingContent.id))
       .returning();
 
-    console.log(`Presidential action "${actionData.title}" updated with new version`);
+    console.log(`Government content "${contentData.title}" updated with new version`);
     return updated;
   }
 
-  // Insert new action
-  const [newAction] = await db
-    .insert(PresidentialAction)
+  // Insert new content
+  const [newContent] = await db
+    .insert(GovernmentContent)
     .values({
-      ...actionData,
+      ...contentData,
       contentHash,
       versions: [],
     })
     .returning();
 
-  console.log(`Presidential action "${actionData.title}" inserted`);
-  return newAction;
+  console.log(`Government content "${contentData.title}" inserted`);
+  return newContent;
+}
+
+// Legacy function name for backward compatibility
+export async function upsertPresidentialAction(actionData: {
+  title: string;
+  type: string;
+  issuedDate?: Date;
+  publishedDate?: Date;
+  description?: string;
+  fullText?: string;
+  url: string;
+  source?: string;
+}) {
+  return upsertGovernmentContent({
+    ...actionData,
+    publishedDate: actionData.publishedDate || actionData.issuedDate || new Date(),
+    source: actionData.source || 'whitehouse.gov',
+  });
 }
 
 // Insert or update a court case with version tracking

@@ -51,15 +51,16 @@ export const CreateBillSchema = createInsertSchema(Bill).omit({
   updatedAt: true,
 });
 
-// Presidential Actions table (executive orders, memoranda, proclamations, news articles)
-export const PresidentialAction = pgTable("presidential_action", (t) => ({
+// Government Content table (executive orders, memoranda, proclamations, news articles, briefings, etc.)
+export const GovernmentContent = pgTable("government_content", (t) => ({
   id: t.uuid().notNull().primaryKey().defaultRandom(),
   title: t.text().notNull(),
-  type: t.varchar({ length: 50 }).notNull(), // "Executive Order", "Memorandum", "Proclamation", "News Article"
-  issuedDate: t.timestamp().notNull(),
+  type: t.varchar({ length: 50 }).notNull(), // "Executive Order", "Memorandum", "Proclamation", "News Article", "Fact Sheet", "Briefing", etc.
+  publishedDate: t.timestamp().notNull(),
   description: t.text(),
   fullText: t.text(),
   url: t.text().notNull().unique(), // Unique constraint for upsert by URL
+  source: t.varchar({ length: 100 }).notNull().default('whitehouse.gov'), // Source website
   contentHash: t.varchar({ length: 64 }).notNull().default(''), // SHA-256 hash for version tracking
   versions: t.jsonb().$type<Array<{ hash: string; updatedAt: string; changes: string }>>().default([]), // Version history
   createdAt: t.timestamp().defaultNow().notNull(),
@@ -68,11 +69,15 @@ export const PresidentialAction = pgTable("presidential_action", (t) => ({
     .$onUpdateFn(() => sql`now()`),
 }));
 
-export const CreatePresidentialActionSchema = createInsertSchema(PresidentialAction).omit({
+export const CreateGovernmentContentSchema = createInsertSchema(GovernmentContent).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
+
+// Legacy export for backward compatibility
+export const PresidentialAction = GovernmentContent;
+export const CreatePresidentialActionSchema = CreateGovernmentContentSchema;
 
 // Court Cases table
 export const CourtCase = pgTable("court_case", (t) => ({

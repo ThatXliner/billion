@@ -109,19 +109,30 @@ export async function scrapeWhiteHouse() {
             }
           }
 
-          const actionData = {
+          // Determine content type from URL
+          let contentType = "News Article";
+          if (request.url.includes("/fact-sheets/")) {
+            contentType = "Fact Sheet";
+          } else if (request.url.includes("/briefings-statements/")) {
+            contentType = "Briefing Statement";
+          } else if (request.url.includes("/presidential-actions/")) {
+            contentType = "Presidential Action";
+          }
+
+          const contentData = {
             title: headline,
-            type: "News Article",
-            issuedDate,
+            type: contentType,
+            publishedDate: issuedDate,
             description: fullText?.substring(0, 500), // First 500 chars as description
             fullText,
             url: request.url,
+            source: "whitehouse.gov",
           };
 
-          log.info(`Scraped article: ${headline}`);
+          log.info(`Scraped ${contentType}: ${headline}`);
 
           // Save to database
-          await upsertPresidentialAction(actionData);
+          await upsertPresidentialAction(contentData);
         } catch (error) {
           log.error(`Error scraping article from ${request.url}:`, error);
         }
