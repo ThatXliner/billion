@@ -403,8 +403,8 @@ export const contentRouter = {
           description: c.description || '',
           type: 'general' as const,
           isAIGenerated: false,
-          articleContent: c.description || 'No description available',
-          originalContent: c.fullText || 'Full text not available',
+          articleContent: c.fullText || c.description || 'No content available', // Use full markdown text
+          originalContent: c.fullText || 'Full text not available', // Same content for now
         };
       }
 

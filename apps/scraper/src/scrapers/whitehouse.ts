@@ -1,4 +1,5 @@
 import { CheerioCrawler } from "crawlee";
+import TurndownService from "turndown";
 
 import { upsertPresidentialAction } from "../utils/db.js";
 
@@ -7,6 +8,10 @@ export async function scrapeWhiteHouse() {
 
   const collectedLinks = new Set<string>();
   const maxArticles = 20;
+  const turndownService = new TurndownService({
+    headingStyle: "atx",
+    codeBlockStyle: "fenced",
+  });
 
   const crawler = new CheerioCrawler({
     async requestHandler({ request, $, log, crawler }) {
@@ -63,7 +68,7 @@ export async function scrapeWhiteHouse() {
 
           // Extract content - all elements after the first div in .entry-content
           const entryContent = $(".entry-content").first();
-          let fullText = "";
+          let fullTextMarkdown = "";
 
           if (entryContent.length > 0) {
             const children = entryContent.children();
@@ -79,22 +84,22 @@ export async function scrapeWhiteHouse() {
               }
             });
 
+            // Build HTML string of content after first div
+            let contentHtml = "";
             if (firstDivIndex === -1) {
               // No div found, get all content
-              fullText = entryContent.text().trim();
+              contentHtml = entryContent.html() || "";
             } else {
               // Get all elements after the first div
-              const textParts: string[] = [];
               children.each((index, element) => {
                 if (index > firstDivIndex) {
-                  const text = $(element).text().trim();
-                  if (text) {
-                    textParts.push(text);
-                  }
+                  contentHtml += $.html(element);
                 }
               });
-              fullText = textParts.join("\n\n");
             }
+
+            // Convert HTML to markdown
+            fullTextMarkdown = turndownService.turndown(contentHtml).trim();
           }
 
           // Determine content type from URL
@@ -111,8 +116,8 @@ export async function scrapeWhiteHouse() {
             title: headline,
             type: contentType,
             publishedDate: issuedDate,
-            description: fullText?.substring(0, 500), // First 500 chars as description
-            fullText,
+            description: fullTextMarkdown?.substring(0, 500), // First 500 chars as description
+            fullText: fullTextMarkdown,
             url: request.url,
             source: "whitehouse.gov",
           };

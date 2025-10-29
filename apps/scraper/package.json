@@ -7,7 +7,8 @@
     "@acme/db": "workspace:*",
     "crawlee": "^3.0.0",
     "dotenv": "^16.4.7",
-    "playwright": "*"
+    "playwright": "*",
+    "turndown": "^7.2.2"
   },
   "devDependencies": {
     "@apify/tsconfig": "^0.1.0",

@@ -105,7 +105,7 @@ const TabButton = ({
 export default function BrowseScreen() {
   const insets = useSafeAreaInsets();
   const [selectedTab, setSelectedTab] = useState<
-    "all" | "bill" | "order" | "case"
+    "all" | "bill" | "order" | "case" | "general"
   >("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -157,7 +157,12 @@ export default function BrowseScreen() {
         />
       </View>
 
-      <View style={styles.tabContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabContainer}
+        contentContainerStyle={styles.tabContentContainer}
+      >
         <TabButton
           title="All"
           active={selectedTab === "all"}
@@ -169,7 +174,7 @@ export default function BrowseScreen() {
           onPress={() => setSelectedTab("bill")}
         />
         <TabButton
-          title="Orders"
+          title="Executive"
           active={selectedTab === "order"}
           onPress={() => setSelectedTab("order")}
         />
@@ -178,7 +183,12 @@ export default function BrowseScreen() {
           active={selectedTab === "case"}
           onPress={() => setSelectedTab("case")}
         />
-      </View>
+        <TabButton
+          title="News"
+          active={selectedTab === "general"}
+          onPress={() => setSelectedTab("general")}
+        />
+      </ScrollView>
 
       <ScrollView
         style={styles.scrollView}
@@ -243,13 +253,15 @@ const styles = StyleSheet.create({
     color: colors.gray[800],
   },
   tabContainer: {
-    flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: colors.gray[200],
     backgroundColor: colors.white,
+  },
+  tabContentContainer: {
+    flexDirection: "row",
     paddingHorizontal: spacing[5] * 16,
-    paddingVertical: spacing[4] * 16,
-    gap: spacing[3] * 16,
+    paddingVertical: spacing[2] * 16,
+    gap: spacing[2] * 16,
   },
   tabButton: {
     borderRadius: radius.lg * 16,

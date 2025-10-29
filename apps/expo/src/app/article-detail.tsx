@@ -123,6 +123,7 @@ export default function ArticleDetailScreen() {
 
         <ScrollView
           style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.contentCard}>
@@ -200,7 +201,10 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollViewContent: {
     padding: spacing[5] * 16,
+    paddingBottom: spacing[10] * 16, // Extra padding at bottom to prevent cutoff
   },
   contentCard: {
     borderRadius: radius.lg * 16,
@@ -208,6 +212,7 @@ const styles = StyleSheet.create({
     borderColor: colors.blue[500],
     backgroundColor: colors.blue[100],
     padding: spacing[5] * 16,
+    marginBottom: spacing[5] * 16, // Space before button
   },
   contentText: {
     fontSize: fontSize.base,
