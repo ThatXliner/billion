@@ -1,135 +1,190 @@
-import { Dataset, PlaywrightCrawler } from "crawlee";
+import { CheerioCrawler, Dataset } from "crawlee";
 
 import { upsertPresidentialAction } from "../utils/db.js";
 
 export async function scrapeWhiteHouse() {
   console.log("Starting White House scraper...");
 
-  const crawler = new PlaywrightCrawler({
-    async requestHandler({ request, page, log }) {
+  const crawler = new CheerioCrawler({
+    async requestHandler({ request, $, log }) {
       log.info(`Scraping ${request.loadedUrl}`);
 
-      // Wait for the page to load
-      await page.waitForLoadState("networkidle");
+      // Handle the main news listing page
+      if (request.url.includes("/news")) {
+        // Extract article links using the specified selector
+        const articleLinks: string[] = [];
+        $(".wp-block-post-title > a").each((_, element) => {
+          const href = $(element).attr("href");
+          if (href) {
+            articleLinks.push(href);
+          }
+        });
 
-      // Handle the main listing page
-      if (
-        request.url.endsWith("/presidential-actions") ||
-        request.url.endsWith("/presidential-actions/")
-      ) {
-        // Extract presidential action links
-        const actionLinks = await page.$$eval(
-          'a[href*="/presidential-actions/"]',
-          (links) =>
-            links
-              .map((link) => (link as HTMLAnchorElement).href)
-              .filter(
-                (href) =>
-                  href.includes("/presidential-actions/") &&
-                  !href.endsWith("/presidential-actions/"),
-              )
-              .slice(0, 20), // Limit to first 20 actions for testing
+        log.info(
+          `Found ${articleLinks.length} article links on ${request.url}`,
         );
 
-        log.info(`Found ${actionLinks.length} presidential action links`);
-
-        // Return action links to be processed
+        // Return article links to be processed
         await Dataset.pushData({
-          type: "actionLinks",
-          links: [...new Set(actionLinks)], // Remove duplicates
+          type: "articleLinks",
+          links: articleLinks,
         });
+        const dataset = await Dataset.open();
+        const data = await dataset.getData();
+
+        // Get all article links collected so far
+        const allLinks = data.items
+          .filter((item: any) => item.type === "articleLinks")
+          .flatMap((item: any) => item.links);
+
+        // If we have fewer than 20 articles, try to find the next page
+        if (allLinks.length < 20) {
+          const nextPageLink = $(".wp-block-query-pagination-next").attr(
+            "href",
+          );
+
+          if (nextPageLink) {
+            log.info(`Found next page: ${nextPageLink}`);
+            await Dataset.pushData({
+              type: "paginationLinks",
+              links: [nextPageLink],
+            });
+          }
+        }
       }
-      // Handle individual action pages
+      // Handle individual article pages
       else {
         try {
-          // Extract action title
-          const title = await page
-            .locator("h1")
+          // Extract headline from the specified selector
+          let headline = $(".wp-block-whitehouse-topper__headline")
             .first()
-            .textContent()
-            .then((text) => text?.trim() || "Untitled Action");
+            .text()
+            .trim();
 
-          // Determine type from title or URL
-          let type = "Presidential Action";
-          const titleLower = title.toLowerCase();
-          if (titleLower.includes("executive order")) {
-            type = "Executive Order";
-          } else if (titleLower.includes("memorandum")) {
-            type = "Memorandum";
-          } else if (titleLower.includes("proclamation")) {
-            type = "Proclamation";
+          // Fallback to h1 if headline not found
+          if (!headline) {
+            headline = $("h1").first().text().trim() || "Untitled Article";
           }
 
-          // Extract issued date
-          const issuedDateStr = await page
-            .locator("time, .date, .published-date")
-            .first()
-            .getAttribute("datetime")
-            .catch(() =>
-              page
-                .locator("time, .date, .published-date")
-                .first()
-                .textContent()
-                .then((text) => text?.trim()),
-            )
-            .catch(() => undefined);
+          // Extract date from the specified selector
+          const dateStr =
+            $(".wp-block-post-date > time").first().attr("datetime") ||
+            $(".wp-block-post-date > time").first().text().trim();
 
-          const issuedDate = issuedDateStr
-            ? new Date(issuedDateStr)
-            : new Date();
+          const issuedDate = dateStr ? new Date(dateStr) : new Date();
 
-          // Extract description/summary
-          const description = await page
-            .locator(".summary, .excerpt, p")
-            .first()
-            .textContent()
-            .then((text) => text?.trim())
-            .catch(() => undefined);
+          // Extract content - all elements after the first div in .entry-content
+          const entryContent = $(".entry-content").first();
+          let fullText = "";
 
-          // Extract full text
-          const fullText = await page
-            .locator(".entry-content")
-            .first()
-            .textContent()
-            .then((text) => text?.trim())
-            .catch(() => undefined);
+          if (entryContent.length > 0) {
+            const children = entryContent.children();
+            let firstDivIndex = -1;
+
+            // Find the first div
+            children.each((index, element) => {
+              if (
+                element.tagName.toLowerCase() === "div" &&
+                firstDivIndex === -1
+              ) {
+                firstDivIndex = index;
+              }
+            });
+
+            if (firstDivIndex === -1) {
+              // No div found, get all content
+              fullText = entryContent.text().trim();
+            } else {
+              // Get all elements after the first div
+              const textParts: string[] = [];
+              children.each((index, element) => {
+                if (index > firstDivIndex) {
+                  const text = $(element).text().trim();
+                  if (text) {
+                    textParts.push(text);
+                  }
+                }
+              });
+              fullText = textParts.join("\n\n");
+            }
+          }
 
           const actionData = {
-            title,
-            type,
+            title: headline,
+            type: "News Article",
             issuedDate,
-            description,
+            description: fullText?.substring(0, 500), // First 500 chars as description
             fullText,
             url: request.url,
           };
 
-          log.info(`Scraped action: ${title}`);
+          log.info(`Scraped article: ${headline}`);
 
           // Save to database
           await upsertPresidentialAction(actionData);
         } catch (error) {
-          log.error(`Error scraping action from ${request.url}:`, error);
+          log.error(`Error scraping article from ${request.url}:`, error);
         }
       }
     },
     maxRequestsPerCrawl: 50, // Limit for testing
-    headless: true,
     requestHandlerTimeoutSecs: 60,
   });
 
-  // Start with the presidential actions listing page
-  await crawler.run(["https://www.whitehouse.gov/presidential-actions/"]);
+  // Start with the news listing page
+  await crawler.run(["https://www.whitehouse.gov/news/"]);
 
-  // Get the action links from the dataset
-  const dataset = await Dataset.open();
-  const data = await dataset.getData();
-  const actionLinksData = data.items.find(
-    (item: any) => item.type === "actionLinks",
+  // Get the article links from the dataset
+  let dataset = await Dataset.open();
+  let data = await dataset.getData();
+
+  // Check if we need to crawl pagination pages
+  let paginationLinksData = data.items.find(
+    (item: any) => item.type === "paginationLinks",
   );
 
-  if (actionLinksData && Array.isArray(actionLinksData.links)) {
-    // Now scrape each action page
-    await crawler.run(actionLinksData.links);
+  while (paginationLinksData && Array.isArray(paginationLinksData.links)) {
+    // Crawl the next page
+    await crawler.run(paginationLinksData.links);
+
+    // Refresh dataset to check for more pagination
+    dataset = await Dataset.open();
+    data = await dataset.getData();
+
+    // Get all article links collected so far
+    const allLinks = data.items
+      .filter((item: any) => item.type === "articleLinks")
+      .flatMap((item: any) => item.links);
+
+    // Stop if we have 20 or more articles
+    if (allLinks.length >= 20) {
+      break;
+    }
+
+    // // Look for the next pagination link in the newly added items
+    // const newPaginationData = data.items
+    //   .filter((item: any) => item.type === "paginationLinks")
+    //   .slice(-1)[0]; // Get the most recent pagination data
+
+    // paginationLinksData = newPaginationData;
+  }
+
+  // Get all unique article links (limit to 20)
+  const allArticleLinks = [
+    ...new Set(
+      data.items
+        .filter((item: any) => item.type === "articleLinks")
+        .flatMap((item: any) => item.links),
+    ),
+  ].slice(0, 20);
+
+  console.log(
+    `Collected ${allArticleLinks.length} article links, now scraping articles...`,
+  );
+
+  if (allArticleLinks.length > 0) {
+    // Now scrape each article page
+    await crawler.run(allArticleLinks);
   }
 
   console.log("White House scraper completed");

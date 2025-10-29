@@ -32,12 +32,14 @@
     "@vercel/postgres": "^0.10.0",
     "drizzle-orm": "^0.44.6",
     "drizzle-zod": "^0.8.3",
+    "pg": "^8.16.3",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@acme/eslint-config": "workspace:*",
     "@acme/prettier-config": "workspace:*",
     "@acme/tsconfig": "workspace:*",
+    "@types/pg": "^8.15.6",
     "drizzle-kit": "^0.31.5",
     "eslint": "catalog:",
     "prettier": "catalog:",

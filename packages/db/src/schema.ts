@@ -37,8 +37,8 @@ export const Bill = pgTable("bill", (t) => ({
   fullText: t.text(),
   url: t.text().notNull(),
   sourceWebsite: t.varchar({ length: 50 }).notNull(), // "govtrack", "congress.gov"
-  contentHash: t.varchar({ length: 64 }).notNull(), // SHA-256 hash for version tracking
-  versions: t.jsonb().$type<Array<{ hash: string; updatedAt: string; changes: string }>>(), // Version history
+  contentHash: t.varchar({ length: 64 }).notNull().default(''), // SHA-256 hash for version tracking
+  versions: t.jsonb().$type<Array<{ hash: string; updatedAt: string; changes: string }>>().default([]), // Version history
   createdAt: t.timestamp().defaultNow().notNull(),
   updatedAt: t
     .timestamp({ mode: "date", withTimezone: true })
@@ -51,17 +51,17 @@ export const CreateBillSchema = createInsertSchema(Bill).omit({
   updatedAt: true,
 });
 
-// Presidential Actions table (executive orders, memoranda, proclamations)
+// Presidential Actions table (executive orders, memoranda, proclamations, news articles)
 export const PresidentialAction = pgTable("presidential_action", (t) => ({
   id: t.uuid().notNull().primaryKey().defaultRandom(),
   title: t.text().notNull(),
-  type: t.varchar({ length: 50 }).notNull(), // "Executive Order", "Memorandum", "Proclamation"
+  type: t.varchar({ length: 50 }).notNull(), // "Executive Order", "Memorandum", "Proclamation", "News Article"
   issuedDate: t.timestamp().notNull(),
   description: t.text(),
   fullText: t.text(),
-  url: t.text().notNull(),
-  contentHash: t.varchar({ length: 64 }).notNull(), // SHA-256 hash for version tracking
-  versions: t.jsonb().$type<Array<{ hash: string; updatedAt: string; changes: string }>>(), // Version history
+  url: t.text().notNull().unique(), // Unique constraint for upsert by URL
+  contentHash: t.varchar({ length: 64 }).notNull().default(''), // SHA-256 hash for version tracking
+  versions: t.jsonb().$type<Array<{ hash: string; updatedAt: string; changes: string }>>().default([]), // Version history
   createdAt: t.timestamp().defaultNow().notNull(),
   updatedAt: t
     .timestamp({ mode: "date", withTimezone: true })
@@ -85,8 +85,8 @@ export const CourtCase = pgTable("court_case", (t) => ({
   status: t.varchar({ length: 100 }), // e.g., "Pending", "Decided"
   fullText: t.text(),
   url: t.text().notNull(),
-  contentHash: t.varchar({ length: 64 }).notNull(), // SHA-256 hash for version tracking
-  versions: t.jsonb().$type<Array<{ hash: string; updatedAt: string; changes: string }>>(), // Version history
+  contentHash: t.varchar({ length: 64 }).notNull().default(''), // SHA-256 hash for version tracking
+  versions: t.jsonb().$type<Array<{ hash: string; updatedAt: string; changes: string }>>().default([]), // Version history
   createdAt: t.timestamp().defaultNow().notNull(),
   updatedAt: t
     .timestamp({ mode: "date", withTimezone: true })
