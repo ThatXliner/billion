@@ -5,7 +5,10 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
+import Markdown from "react-native-markdown-display";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@acme/ui/button-native";
@@ -101,13 +104,13 @@ export default function ArticleDetailScreen() {
 
   return (
     <>
-      <Stack.Screen
+      {/*<Stack.Screen
         options={{
           title: content.title,
           headerBackTitle: "Back",
         }}
-      />
-      <View style={styles.container}>
+      />*/}
+      <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.tabContainer}>
           <TabButton
             title="Article"
@@ -127,23 +130,88 @@ export default function ArticleDetailScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.contentCard}>
-            <Text style={styles.contentText}>
+            <Markdown
+              style={{
+                body: {
+                  fontSize: fontSize.base,
+                  lineHeight: spacing[6] * 16,
+                  color: colors.gray[800],
+                },
+                heading1: {
+                  fontSize: fontSize["2xl"],
+                  fontWeight: fontWeight.bold,
+                  marginBottom: spacing[4] * 16,
+                  color: colors.gray[900],
+                },
+                heading2: {
+                  fontSize: fontSize.xl,
+                  fontWeight: fontWeight.bold,
+                  marginBottom: spacing[3] * 16,
+                  color: colors.gray[900],
+                },
+                heading3: {
+                  fontSize: fontSize.lg,
+                  fontWeight: fontWeight.semibold,
+                  marginBottom: spacing[2] * 16,
+                  color: colors.gray[900],
+                },
+                paragraph: {
+                  marginBottom: spacing[4] * 16,
+                },
+                listItem: {
+                  marginBottom: spacing[2] * 16,
+                },
+                strong: {
+                  fontWeight: fontWeight.bold,
+                },
+                em: {
+                  fontStyle: "italic",
+                },
+                link: {
+                  color: colors.blue[600],
+                  textDecorationLine: "underline",
+                },
+                blockquote: {
+                  backgroundColor: colors.gray[100],
+                  borderLeftWidth: 4,
+                  borderLeftColor: colors.blue[500],
+                  paddingLeft: spacing[4] * 16,
+                  paddingVertical: spacing[2] * 16,
+                  marginVertical: spacing[3] * 16,
+                },
+                code_inline: {
+                  backgroundColor: colors.gray[200],
+                  paddingHorizontal: spacing[2] * 16,
+                  paddingVertical: spacing[1] * 16,
+                  borderRadius: radius.sm * 16,
+                  fontFamily: "monospace",
+                },
+                code_block: {
+                  backgroundColor: colors.gray[900],
+                  color: colors.white,
+                  padding: spacing[4] * 16,
+                  borderRadius: radius.md * 16,
+                  marginVertical: spacing[3] * 16,
+                  fontFamily: "monospace",
+                },
+              }}
+            >
               {selectedTab === "article"
                 ? content.articleContent
                 : content.originalContent}
-            </Text>
-          </View>
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
+            </Markdown>
           </View>
         </ScrollView>
-      </View>
+
+        {/* Floating close button */}
+        <TouchableOpacity
+          style={styles.floatingCloseButton}
+          onPress={() => router.back()}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="close" size={24} color={colors.white} />
+        </TouchableOpacity>
+      </SafeAreaView>
     </>
   );
 }
@@ -151,7 +219,6 @@ export default function ArticleDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray[100],
   },
   centerContainer: {
     flex: 1,
@@ -212,28 +279,25 @@ const styles = StyleSheet.create({
     borderColor: colors.blue[500],
     backgroundColor: colors.blue[100],
     padding: spacing[5] * 16,
-    marginBottom: spacing[5] * 16, // Space before button
+    marginBottom: spacing[20] * 16, // Extra space at bottom for comfortable reading
   },
-  contentText: {
-    fontSize: fontSize.base,
-    lineHeight: spacing[6] * 16,
-    color: colors.gray[800],
-  },
-  buttonContainer: {
-    alignItems: "center",
-  },
-  backButton: {
-    marginVertical: spacing[3] * 16,
-    width: "100%",
-    borderRadius: radius.md * 16,
+  floatingCloseButton: {
+    position: "absolute",
+    bottom: spacing[8] * 16,
+    right: spacing[5] * 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.blue[500],
-    paddingHorizontal: spacing[8] * 16,
-    paddingVertical: spacing[3] * 16,
-  },
-  backButtonText: {
-    textAlign: "center",
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-    color: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
 });
