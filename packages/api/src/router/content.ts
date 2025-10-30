@@ -428,8 +428,8 @@ export const contentRouter = {
           title: b.title,
           description: b.description || b.summary || "",
           type: "bill" as const,
-          isAIGenerated: false,
-          articleContent: b.summary || b.description || "No summary available",
+          isAIGenerated: !!b.aiGeneratedArticle,
+          articleContent: b.aiGeneratedArticle || b.fullText || "No content available",
           originalContent: b.fullText || "Full text not available",
         };
       }
@@ -447,9 +447,9 @@ export const contentRouter = {
           title: c.title,
           description: c.description || "",
           type: "general" as const,
-          isAIGenerated: false,
-          articleContent: c.fullText || c.description || "No content available", // Use full markdown text
-          originalContent: c.fullText || "Full text not available", // Same content for now
+          isAIGenerated: !!c.aiGeneratedArticle,
+          articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
+          originalContent: c.fullText || "Full text not available",
         };
       }
 
@@ -466,8 +466,8 @@ export const contentRouter = {
           title: c.title,
           description: c.description || "",
           type: "case" as const,
-          isAIGenerated: false,
-          articleContent: c.description || "No description available",
+          isAIGenerated: !!c.aiGeneratedArticle,
+          articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
           originalContent: c.fullText || "Full text not available",
         };
       }

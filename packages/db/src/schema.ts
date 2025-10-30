@@ -35,12 +35,13 @@ export const Bill = pgTable("bill", (t) => ({
   chamber: t.varchar({ length: 50 }), // "House" or "Senate"
   summary: t.text(),
   fullText: t.text(),
+  aiGeneratedArticle: t.text(), // AI-generated accessible article version
   url: t.text().notNull(),
   sourceWebsite: t.varchar({ length: 50 }).notNull(), // "govtrack", "congress.gov"
   contentHash: t.varchar({ length: 64 }).notNull().default(""), // SHA-256 hash for version tracking
   versions: t
     .jsonb()
-    .$type<Array<{ hash: string; updatedAt: string; changes: string }>>()
+    .$type<{ hash: string; updatedAt: string; changes: string }[]>()
     .default([]), // Version history
   createdAt: t.timestamp().defaultNow().notNull(),
   updatedAt: t
@@ -62,12 +63,13 @@ export const GovernmentContent = pgTable("government_content", (t) => ({
   publishedDate: t.timestamp().notNull(),
   description: t.text(),
   fullText: t.text(),
+  aiGeneratedArticle: t.text(), // AI-generated accessible article version
   url: t.text().notNull().unique(), // Unique constraint for upsert by URL
   source: t.varchar({ length: 100 }).notNull().default("whitehouse.gov"), // Source website
   contentHash: t.varchar({ length: 64 }).notNull().default(""), // SHA-256 hash for version tracking
   versions: t
     .jsonb()
-    .$type<Array<{ hash: string; updatedAt: string; changes: string }>>()
+    .$type<{ hash: string; updatedAt: string; changes: string }[]>()
     .default([]), // Version history
   createdAt: t.timestamp().defaultNow().notNull(),
   updatedAt: t
@@ -97,11 +99,12 @@ export const CourtCase = pgTable("court_case", (t) => ({
   description: t.text(),
   status: t.varchar({ length: 100 }), // e.g., "Pending", "Decided"
   fullText: t.text(),
+  aiGeneratedArticle: t.text(), // AI-generated accessible article version
   url: t.text().notNull(),
   contentHash: t.varchar({ length: 64 }).notNull().default(""), // SHA-256 hash for version tracking
   versions: t
     .jsonb()
-    .$type<Array<{ hash: string; updatedAt: string; changes: string }>>()
+    .$type<{ hash: string; updatedAt: string; changes: string }[]>()
     .default([]), // Version history
   createdAt: t.timestamp().defaultNow().notNull(),
   updatedAt: t

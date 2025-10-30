@@ -2,10 +2,10 @@
  * React Native Card component with neumorphic styling
  * Shared component for Expo app
  */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
+ 
+ 
+ 
+ 
 import type { ViewProps, ViewStyle } from "react-native";
 import { Pressable, StyleSheet, useColorScheme, View } from "react-native";
 

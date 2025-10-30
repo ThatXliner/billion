@@ -2,11 +2,11 @@
  * React Native Button component with neumorphic styling
  * Shared component for Expo app
  */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
+ 
+ 
+ 
+ 
+ 
 import type { PressableProps, ViewStyle } from "react-native";
 import { Pressable, StyleSheet, Text, useColorScheme } from "react-native";
 
