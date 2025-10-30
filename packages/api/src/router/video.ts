@@ -22,62 +22,6 @@ const VideoPostSchema = z.object({
 });
 
 export type VideoPost = z.infer<typeof VideoPostSchema>;
-// Import mock content from content router
-// In a real app, this would be from a shared database
-const mockContentForFeed = [
-  {
-    id: "1",
-    likes: 69,
-    comments: 69,
-    shares: 69,
-    author: "Mock",
-    title: "AI Generated Short Form",
-    description:
-      "Video describing the law/bill/action, its consequences, and views from both sides of the political spectrum",
-    type: "bill" as const,
-    articlePreview:
-      "This comprehensive analysis breaks down the key components of the proposed legislation and examines its potential impact across different sectors of society.",
-  },
-  {
-    id: "2",
-    likes: 69,
-    comments: 69,
-    shares: 69,
-    author: "Mock",
-    title: "Healthcare Reform Bill Analysis",
-    description:
-      "Comprehensive breakdown of the proposed healthcare legislation and its potential impacts on different demographics",
-    type: "bill" as const,
-    articlePreview:
-      "The proposed Healthcare Reform Bill represents one of the most significant legislative efforts to modernize the American healthcare system in decades.",
-  },
-  {
-    id: "3",
-    likes: 69,
-    comments: 69,
-    shares: 69,
-    author: "Mock",
-    title: "Supreme Court Order Update",
-    description:
-      "Recent court ruling on constitutional matters with expert legal commentary and public reaction",
-    type: "order" as const,
-    articlePreview:
-      "In a 6-3 ruling, the Supreme Court has clarified the scope of constitutional protections in the digital age, establishing new precedents for privacy rights.",
-  },
-  {
-    id: "4",
-    likes: 69,
-    comments: 69,
-    shares: 69,
-    author: "Mock",
-    title: "Environmental Case Study",
-    description:
-      "Ongoing legal case about environmental protection policies and corporate responsibility",
-    type: "case" as const,
-    articlePreview:
-      "Multiple state attorneys general have brought suit against major corporations, alleging decades of environmental harm and misleading public statements.",
-  },
-] satisfies VideoPost[];
 
 const authors = [
   "@LegalUpdates",
@@ -189,11 +133,8 @@ export const videoRouter = {
         })),
       ] satisfies VideoPost[];
 
-      // Combine mock content with database content
-      const allContent = [
-        ...mockContentForFeed,
-        ...dbContentForFeed,
-      ] satisfies VideoPost[];
+      // Use database content
+      const allContent = dbContentForFeed;
 
       // Create a repeating shuffled feed by cycling through content
       const shuffledContent = shuffleArray(allContent);
