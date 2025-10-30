@@ -37,8 +37,11 @@ export const Bill = pgTable("bill", (t) => ({
   fullText: t.text(),
   url: t.text().notNull(),
   sourceWebsite: t.varchar({ length: 50 }).notNull(), // "govtrack", "congress.gov"
-  contentHash: t.varchar({ length: 64 }).notNull().default(''), // SHA-256 hash for version tracking
-  versions: t.jsonb().$type<Array<{ hash: string; updatedAt: string; changes: string }>>().default([]), // Version history
+  contentHash: t.varchar({ length: 64 }).notNull().default(""), // SHA-256 hash for version tracking
+  versions: t
+    .jsonb()
+    .$type<Array<{ hash: string; updatedAt: string; changes: string }>>()
+    .default([]), // Version history
   createdAt: t.timestamp().defaultNow().notNull(),
   updatedAt: t
     .timestamp({ mode: "date", withTimezone: true })
@@ -60,16 +63,21 @@ export const GovernmentContent = pgTable("government_content", (t) => ({
   description: t.text(),
   fullText: t.text(),
   url: t.text().notNull().unique(), // Unique constraint for upsert by URL
-  source: t.varchar({ length: 100 }).notNull().default('whitehouse.gov'), // Source website
-  contentHash: t.varchar({ length: 64 }).notNull().default(''), // SHA-256 hash for version tracking
-  versions: t.jsonb().$type<Array<{ hash: string; updatedAt: string; changes: string }>>().default([]), // Version history
+  source: t.varchar({ length: 100 }).notNull().default("whitehouse.gov"), // Source website
+  contentHash: t.varchar({ length: 64 }).notNull().default(""), // SHA-256 hash for version tracking
+  versions: t
+    .jsonb()
+    .$type<Array<{ hash: string; updatedAt: string; changes: string }>>()
+    .default([]), // Version history
   createdAt: t.timestamp().defaultNow().notNull(),
   updatedAt: t
     .timestamp({ mode: "date", withTimezone: true })
     .$onUpdateFn(() => sql`now()`),
 }));
 
-export const CreateGovernmentContentSchema = createInsertSchema(GovernmentContent).omit({
+export const CreateGovernmentContentSchema = createInsertSchema(
+  GovernmentContent,
+).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -90,8 +98,11 @@ export const CourtCase = pgTable("court_case", (t) => ({
   status: t.varchar({ length: 100 }), // e.g., "Pending", "Decided"
   fullText: t.text(),
   url: t.text().notNull(),
-  contentHash: t.varchar({ length: 64 }).notNull().default(''), // SHA-256 hash for version tracking
-  versions: t.jsonb().$type<Array<{ hash: string; updatedAt: string; changes: string }>>().default([]), // Version history
+  contentHash: t.varchar({ length: 64 }).notNull().default(""), // SHA-256 hash for version tracking
+  versions: t
+    .jsonb()
+    .$type<Array<{ hash: string; updatedAt: string; changes: string }>>()
+    .default([]), // Version history
   createdAt: t.timestamp().defaultNow().notNull(),
   updatedAt: t
     .timestamp({ mode: "date", withTimezone: true })

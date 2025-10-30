@@ -1,8 +1,9 @@
 import type { TRPCRouterRecord } from "@trpc/server";
 import { z } from "zod/v4";
+
 import { desc, eq } from "@acme/db";
 import { db } from "@acme/db/client";
-import { Bill, GovernmentContent, CourtCase } from "@acme/db/schema";
+import { Bill, CourtCase, GovernmentContent } from "@acme/db/schema";
 
 import { publicProcedure } from "../trpc";
 
@@ -247,9 +248,21 @@ This Court has jurisdiction pursuant to...
 export const contentRouter = {
   // Get all content from database
   getAll: publicProcedure.query(async () => {
-    const bills = await db.select().from(Bill).orderBy(desc(Bill.createdAt)).limit(20);
-    const governmentContent = await db.select().from(GovernmentContent).orderBy(desc(GovernmentContent.createdAt)).limit(20);
-    const courtCases = await db.select().from(CourtCase).orderBy(desc(CourtCase.createdAt)).limit(20);
+    const bills = await db
+      .select()
+      .from(Bill)
+      .orderBy(desc(Bill.createdAt))
+      .limit(20);
+    const governmentContent = await db
+      .select()
+      .from(GovernmentContent)
+      .orderBy(desc(GovernmentContent.createdAt))
+      .limit(20);
+    const courtCases = await db
+      .select()
+      .from(CourtCase)
+      .orderBy(desc(CourtCase.createdAt))
+      .limit(20);
 
     const allContent: ContentCard[] = [
       // Mock content first
@@ -258,24 +271,24 @@ export const contentRouter = {
       ...bills.map((bill) => ({
         id: bill.id,
         title: bill.title,
-        description: bill.description || bill.summary || '',
-        type: 'bill' as const,
+        description: bill.description || bill.summary || "",
+        type: "bill" as const,
         isAIGenerated: false,
       })),
       // Government content (news articles, executive orders, etc.) from database
       ...governmentContent.map((content) => ({
         id: content.id,
         title: content.title,
-        description: content.description || '',
-        type: 'general' as const,
+        description: content.description || "",
+        type: "general" as const,
         isAIGenerated: false,
       })),
       // Court cases from database
       ...courtCases.map((courtCase) => ({
         id: courtCase.id,
         title: courtCase.title,
-        description: courtCase.description || '',
-        type: 'case' as const,
+        description: courtCase.description || "",
+        type: "case" as const,
         isAIGenerated: false,
       })),
     ];
@@ -292,9 +305,21 @@ export const contentRouter = {
     )
     .query(async ({ input }) => {
       if (!input.type || input.type === "all") {
-        const bills = await db.select().from(Bill).orderBy(desc(Bill.createdAt)).limit(20);
-        const governmentContent = await db.select().from(GovernmentContent).orderBy(desc(GovernmentContent.createdAt)).limit(20);
-        const courtCases = await db.select().from(CourtCase).orderBy(desc(CourtCase.createdAt)).limit(20);
+        const bills = await db
+          .select()
+          .from(Bill)
+          .orderBy(desc(Bill.createdAt))
+          .limit(20);
+        const governmentContent = await db
+          .select()
+          .from(GovernmentContent)
+          .orderBy(desc(GovernmentContent.createdAt))
+          .limit(20);
+        const courtCases = await db
+          .select()
+          .from(CourtCase)
+          .orderBy(desc(CourtCase.createdAt))
+          .limit(20);
 
         const allContent: ContentCard[] = [
           // Mock content first
@@ -303,24 +328,24 @@ export const contentRouter = {
           ...bills.map((bill) => ({
             id: bill.id,
             title: bill.title,
-            description: bill.description || bill.summary || '',
-            type: 'bill' as const,
+            description: bill.description || bill.summary || "",
+            type: "bill" as const,
             isAIGenerated: false,
           })),
           // Government content from database
           ...governmentContent.map((content) => ({
             id: content.id,
             title: content.title,
-            description: content.description || '',
-            type: 'general' as const,
+            description: content.description || "",
+            type: "general" as const,
             isAIGenerated: false,
           })),
           // Court cases from database
           ...courtCases.map((courtCase) => ({
             id: courtCase.id,
             title: courtCase.title,
-            description: courtCase.description || '',
-            type: 'case' as const,
+            description: courtCase.description || "",
+            type: "case" as const,
             isAIGenerated: false,
           })),
         ];
@@ -329,34 +354,46 @@ export const contentRouter = {
       }
 
       if (input.type === "bill") {
-        const bills = await db.select().from(Bill).orderBy(desc(Bill.createdAt)).limit(50);
+        const bills = await db
+          .select()
+          .from(Bill)
+          .orderBy(desc(Bill.createdAt))
+          .limit(50);
         return bills.map((bill) => ({
           id: bill.id,
           title: bill.title,
-          description: bill.description || bill.summary || '',
-          type: 'bill' as const,
+          description: bill.description || bill.summary || "",
+          type: "bill" as const,
           isAIGenerated: false,
         }));
       }
 
       if (input.type === "order" || input.type === "general") {
-        const governmentContent = await db.select().from(GovernmentContent).orderBy(desc(GovernmentContent.createdAt)).limit(50);
+        const governmentContent = await db
+          .select()
+          .from(GovernmentContent)
+          .orderBy(desc(GovernmentContent.createdAt))
+          .limit(50);
         return governmentContent.map((content) => ({
           id: content.id,
           title: content.title,
-          description: content.description || '',
-          type: 'general' as const,
+          description: content.description || "",
+          type: "general" as const,
           isAIGenerated: false,
         }));
       }
 
       if (input.type === "case") {
-        const courtCases = await db.select().from(CourtCase).orderBy(desc(CourtCase.createdAt)).limit(50);
+        const courtCases = await db
+          .select()
+          .from(CourtCase)
+          .orderBy(desc(CourtCase.createdAt))
+          .limit(50);
         return courtCases.map((courtCase) => ({
           id: courtCase.id,
           title: courtCase.title,
-          description: courtCase.description || '',
-          type: 'case' as const,
+          description: courtCase.description || "",
+          type: "case" as const,
           isAIGenerated: false,
         }));
       }
@@ -373,53 +410,65 @@ export const contentRouter = {
     )
     .query(async ({ input }) => {
       // Check mock content first
-      const mockItem = mockDetailedContent.find(item => item.id === input.id);
+      const mockItem = mockDetailedContent.find((item) => item.id === input.id);
       if (mockItem) {
         return mockItem;
       }
 
       // Try to find in bills
-      const bill = await db.select().from(Bill).where(eq(Bill.id, input.id)).limit(1);
+      const bill = await db
+        .select()
+        .from(Bill)
+        .where(eq(Bill.id, input.id))
+        .limit(1);
       if (bill.length > 0) {
         const b = bill[0]!;
         return {
           id: b.id,
           title: b.title,
-          description: b.description || b.summary || '',
-          type: 'bill' as const,
+          description: b.description || b.summary || "",
+          type: "bill" as const,
           isAIGenerated: false,
-          articleContent: b.summary || b.description || 'No summary available',
-          originalContent: b.fullText || 'Full text not available',
+          articleContent: b.summary || b.description || "No summary available",
+          originalContent: b.fullText || "Full text not available",
         };
       }
 
       // Try to find in government content
-      const content = await db.select().from(GovernmentContent).where(eq(GovernmentContent.id, input.id)).limit(1);
+      const content = await db
+        .select()
+        .from(GovernmentContent)
+        .where(eq(GovernmentContent.id, input.id))
+        .limit(1);
       if (content.length > 0) {
         const c = content[0]!;
         return {
           id: c.id,
           title: c.title,
-          description: c.description || '',
-          type: 'general' as const,
+          description: c.description || "",
+          type: "general" as const,
           isAIGenerated: false,
-          articleContent: c.fullText || c.description || 'No content available', // Use full markdown text
-          originalContent: c.fullText || 'Full text not available', // Same content for now
+          articleContent: c.fullText || c.description || "No content available", // Use full markdown text
+          originalContent: c.fullText || "Full text not available", // Same content for now
         };
       }
 
       // Try to find in court cases
-      const courtCase = await db.select().from(CourtCase).where(eq(CourtCase.id, input.id)).limit(1);
+      const courtCase = await db
+        .select()
+        .from(CourtCase)
+        .where(eq(CourtCase.id, input.id))
+        .limit(1);
       if (courtCase.length > 0) {
         const c = courtCase[0]!;
         return {
           id: c.id,
           title: c.title,
-          description: c.description || '',
-          type: 'case' as const,
+          description: c.description || "",
+          type: "case" as const,
           isAIGenerated: false,
-          articleContent: c.description || 'No description available',
-          originalContent: c.fullText || 'Full text not available',
+          articleContent: c.description || "No description available",
+          originalContent: c.fullText || "Full text not available",
         };
       }
 
