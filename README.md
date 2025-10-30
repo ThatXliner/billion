@@ -165,6 +165,52 @@ Learn more: https://docs.expo.dev/development/build/"
 
 Billion aims to bridge the gap between complex political information and public understanding, making civic engagement more accessible through AI-powered content creation and modern mobile experiences.
 
+
+# Technical docs
+
+## Architecture
+
+```
+---
+📊 Data Flow: Source → Database → API → App
+
+┌─────────────────┐
+│  Source Sites   │
+│  ├─ GovTrack    │
+│  ├─ WhiteHouse  │
+│  └─ Congress    │
+└────────┬────────┘
+         │ Playwright/Crawlee
+         │ (Headless Browser)
+         ▼
+┌─────────────────┐
+│   Scrapers      │
+│  ├─ govtrack.ts │
+│  ├─ whitehouse  │
+│  └─ congress.ts │
+└────────┬────────┘
+         │ upsert functions
+         ▼
+┌─────────────────┐
+│  PostgreSQL     │
+│  ├─ bill        │
+│  ├─ pres_action │
+│  └─ court_case  │
+└────────┬────────┘
+         │ Drizzle ORM
+         ▼
+┌─────────────────┐
+│  tRPC Router    │
+│  content.ts     │
+└────────┬────────┘
+         │ Type-safe API
+         ▼
+┌─────────────────┐
+│  Mobile/Web App │
+│  (Expo/Next.js) │
+└─────────────────┘
+```
+
 ---
 
 # create-t3-turbo

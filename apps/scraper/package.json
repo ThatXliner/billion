@@ -1,0 +1,32 @@
+{
+  "name": "@acme/scraper",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "This is an example of a Crawlee project.",
+  "dependencies": {
+    "@acme/db": "workspace:*",
+    "@ai-sdk/openai": "^2.0.57",
+    "ai": "^5.0.82",
+    "crawlee": "^3.0.0",
+    "dotenv": "^16.4.7",
+    "playwright": "*",
+    "turndown": "^7.2.2"
+  },
+  "devDependencies": {
+    "@apify/tsconfig": "^0.1.0",
+    "@types/node": "^22.18.12",
+    "@types/turndown": "^5.0.6",
+    "tsx": "^4.4.0",
+    "typescript": "~5.9.0"
+  },
+  "scripts": {
+    "dev": "pnpm run start:dev",
+    "start": "pnpm run start:dev",
+    "start:prod": "node dist/main.js",
+    "start:dev": "tsx src/main.ts",
+    "build": "tsc",
+    "test": "echo \"Error: oops, the actor has no tests yet, sad!\" && exit 1"
+  },
+  "author": "It's not you it's me",
+  "license": "ISC"
+}
