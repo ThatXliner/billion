@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import Fuse from "fuse.js";
 
+import type { VideoPost } from "@acme/api";
 import { Button } from "@acme/ui/button-native";
 import { Card, CardContent } from "@acme/ui/card-native";
 import {
@@ -113,9 +114,9 @@ const TabButton = ({
 
 export default function BrowseScreen() {
   const insets = useSafeAreaInsets();
-  const [selectedTab, setSelectedTab] = useState<
-    "all" | "bill" | "order" | "case" | "general"
-  >("all");
+  const [selectedTab, setSelectedTab] = useState<VideoPost["type"] | "all">(
+    "all",
+  );
   const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch content from tRPC
@@ -149,6 +150,29 @@ export default function BrowseScreen() {
     return results.map((result) => result.item);
   }, [content, searchQuery, fuse]);
 
+  const tabs = {
+    all: {
+      title: "All",
+      active: selectedTab === "all",
+      onPress: () => setSelectedTab("all"),
+    },
+    bill: {
+      title: "Bills",
+      active: selectedTab === "bill",
+      onPress: () => setSelectedTab("bill"),
+    },
+    case: {
+      title: "Cases",
+      active: selectedTab === "case",
+      onPress: () => setSelectedTab("case"),
+    },
+    order: {
+      title: "Orders",
+      active: selectedTab === "order",
+      onPress: () => setSelectedTab("order"),
+    },
+  };
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
@@ -167,31 +191,14 @@ export default function BrowseScreen() {
       </View>
 
       <View style={styles.tabContainer}>
-        <TabButton
-          title="All"
-          active={selectedTab === "all"}
-          onPress={() => setSelectedTab("all")}
-        />
-        <TabButton
-          title="Bills"
-          active={selectedTab === "bill"}
-          onPress={() => setSelectedTab("bill")}
-        />
-        <TabButton
-          title="Executive"
-          active={selectedTab === "order"}
-          onPress={() => setSelectedTab("order")}
-        />
-        <TabButton
-          title="Cases"
-          active={selectedTab === "case"}
-          onPress={() => setSelectedTab("case")}
-        />
-        <TabButton
-          title="News"
-          active={selectedTab === "general"}
-          onPress={() => setSelectedTab("general")}
-        />
+        {Object.values(tabs).map((tab) => (
+          <TabButton
+            key={tab.title}
+            title={tab.title}
+            active={tab.active}
+            onPress={tab.onPress}
+          />
+        ))}
       </View>
 
       <ScrollView

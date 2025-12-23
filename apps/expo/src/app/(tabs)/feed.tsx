@@ -82,6 +82,7 @@ export default function FeedScreen() {
   };
 
   const renderVideoItem = ({ item }: { item: VideoPost; index: number }) => (
+    // I have no idea why TypeScript is crashing out here
     <View
       style={[styles.videoContainer, { height: screenHeight }]}
       lightColor={colors.white}

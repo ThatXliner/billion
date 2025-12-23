@@ -9,7 +9,7 @@ import { publicProcedure } from "../trpc";
 
 // Schema for video/feed post (using real content)
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const VideoPostSchema = z.object({
+export const VideoPostSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string(),
