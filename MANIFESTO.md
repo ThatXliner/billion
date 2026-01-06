@@ -2,27 +2,27 @@
 
 > Congressional App Challenge 2025 -> AI.gov 2026
 
-## What is Billion?
+# What is Billion?
 
 Tagline for now: An AI-powered mobile app that makes political information accessible through engaging, short-form content.
 
-### The idea/problem
+## The idea/problem
 
 If I asked you right now about what laws are currently about to be passed, what sort of important cases are currently happening, or what the President has most recently done (maybe except for the Venezuela thing), you probably have no idea.
 
 Or maybe you have. However, you likely only have heard of the craziest things that are happening on the news or on social media. This provides a very skewed view of the political landscape. A well-informed people is the foundation to democracy, and the lack of information is a threat to democracy.
 
-### The initial vision
+## The initial vision
 
 The issue isn't the lack of information, but the lack of access to information. Billion aims to bridge this gap by providing a platform where users can easily access and understand complex political topics.
 
 It aims to use artificial intelligence to generate summaries, analyses, and visual content about laws, bills, political actions, and their real-world consequences across the political spectrum. See [this Instagram account](https://www.instagram.com/bothsidesnews_/) for inspiration.
 
-### What it currently is
+## What it currently is
 
 Currently, we have functional scrapers only for presidential actions and other [White House news](https://www.whitehouse.gov/news/) (I think?). Additionally, we have a sort of mock-feed which we planned to replace with fully AI-generated videos. But for now, it stands as a proof-of-concept with just article cards and poorly AI-generated articles (not engaging nor is it concisely presented).
 
-### The vision for now
+## The vision for now
 
 Given our Janurary 20th implementation deadline, I believe we should aim to get the app to this state:
 
@@ -37,7 +37,7 @@ Given our Janurary 20th implementation deadline, I believe we should aim to get 
 3. Personalization of the feed via a double-tap-to-like?
 4. Being able to search long-form articles
 
-#### What needs to be done
+### What needs to be done
 
 **The currently article generation**
 - Fix/write scrapers for more direct political sources, including
@@ -67,6 +67,6 @@ OOH! Maybe make the current "political discourse" feature much more interactive 
 
 TBD. Honestly, this is a last priority since graphics should deem sufficient.
 
-### The ultimate vision
+## The ultimate vision
 
 Be the ultimate place for political discourse and knowledge base. Maybe even a "how will this affect X" feature.
