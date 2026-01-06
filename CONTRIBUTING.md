@@ -1,6 +1,6 @@
 # Contributing guide
 
-These instructions (5a and 5b)             were also originally copy-pasted from https://github.com/t3-oss/create-t3-turbo
+These instructions (5a and 5b) were also originally copy-pasted from https://github.com/t3-oss/create-t3-turbo
 
 ### 5a. When it's time to add a new UI component
 
