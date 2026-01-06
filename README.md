@@ -6,7 +6,7 @@ Welcome to the codebase. See below for development set-up instructions. See [MAN
 
 > These instructions were originally copy-pasted from https://github.com/t3-oss/create-t3-turbo (which this project is scaffolded from). I've modified it to get rid of the bs that we don't use. For example, I've commented out all of the original auth instructions cuz we're not using that for now.
 
-> Anything in blockquotes without admonitions like this is additionally commentary I added
+> Anything in blockquotes without admonitions (like this one you're reading) is additional commentary I added
 
 ### If already set up
 
