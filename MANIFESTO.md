@@ -70,3 +70,6 @@ TBD. Honestly, this is a last priority since graphics should deem sufficient.
 ## The ultimate vision
 
 Be the ultimate place for political discourse and knowledge base. Maybe even a "how will this affect X" feature.
+
+
+Maybe partner with Ground News
