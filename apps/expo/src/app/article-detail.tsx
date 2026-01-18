@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  useColorScheme,
 } from "react-native";
 import Markdown from "react-native-markdown-display";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,8 +15,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@acme/ui/button-native";
 import {
   colors,
+  darkTheme,
   fontSize,
   fontWeight,
+  lightTheme,
   radius,
   spacing,
 } from "@acme/ui/theme-tokens";
@@ -43,6 +46,8 @@ const TabButton = ({
 );
 export default function ArticleDetailScreen() {
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === "dark" ? darkTheme : lightTheme;
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [selectedTab, setSelectedTab] = useState<"article" | "original">(
@@ -69,9 +74,11 @@ export default function ArticleDetailScreen() {
             headerBackTitle: "Back",
           }}
         />
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.blue[500]} />
-          <Text style={styles.loadingText}>Loading content...</Text>
+        <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+            Loading content...
+          </Text>
         </View>
       </>
     );
@@ -87,15 +94,17 @@ export default function ArticleDetailScreen() {
             headerBackTitle: "Back",
           }}
         />
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>
+        <View style={[styles.errorContainer, { backgroundColor: theme.background }]}>
+          <Text style={[styles.errorTitle, { color: theme.danger }]}>
             {error ? "Failed to load content" : "Content not found"}
           </Text>
           <TouchableOpacity
-            style={styles.errorButton}
+            style={[styles.errorButton, { backgroundColor: theme.primary }]}
             onPress={() => router.back()}
           >
-            <Text style={styles.errorButtonText}>Go Back</Text>
+            <Text style={[styles.errorButtonText, { color: theme.primaryForeground }]}>
+              Go Back
+            </Text>
           </TouchableOpacity>
         </View>
       </>
@@ -111,7 +120,15 @@ export default function ArticleDetailScreen() {
         }}
       />*/}
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.tabContainer}>
+        <View
+          style={[
+            styles.tabContainer,
+            {
+              backgroundColor: theme.background,
+              borderBottomColor: theme.border,
+            },
+          ]}
+        >
           <TabButton
             title="Article"
             active={selectedTab === "article"}
@@ -129,31 +146,39 @@ export default function ArticleDetailScreen() {
           contentContainerStyle={styles.scrollViewContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.contentCard}>
+          <View
+            style={[
+              styles.contentCard,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+          >
             <Markdown
               style={{
                 body: {
                   fontSize: fontSize.base,
                   lineHeight: spacing[6] * 16,
-                  color: colors.gray[800],
+                  color: theme.foreground,
                 },
                 heading1: {
                   fontSize: fontSize["2xl"],
                   fontWeight: fontWeight.bold,
                   marginBottom: spacing[4] * 16,
-                  color: colors.gray[900],
+                  color: theme.foreground,
                 },
                 heading2: {
                   fontSize: fontSize.xl,
                   fontWeight: fontWeight.bold,
                   marginBottom: spacing[3] * 16,
-                  color: colors.gray[900],
+                  color: theme.foreground,
                 },
                 heading3: {
                   fontSize: fontSize.lg,
                   fontWeight: fontWeight.semibold,
                   marginBottom: spacing[2] * 16,
-                  color: colors.gray[900],
+                  color: theme.foreground,
                 },
                 paragraph: {
                   marginBottom: spacing[4] * 16,
@@ -168,27 +193,28 @@ export default function ArticleDetailScreen() {
                   fontStyle: "italic",
                 },
                 link: {
-                  color: colors.blue[600],
+                  color: theme.accent,
                   textDecorationLine: "underline",
                 },
                 blockquote: {
-                  backgroundColor: colors.gray[100],
+                  backgroundColor: theme.muted,
                   borderLeftWidth: 4,
-                  borderLeftColor: colors.blue[500],
+                  borderLeftColor: theme.accent,
                   paddingLeft: spacing[4] * 16,
                   paddingVertical: spacing[2] * 16,
                   marginVertical: spacing[3] * 16,
                 },
                 code_inline: {
-                  backgroundColor: colors.gray[200],
+                  backgroundColor: theme.muted,
+                  color: theme.foreground,
                   paddingHorizontal: spacing[2] * 16,
                   paddingVertical: spacing[1] * 16,
                   borderRadius: radius.sm * 16,
                   fontFamily: "monospace",
                 },
                 code_block: {
-                  backgroundColor: colors.gray[900],
-                  color: colors.white,
+                  backgroundColor: theme.muted,
+                  color: theme.foreground,
                   padding: spacing[4] * 16,
                   borderRadius: radius.md * 16,
                   marginVertical: spacing[3] * 16,
@@ -205,11 +231,11 @@ export default function ArticleDetailScreen() {
 
         {/* Floating close button */}
         <TouchableOpacity
-          style={styles.floatingCloseButton}
+          style={[styles.floatingCloseButton, { backgroundColor: theme.primary }]}
           onPress={() => router.back()}
           activeOpacity={0.8}
         >
-          <Ionicons name="close" size={24} color={colors.white} />
+          <Ionicons name="close" size={24} color={theme.primaryForeground} />
         </TouchableOpacity>
       </SafeAreaView>
     </>
@@ -224,41 +250,33 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.gray[100],
   },
   loadingText: {
     marginTop: spacing[4] * 16,
-    color: colors.gray[600],
   },
   errorContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.gray[100],
     padding: spacing[5] * 16,
   },
   errorTitle: {
     marginBottom: spacing[4] * 16,
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
-    color: colors.red[600],
   },
   errorButton: {
     borderRadius: radius.md * 16,
-    backgroundColor: colors.blue[500],
     paddingHorizontal: spacing[8] * 16,
     paddingVertical: spacing[3] * 16,
   },
   errorButtonText: {
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
-    color: colors.white,
   },
   tabContainer: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
-    backgroundColor: colors.white,
     paddingHorizontal: spacing[5] * 16,
     paddingVertical: spacing[4] * 16,
     gap: spacing[3] * 16,
@@ -276,8 +294,6 @@ const styles = StyleSheet.create({
   contentCard: {
     borderRadius: radius.lg * 16,
     borderWidth: 1,
-    borderColor: colors.blue[500],
-    backgroundColor: colors.blue[100],
     padding: spacing[5] * 16,
     marginBottom: spacing[20] * 16, // Extra space at bottom for comfortable reading
   },
@@ -288,7 +304,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.blue[500],
     alignItems: "center",
     justifyContent: "center",
     shadowColor: colors.black,

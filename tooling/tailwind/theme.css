@@ -1,37 +1,37 @@
 :root {
-  /* USA.gov Professional Blue Theme */
-  --background: oklch(0.96 0.008 240); /* Light blue-gray #f1f4f8 */
-  --foreground: oklch(0.25 0.02 240); /* Deep navy text #112e51 */
-  --card: oklch(0.985 0.005 240); /* Near-white with blue tint #fafbfc */
-  --card-foreground: oklch(0.25 0.02 240);
-  --popover: oklch(0.985 0.005 240);
-  --popover-foreground: oklch(0.25 0.02 240);
-  --primary: oklch(0.45 0.12 240); /* Bright blue #0071bc */
+  /* "Deep State Modern" - Light Mode (designed primarily for dark) */
+  --background: oklch(0.97 0.015 280); /* Light indigo tint #eef2ff */
+  --foreground: oklch(0.2 0.05 280); /* Deep indigo text #1a1a40 */
+  --card: oklch(1 0 0); /* Pure white cards */
+  --card-foreground: oklch(0.2 0.05 280);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.05 280);
+  --primary: oklch(0.55 0.22 290); /* Purple #9333ea */
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.92 0.01 240); /* Light gray-blue */
-  --secondary-foreground: oklch(0.3 0.025 240);
-  --muted: oklch(0.94 0.008 240); /* Muted blue-gray */
-  --muted-foreground: oklch(0.5 0.015 240);
-  --accent: oklch(0.5 0.14 240); /* Accent blue */
+  --secondary: oklch(0.92 0.02 280); /* Light indigo */
+  --secondary-foreground: oklch(0.2 0.05 280);
+  --muted: oklch(0.96 0.005 240); /* Muted gray */
+  --muted-foreground: oklch(0.5 0.08 280); /* Lavender muted text */
+  --accent: oklch(0.7 0.15 200); /* Electric cyan #06b6d4 */
   --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.55 0.22 25); /* Red for errors */
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.88 0.012 240); /* Subtle blue-gray border */
-  --input: oklch(0.98 0.005 240); /* Light input background */
-  --ring: oklch(0.45 0.12 240); /* Focus ring matches primary */
-  --chart-1: oklch(0.45 0.12 240);
-  --chart-2: oklch(0.35 0.1 240);
-  --chart-3: oklch(0.55 0.14 240);
-  --chart-4: oklch(0.65 0.1 240);
-  --chart-5: oklch(0.75 0.08 240);
-  --sidebar: oklch(0.92 0.01 240);
-  --sidebar-foreground: oklch(0.3 0.025 240);
-  --sidebar-primary: oklch(0.45 0.12 240);
+  --border: oklch(0.88 0.03 280); /* Light indigo border */
+  --input: oklch(1 0 0); /* White input background */
+  --ring: oklch(0.55 0.22 290); /* Purple focus ring */
+  --chart-1: oklch(0.55 0.22 290);
+  --chart-2: oklch(0.45 0.18 290);
+  --chart-3: oklch(0.65 0.15 200);
+  --chart-4: oklch(0.75 0.12 200);
+  --chart-5: oklch(0.85 0.08 280);
+  --sidebar: oklch(0.92 0.02 280);
+  --sidebar-foreground: oklch(0.2 0.05 280);
+  --sidebar-primary: oklch(0.55 0.22 290);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.88 0.012 240);
-  --sidebar-accent-foreground: oklch(0.45 0.12 240);
-  --sidebar-border: oklch(0.86 0.015 240);
-  --sidebar-ring: oklch(0.45 0.12 240);
+  --sidebar-accent: oklch(0.88 0.03 280);
+  --sidebar-accent-foreground: oklch(0.55 0.22 290);
+  --sidebar-border: oklch(0.86 0.035 280);
+  --sidebar-ring: oklch(0.55 0.22 290);
   --radius: 0.75rem;
   /* Neumorphic shadows - subtle dual-light-source */
   --shadow-2xs:
@@ -65,64 +65,64 @@
   --spacing: 0.25rem;
 
   @variant dark {
-    /* Dark navy theme adapted from USA.gov style */
-    --background: oklch(0.18 0.025 240); /* Dark navy #0a192f */
-    --foreground: oklch(0.92 0.008 240); /* Light blue-gray text */
-    --card: oklch(0.22 0.03 240); /* Slightly lighter navy #162d47 */
-    --card-foreground: oklch(0.92 0.008 240);
-    --popover: oklch(0.22 0.03 240);
-    --popover-foreground: oklch(0.92 0.008 240);
-    --primary: oklch(0.55 0.14 240); /* Brighter blue for contrast */
-    --primary-foreground: oklch(0.18 0.025 240);
-    --secondary: oklch(0.28 0.035 240); /* Medium navy */
-    --secondary-foreground: oklch(0.85 0.01 240);
-    --muted: oklch(0.26 0.032 240);
-    --muted-foreground: oklch(0.65 0.012 240);
-    --accent: oklch(0.5 0.14 240);
-    --accent-foreground: oklch(0.95 0.005 240);
-    --destructive: oklch(0.45 0.18 25);
+    /* "Deep State Modern" - Dark Mode (Primary Theme) */
+    --background: oklch(0.2 0.05 280); /* Deep indigo #1a1a40 */
+    --foreground: oklch(1 0 0); /* Pure white text */
+    --card: oklch(0.25 0.06 280); /* Dark glass cards #1e1e4f */
+    --card-foreground: oklch(1 0 0);
+    --popover: oklch(0.25 0.06 280);
+    --popover-foreground: oklch(1 0 0);
+    --primary: oklch(0.55 0.22 290); /* Purple gradient #9333ea */
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.3 0.07 280); /* Dark glass surface #252560 */
+    --secondary-foreground: oklch(1 0 0);
+    --muted: oklch(0.22 0.05 280); /* Muted dark surface */
+    --muted-foreground: oklch(0.75 0.05 280); /* Lavender #b0b0d1 */
+    --accent: oklch(0.68 0.15 200); /* Electric cyan #22d3ee */
+    --accent-foreground: oklch(0.2 0.05 280);
+    --destructive: oklch(0.55 0.22 25);
     --destructive-foreground: oklch(1 0 0);
-    --border: oklch(0.32 0.04 240);
-    --input: oklch(0.24 0.03 240);
-    --ring: oklch(0.55 0.14 240);
-    --chart-1: oklch(0.55 0.14 240);
-    --chart-2: oklch(0.45 0.12 240);
-    --chart-3: oklch(0.65 0.12 240);
-    --chart-4: oklch(0.75 0.1 240);
-    --chart-5: oklch(0.85 0.08 240);
-    --sidebar: oklch(0.2 0.028 240);
-    --sidebar-foreground: oklch(0.85 0.01 240);
-    --sidebar-primary: oklch(0.55 0.14 240);
-    --sidebar-primary-foreground: oklch(0.18 0.025 240);
-    --sidebar-accent: oklch(0.28 0.035 240);
-    --sidebar-accent-foreground: oklch(0.55 0.14 240);
-    --sidebar-border: oklch(0.32 0.04 240);
-    --sidebar-ring: oklch(0.55 0.14 240);
+    --border: oklch(0.35 0.08 200); /* Thin cyan stroke #0e7490 */
+    --input: oklch(0.22 0.05 280); /* Dark input surface */
+    --ring: oklch(0.68 0.15 200); /* Cyan focus ring */
+    --chart-1: oklch(0.55 0.22 290);
+    --chart-2: oklch(0.45 0.18 290);
+    --chart-3: oklch(0.68 0.15 200);
+    --chart-4: oklch(0.75 0.12 200);
+    --chart-5: oklch(0.85 0.08 280);
+    --sidebar: oklch(0.18 0.045 280);
+    --sidebar-foreground: oklch(1 0 0);
+    --sidebar-primary: oklch(0.55 0.22 290);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.3 0.07 280);
+    --sidebar-accent-foreground: oklch(0.68 0.15 200);
+    --sidebar-border: oklch(0.35 0.08 200);
+    --sidebar-ring: oklch(0.68 0.15 200);
     --radius: 0.75rem;
-    /* Dark mode neumorphic shadows - higher opacity */
+    /* Dark mode glassmorphism shadows - dramatic depth */
     --shadow-2xs:
-      2px 2px 4px rgba(0, 0, 0, 0.6), -2px -2px 4px rgba(35, 60, 90, 0.3);
+      0 2px 8px rgba(0, 0, 0, 0.7), 0 0 2px rgba(99, 102, 241, 0.15);
     --shadow-xs:
-      3px 3px 6px rgba(0, 0, 0, 0.6), -3px -3px 6px rgba(35, 60, 90, 0.3);
+      0 3px 10px rgba(0, 0, 0, 0.7), 0 0 4px rgba(99, 102, 241, 0.2);
     --shadow-sm:
-      4px 4px 8px rgba(0, 0, 0, 0.7), -4px -4px 8px rgba(35, 60, 90, 0.35);
+      0 4px 14px rgba(0, 0, 0, 0.75), 0 0 6px rgba(99, 102, 241, 0.25);
     --shadow:
-      5px 5px 10px rgba(0, 0, 0, 0.7), -5px -5px 10px rgba(35, 60, 90, 0.35);
+      0 6px 18px rgba(0, 0, 0, 0.8), 0 0 8px rgba(99, 102, 241, 0.3);
     --shadow-md:
-      6px 6px 12px rgba(0, 0, 0, 0.75), -6px -6px 12px rgba(35, 60, 90, 0.4);
+      0 8px 24px rgba(0, 0, 0, 0.85), 0 0 12px rgba(99, 102, 241, 0.35);
     --shadow-lg:
-      8px 8px 16px rgba(0, 0, 0, 0.8), -8px -8px 16px rgba(35, 60, 90, 0.45);
+      0 12px 32px rgba(0, 0, 0, 0.9), 0 0 16px rgba(99, 102, 241, 0.4);
     --shadow-xl:
-      10px 10px 20px rgba(0, 0, 0, 0.85), -10px -10px 20px rgba(35, 60, 90, 0.5);
+      0 16px 48px rgba(0, 0, 0, 0.95), 0 0 24px rgba(99, 102, 241, 0.45);
     --shadow-2xl:
-      12px 12px 24px rgba(0, 0, 0, 0.9), -12px -12px 24px rgba(35, 60, 90, 0.55);
-    /* Inset shadows for dark mode */
+      0 24px 64px rgba(0, 0, 0, 0.95), 0 0 32px rgba(99, 102, 241, 0.5);
+    /* Inset shadows for glassmorphism */
     --shadow-inset:
-      inset 3px 3px 6px rgba(0, 0, 0, 0.7),
-      inset -3px -3px 6px rgba(35, 60, 90, 0.3);
+      inset 0 2px 8px rgba(0, 0, 0, 0.8),
+      inset 0 0 2px rgba(99, 102, 241, 0.2);
     --shadow-inset-sm:
-      inset 2px 2px 4px rgba(0, 0, 0, 0.6),
-      inset -2px -2px 4px rgba(35, 60, 90, 0.25);
+      inset 0 1px 4px rgba(0, 0, 0, 0.7),
+      inset 0 0 1px rgba(99, 102, 241, 0.15);
   }
 }
 

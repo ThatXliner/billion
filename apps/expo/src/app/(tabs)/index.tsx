@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  useColorScheme,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -16,8 +17,10 @@ import { Button } from "@acme/ui/button-native";
 import { Card, CardContent } from "@acme/ui/card-native";
 import {
   colors,
+  darkTheme,
   fontSize,
   fontWeight,
+  lightTheme,
   radius,
   spacing,
 } from "@acme/ui/theme-tokens";
@@ -33,7 +36,13 @@ interface ContentCard {
   isAIGenerated: boolean;
 }
 
-const ContentCardComponent = ({ item }: { item: ContentCard }) => {
+const ContentCardComponent = ({
+  item,
+  theme,
+}: {
+  item: ContentCard;
+  theme: typeof darkTheme;
+}) => {
   const router = useRouter();
 
   return (
@@ -51,8 +60,25 @@ const ContentCardComponent = ({ item }: { item: ContentCard }) => {
           lightColor="transparent"
           darkColor="transparent"
         >
-          <Text style={styles.cardTitle}>{item.title}</Text>
-          <Text style={styles.cardDescription}>{item.description}</Text>
+          <Text
+            style={{
+              marginBottom: spacing[2] * 16,
+              fontSize: fontSize.lg,
+              fontWeight: fontWeight.bold,
+              color: theme.foreground,
+            }}
+          >
+            {item.title}
+          </Text>
+          <Text
+            style={{
+              fontSize: fontSize.sm,
+              lineHeight: spacing[5] * 16,
+              color: theme.textSecondary,
+            }}
+          >
+            {item.description}
+          </Text>
         </View>
         <View
           style={styles.cardButtonContainer}
@@ -62,7 +88,6 @@ const ContentCardComponent = ({ item }: { item: ContentCard }) => {
           <Button
             variant="default"
             size="sm"
-            style={styles.watchButton}
             onPress={() => {
               router.push(`/article-detail?id=${item.id}`);
             }}
@@ -70,9 +95,8 @@ const ContentCardComponent = ({ item }: { item: ContentCard }) => {
             Watch Short
           </Button>
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
-            style={styles.readButton}
             onPress={() => {
               router.push(`/article-detail?id=${item.id}`);
             }}
@@ -89,22 +113,32 @@ const TabButton = ({
   title,
   active,
   onPress,
+  theme,
 }: {
   title: string;
   active: boolean;
   onPress: () => void;
+  theme: typeof darkTheme;
 }) => (
   <TouchableOpacity
     style={[
       styles.tabButton,
-      active ? styles.tabButtonActive : styles.tabButtonInactive,
+      active
+        ? { backgroundColor: theme.primary }
+        : {
+            backgroundColor: "transparent",
+            borderWidth: 1,
+            borderColor: theme.border,
+          },
     ]}
     onPress={onPress}
   >
     <Text
       style={[
         styles.tabButtonText,
-        active ? styles.tabButtonTextActive : styles.tabButtonTextInactive,
+        {
+          color: active ? theme.primaryForeground : theme.mutedForeground,
+        },
       ]}
     >
       {title}
@@ -114,6 +148,8 @@ const TabButton = ({
 
 export default function BrowseScreen() {
   const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === "dark" ? darkTheme : lightTheme;
   const [selectedTab, setSelectedTab] = useState<VideoPost["type"] | "all">(
     "all",
   );
@@ -173,16 +209,75 @@ export default function BrowseScreen() {
     },
   };
 
+  const dynamicStyles = {
+    header: {
+      backgroundColor: theme.background,
+      paddingHorizontal: spacing[5] * 16,
+      paddingBottom: spacing[5] * 16,
+      paddingTop: insets.top + 20,
+    },
+    headerText: {
+      fontSize: fontSize["2xl"],
+      fontWeight: fontWeight.bold,
+      color: theme.foreground,
+      marginBottom: spacing[4] * 16,
+    },
+    searchInput: {
+      backgroundColor: theme.input,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: radius.lg * 16,
+      paddingHorizontal: spacing[4] * 16,
+      paddingVertical: spacing[3] * 16,
+      fontSize: fontSize.base,
+      color: theme.foreground,
+    },
+    tabContainer: {
+      flexDirection: "row" as const,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+      backgroundColor: theme.background,
+      paddingHorizontal: spacing[5] * 16,
+      paddingVertical: spacing[3] * 16,
+      gap: spacing[2] * 16,
+    },
+    tabButtonActive: {
+      backgroundColor: theme.primary,
+    },
+    tabButtonInactive: {
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    tabButtonTextActive: {
+      color: theme.primaryForeground,
+    },
+    tabButtonTextInactive: {
+      color: theme.mutedForeground,
+    },
+    cardTitle: {
+      marginBottom: spacing[2] * 16,
+      fontSize: fontSize.lg,
+      fontWeight: fontWeight.bold,
+      color: theme.foreground,
+    },
+    cardDescription: {
+      fontSize: fontSize.sm,
+      lineHeight: spacing[5] * 16,
+      color: theme.textSecondary,
+    },
+  };
+
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-        <Text style={styles.headerText}>Browse</Text>
+      <View style={dynamicStyles.header}>
+        <Text style={dynamicStyles.headerText}>Browse</Text>
 
         {/* Search Input */}
         <TextInput
-          style={styles.searchInput}
+          style={dynamicStyles.searchInput}
           placeholder="Search bills, cases, and orders..."
-          placeholderTextColor={colors.gray[400]}
+          placeholderTextColor={theme.mutedForeground}
           value={searchQuery}
           onChangeText={setSearchQuery}
           clearButtonMode="while-editing"
@@ -190,13 +285,14 @@ export default function BrowseScreen() {
         />
       </View>
 
-      <View style={styles.tabContainer}>
+      <View style={dynamicStyles.tabContainer}>
         {Object.values(tabs).map((tab) => (
           <TabButton
             key={tab.title}
             title={tab.title}
             active={tab.active}
             onPress={tab.onPress}
+            theme={theme}
           />
         ))}
       </View>
@@ -207,29 +303,33 @@ export default function BrowseScreen() {
       >
         {isLoading ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={colors.blue[500]} />
+            <ActivityIndicator size="large" color={theme.primary} />
           </View>
         ) : error ? (
           <View style={styles.centerContainer}>
-            <Text style={styles.errorText}>Error loading content</Text>
+            <Text style={[styles.errorText, { color: theme.danger }]}>
+              Error loading content
+            </Text>
           </View>
         ) : filteredContent.length === 0 ? (
           <View style={styles.centerContainer}>
-            <Text style={styles.emptyText}>No results found</Text>
-            <Text style={styles.emptySubtext}>
+            <Text style={[styles.emptyText, { color: theme.foreground }]}>
+              No results found
+            </Text>
+            <Text style={[styles.emptySubtext, { color: theme.mutedForeground }]}>
               Try adjusting your search terms
             </Text>
           </View>
         ) : (
           <>
             {searchQuery.trim() && (
-              <Text style={styles.resultsText}>
+              <Text style={[styles.resultsText, { color: theme.textSecondary }]}>
                 Found {filteredContent.length} result
                 {filteredContent.length !== 1 ? "s" : ""}
               </Text>
             )}
             {filteredContent.map((item) => (
-              <ContentCardComponent key={item.id} item={item} />
+              <ContentCardComponent key={item.id} item={item} theme={theme} />
             ))}
           </>
         )}
@@ -242,58 +342,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing[5] * 16,
-    paddingBottom: spacing[5] * 16,
-  },
-  headerText: {
-    fontSize: fontSize["2xl"],
-    fontWeight: fontWeight.bold,
-    color: colors.blue[900],
-    marginBottom: spacing[4] * 16,
-  },
-  searchInput: {
-    backgroundColor: colors.gray[50],
-    borderWidth: 1,
-    borderColor: colors.gray[200],
-    borderRadius: radius.lg * 16,
-    paddingHorizontal: spacing[4] * 16,
-    paddingVertical: spacing[3] * 16,
-    fontSize: fontSize.base,
-    color: colors.gray[800],
-  },
-  tabContainer: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing[5] * 16,
-    paddingVertical: spacing[3] * 16,
-    gap: spacing[2] * 16,
-  },
   tabButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
-  tabButtonActive: {
-    backgroundColor: colors.blue[500],
-  },
-  tabButtonInactive: {
-    backgroundColor: colors.gray[100],
-    borderWidth: 1,
-    borderColor: colors.gray[200],
-  },
   tabButtonText: {
     fontSize: 14,
     fontWeight: fontWeight.medium,
-  },
-  tabButtonTextActive: {
-    color: colors.white,
-  },
-  tabButtonTextInactive: {
-    color: colors.gray[600],
   },
   scrollView: {
     flex: 1,
@@ -306,21 +362,17 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[10] * 16,
   },
   errorText: {
-    color: colors.red[500],
     fontSize: fontSize.base,
   },
   emptyText: {
-    color: colors.gray[700],
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
   },
   emptySubtext: {
     marginTop: spacing[2] * 16,
-    color: colors.gray[500],
     fontSize: fontSize.sm,
   },
   resultsText: {
-    color: colors.gray[600],
     fontSize: fontSize.sm,
     marginBottom: spacing[3] * 16,
     fontWeight: fontWeight.medium,
@@ -336,24 +388,9 @@ const styles = StyleSheet.create({
   cardTextContainer: {
     flex: 1,
   },
-  cardTitle: {
-    marginBottom: spacing[2] * 16,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.blue[900],
-  },
-  cardDescription: {
-    fontSize: fontSize.sm,
-    lineHeight: spacing[5] * 16,
-    color: colors.gray[600],
-  },
   cardButtonContainer: {
     width: "33.333%",
     flexDirection: "column",
     gap: spacing[3] * 16,
   },
-  watchButton: {
-    backgroundColor: colors.green[600],
-  },
-  readButton: {},
 });

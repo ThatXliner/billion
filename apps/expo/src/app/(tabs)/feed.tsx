@@ -6,6 +6,7 @@ import {
   StatusBar,
   StyleSheet,
   TouchableOpacity,
+  useColorScheme,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -15,8 +16,10 @@ import type { VideoPost } from "@acme/api";
 import { Button } from "@acme/ui/button-native";
 import {
   colors,
+  darkTheme,
   fontSize,
   fontWeight,
+  lightTheme,
   radius,
   spacing,
 } from "@acme/ui/theme-tokens";
@@ -28,6 +31,8 @@ const { height: screenHeight } = Dimensions.get("window");
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === "dark" ? darkTheme : lightTheme;
   const [likedVideos, setLikedVideos] = useState<Set<string>>(new Set());
 
   // Use infinite query for video feed
@@ -71,28 +76,38 @@ export default function FeedScreen() {
   const getTypeBadgeColor = (type: VideoPost["type"]) => {
     switch (type) {
       case "bill":
-        return colors.blue[500];
+        return colors.purple[600]; // Purple for bills
       case "order":
-        return colors.blue[700];
+        return colors.indigo[600]; // Indigo for orders
       case "case":
-        return colors.blue[600];
+        return colors.cyan[600]; // Cyan for cases
       default:
-        return colors.gray[600];
+        return theme.muted; // Muted for general
     }
   };
 
   const renderVideoItem = ({ item }: { item: VideoPost; index: number }) => (
     // I have no idea why TypeScript is crashing out here
     <View
-      style={[styles.videoContainer, { height: screenHeight }]}
-      lightColor={colors.white}
-      darkColor={colors.navy[900]}
+      style={[
+        styles.videoContainer,
+        { height: screenHeight, backgroundColor: theme.background },
+      ]}
+      lightColor={theme.background}
+      darkColor={theme.background}
     >
       {/* Content Card */}
       <View
-        style={styles.contentCard}
-        lightColor={colors.white}
-        darkColor={colors.navy[700]}
+        style={[
+          styles.contentCard,
+          {
+            backgroundColor: theme.card,
+            borderWidth: 1,
+            borderColor: theme.border,
+          },
+        ]}
+        lightColor={theme.card}
+        darkColor={theme.card}
       >
         {/* Type Badge */}
         <View
@@ -107,16 +122,24 @@ export default function FeedScreen() {
         </View>
 
         {/* Title */}
-        <Text style={styles.cardTitle}>{item.title}</Text>
+        <Text style={[styles.cardTitle, { color: theme.foreground }]}>
+          {item.title}
+        </Text>
 
         {/* Description */}
-        <Text style={styles.cardDescription}>{item.description}</Text>
+        <Text style={[styles.cardDescription, { color: theme.textSecondary }]}>
+          {item.description}
+        </Text>
 
         {/* Article Preview */}
-        <Text style={styles.articlePreview}>{item.articlePreview}</Text>
+        <Text style={[styles.articlePreview, { color: theme.mutedForeground }]}>
+          {item.articlePreview}
+        </Text>
 
         {/* Author */}
-        <Text style={styles.author}>{item.author}</Text>
+        <Text style={[styles.author, { color: theme.accent }]}>
+          {item.author}
+        </Text>
 
         {/* Read Full Article Button */}
         <Button
@@ -133,7 +156,7 @@ export default function FeedScreen() {
         </Button>
       </View>
 
-      {/* Action Buttons */}
+      {/* Action Buttons - Floating with no background */}
       <View
         style={[styles.bottomOverlay, { paddingBottom: insets.bottom + 80 }]}
         lightColor="transparent"
@@ -151,24 +174,29 @@ export default function FeedScreen() {
             <Text
               style={[
                 styles.actionIcon,
+                { filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))" },
                 likedVideos.has(item.id) && styles.actionIconLiked,
               ]}
             >
               {likedVideos.has(item.id) ? "❤️" : "🤍"}
             </Text>
-            <Text style={styles.actionText}>
+            <Text style={[styles.actionText, { color: theme.foreground }]}>
               {item.likes + (likedVideos.has(item.id) ? 1 : 0)}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton}>
             <Text style={styles.actionIcon}>💬</Text>
-            <Text style={styles.actionText}>{item.comments}</Text>
+            <Text style={[styles.actionText, { color: theme.foreground }]}>
+              {item.comments}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton}>
             <Text style={styles.actionIcon}>📤</Text>
-            <Text style={styles.actionText}>{item.shares}</Text>
+            <Text style={[styles.actionText, { color: theme.foreground }]}>
+              {item.shares}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -178,10 +206,12 @@ export default function FeedScreen() {
   // Show loading state while fetching initial videos
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
         <StatusBar hidden />
-        <ActivityIndicator size="large" color={colors.white} />
-        <Text style={styles.loadingText}>Loading videos...</Text>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+          Loading videos...
+        </Text>
       </View>
     );
   }
@@ -189,10 +219,14 @@ export default function FeedScreen() {
   // Show error state if fetching failed
   if (error) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
         <StatusBar hidden />
-        <Text style={styles.errorText}>Error loading videos</Text>
-        <Text style={styles.errorSubtext}>Please try again later</Text>
+        <Text style={[styles.errorText, { color: theme.danger }]}>
+          Error loading videos
+        </Text>
+        <Text style={[styles.errorSubtext, { color: theme.textSecondary }]}>
+          Please try again later
+        </Text>
       </View>
     );
   }
@@ -228,45 +262,38 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray[100],
   },
   loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.gray[100],
   },
   loadingText: {
     marginTop: spacing[4] * 16,
-    color: colors.gray[600],
     fontSize: fontSize.base,
   },
   errorText: {
-    color: colors.red[500],
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
   },
   errorSubtext: {
     marginTop: spacing[2] * 16,
-    color: colors.gray[600],
     fontSize: fontSize.base,
   },
   videoContainer: {
     position: "relative",
     width: "100%",
-    backgroundColor: colors.gray[100],
     padding: spacing[5] * 16,
     justifyContent: "center",
   },
   contentCard: {
-    backgroundColor: colors.white,
     borderRadius: radius.xl * 16,
     padding: spacing[6] * 16,
-    shadowColor: colors.blue[900],
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   typeBadge: {
     alignSelf: "flex-start",
@@ -284,19 +311,16 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: fontSize["3xl"],
     fontWeight: fontWeight.bold,
-    color: colors.blue[900],
     marginBottom: spacing[3] * 16,
     lineHeight: fontSize["3xl"] * 1.2,
   },
   cardDescription: {
     fontSize: fontSize.base,
-    color: colors.gray[700],
     marginBottom: spacing[4] * 16,
     lineHeight: fontSize.base * 1.5,
   },
   articlePreview: {
     fontSize: fontSize.sm,
-    color: colors.gray[600],
     marginBottom: spacing[4] * 16,
     lineHeight: fontSize.sm * 1.6,
     fontStyle: "italic",
@@ -304,7 +328,6 @@ const styles = StyleSheet.create({
   author: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
-    color: colors.blue[600],
     marginBottom: spacing[5] * 16,
   },
   readButton: {
@@ -323,15 +346,7 @@ const styles = StyleSheet.create({
   actionButton: {
     marginBottom: spacing[4] * 16,
     alignItems: "center",
-    backgroundColor: colors.white,
-    borderRadius: radius.full * 16,
-    padding: spacing[2] * 16,
-    minWidth: 50,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: "transparent",
   },
   actionIcon: {
     marginBottom: spacing[1] * 16,
@@ -344,6 +359,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
-    color: colors.gray[700],
   },
 });
