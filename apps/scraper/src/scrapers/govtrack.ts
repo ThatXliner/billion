@@ -34,11 +34,23 @@ export async function scrapeGovTrack() {
 
         log.info(`Found ${collectedLinks.size} total bill links so far`);
       }
-      // Handle individual bill pages
-      else if (/\/congress\/bills\/\d+\/[a-z]+\d+/.test(request.url)) {
+      // Handle bill text pages
+      else if (request.url.includes("/text")) {
         try {
+          // Extract full text from the specific element
+          let fullText = $("html body.bills div#bodybody div div.container div.row div.col-sm-8.order-1 div#content article.bill").text().trim();
+          
+          // Truncate to 1,000 words
+          if (fullText) {
+            const words = fullText.split(/\s+/);
+            if (words.length > 1000) {
+              fullText = words.slice(0, 1000).join(" ");
+              log.info(`Truncated full text from ${words.length} to 1,000 words`);
+            }
+          }
+          
           // Extract bill number and title from h1
-          const h1Text = $("h1").first().text().trim();
+          const h1Text = $(".h1-multiline > h1:nth-child(1)").first().text().trim();
           const h1Parts = h1Text.split(":");
           const billNumber = h1Parts[0]?.trim() || "";
           const title = h1Parts.length > 1
@@ -80,10 +92,10 @@ export async function scrapeGovTrack() {
 
           // Extract summary
           const summary = $(".summary").first().text().trim() || undefined;
-
-          // Try to get full text (may not always be available)
-          const fullText = $(".bill-text").first().text().trim() || undefined;
-
+          
+          // Remove /text from the URL to get the original bill URL
+          const billUrl = request.url.replace(/\/text$/, "");
+          
           const billData = {
             billNumber,
             title,
@@ -95,20 +107,24 @@ export async function scrapeGovTrack() {
             chamber,
             summary,
             fullText,
-            url: request.url,
+            url: billUrl,
             sourceWebsite: "govtrack",
           };
 
-          log.info(`Scraped bill: ${billNumber} - ${title}`);
-
-          // Save to database
+          console.log(fullText);
+          
+          log.info(`Scraped bill with full text: ${billNumber} - ${title} (${fullText.length} characters)`);
+          
+          // Save complete bill data with full text
           await upsertBill(billData);
         } catch (error) {
-          log.error(`Error scraping bill from ${request.url}:`, error);
+          console.log(error);
+          log.error(`Error scraping full text from ${request.url}:`, error);
+          
         }
       }
     },
-    maxRequestsPerCrawl: 50, // Limit for testing
+    maxRequestsPerCrawl: 100, // Increased to accommodate text pages
     requestHandlerTimeoutSecs: 60,
   });
 
@@ -119,9 +135,13 @@ export async function scrapeGovTrack() {
     `Collected ${collectedLinks.size} bill links, now scraping bills...`,
   );
 
-  // Now scrape each collected bill
+  // Now scrape text pages directly (they have all the info we need)
   if (collectedLinks.size > 0) {
-    await crawler.run([...collectedLinks].slice(0, maxBills));
+    const billUrls = [...collectedLinks].slice(0, maxBills);
+    const textUrls = billUrls.map(url => `${url}/text`);
+    
+    console.log(`Scraping ${textUrls.length} text pages with full bill data...`);
+    await crawler.run(textUrls);
   }
 
   console.log("GovTrack scraper completed");

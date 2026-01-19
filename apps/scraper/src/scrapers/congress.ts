@@ -46,7 +46,7 @@ export async function scrapeCongress() {
       else if (/\/bill\/\d+(?:th|st|nd|rd)-congress\/(?:house|senate)-bill\/\d+/i.test(request.url)) {
         try {
           // Wait for main content to load with a timeout
-          await page.waitForSelector('h1, .bill-number', { timeout: 10000 }).catch(() => {
+          await page.waitForSelector('h1, .bill-number', { timeout: 1000 }).catch(() => {
             log.warning('Main content selector not found, continuing anyway...');
           });
 
@@ -54,7 +54,7 @@ export async function scrapeCongress() {
           const billNumber = await page
             .locator('.bill-number, h1')
             .first()
-            .textContent({ timeout: 5000 })
+            .textContent({ timeout: 500 })
             .then((text) => {
               const match = text?.match(/([HS]\.\s?(?:R\.|J\.\s?Res\.|Con\.\s?Res\.|Res\.)\s?\d+)/i);
               return match ? match[1]!.trim() : text?.trim().split(' ')[0] || '';
@@ -68,7 +68,7 @@ export async function scrapeCongress() {
           const title = await page
             .locator('.bill-title, h1')
             .first()
-            .textContent({ timeout: 5000 })
+            .textContent({ timeout: 500 })
             .then((text) => {
               // Remove bill number from title if present
               return text?.replace(/[HS]\.\s?(?:R\.|J\.\s?Res\.|Con\.\s?Res\.|Res\.)\s?\d+/i, '').trim() || '';
@@ -82,15 +82,16 @@ export async function scrapeCongress() {
           const sponsor = await page
             .locator('text=/Sponsor:/i')
             .locator('..')
-            .textContent({ timeout: 5000 })
+            .textContent({ timeout: 500 })
             .then((text) => text?.replace(/Sponsor:/i, '').trim())
             .catch(() => undefined);
+      
 
           // Extract status with timeout
           const status = await page
             .locator('.bill-status, [class*="status"]')
             .first()
-            .textContent({ timeout: 5000 })
+            .textContent({ timeout: 500 })
             .then((text) => text?.trim())
             .catch(() => 'Unknown');
 
@@ -98,7 +99,7 @@ export async function scrapeCongress() {
           const introducedDateStr = await page
             .locator('text=/Introduced:/i')
             .locator('..')
-            .textContent({ timeout: 5000 })
+            .textContent({ timeout: 500 })
             .then((text) => text?.replace(/Introduced:/i, '').trim())
             .catch(() => undefined);
 
@@ -120,6 +121,7 @@ export async function scrapeCongress() {
             .textContent({ timeout: 5000 })
             .then((text) => text?.trim())
             .catch(() => undefined);
+          console.log(summary);
 
           // Try to get full text with timeout
           const fullText = await page
@@ -147,7 +149,7 @@ export async function scrapeCongress() {
           log.info(`Scraped bill from Congress.gov: ${billNumber} - ${title}`);
 
           // Save to database
-          await upsertBill(billData);
+          // await upsertBill(billData);
         } catch (error) {
           log.error(`Error scraping bill from ${request.url}:`, error);
         }
