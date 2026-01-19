@@ -1,12 +1,21 @@
 // Government data scraper for Billion app
 // Scrapes bills, presidential actions, and court cases from government websites
+
+// IMPORTANT: Load env FIRST before any other imports
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables from project root
+dotenv.config({ path: join(__dirname, '../../../.env') });
+
+// Import scrapers AFTER env is loaded (they import db which needs POSTGRES_URL)
 import { scrapeGovTrack } from './scrapers/govtrack.js';
 import { scrapeWhiteHouse } from './scrapers/whitehouse.js';
 import { scrapeCongress } from './scrapers/congress.js';
-
-// Load environment variables
-dotenv.config({ path: '../../.env' });
 
 async function main() {
   console.log('Starting government data scrapers...\n');

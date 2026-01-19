@@ -14,15 +14,25 @@ const ContentCardSchema = z.object({
   description: z.string(),
   type: z.enum(["bill", "order", "case", "general"]),
   isAIGenerated: z.boolean(),
+  thumbnailUrl: z.string().optional(),
 });
 
 export type ContentCard = z.infer<typeof ContentCardSchema>;
+
+// Schema for image data
+const ImageSchema = z.object({
+  url: z.string(),
+  alt: z.string(),
+  source: z.string(),
+  sourceUrl: z.string(),
+});
 
 // Schema for detailed content
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ContentDetailSchema = ContentCardSchema.extend({
   articleContent: z.string(),
   originalContent: z.string(),
+  images: z.array(ImageSchema).optional(),
 });
 
 export type ContentDetail = z.infer<typeof ContentDetailSchema>;
@@ -54,6 +64,7 @@ export const contentRouter = {
         description: bill.description || bill.summary || "",
         type: "bill" as const,
         isAIGenerated: false,
+        thumbnailUrl: bill.thumbnailUrl || undefined,
       })),
       // Government content (news articles, executive orders, etc.) from database
       ...governmentContent.map((content) => ({
@@ -62,6 +73,7 @@ export const contentRouter = {
         description: content.description || "",
         type: "general" as const,
         isAIGenerated: false,
+        thumbnailUrl: content.thumbnailUrl || undefined,
       })),
       // Court cases from database
       ...courtCases.map((courtCase) => ({
@@ -70,6 +82,7 @@ export const contentRouter = {
         description: courtCase.description || "",
         type: "case" as const,
         isAIGenerated: false,
+        thumbnailUrl: courtCase.thumbnailUrl || undefined,
       })),
     ];
 
@@ -109,6 +122,7 @@ export const contentRouter = {
             description: bill.description || bill.summary || "",
             type: "bill" as const,
             isAIGenerated: false,
+            thumbnailUrl: bill.thumbnailUrl || undefined,
           })),
           // Government content from database
           ...governmentContent.map((content) => ({
@@ -117,6 +131,7 @@ export const contentRouter = {
             description: content.description || "",
             type: "general" as const,
             isAIGenerated: false,
+            thumbnailUrl: content.thumbnailUrl || undefined,
           })),
           // Court cases from database
           ...courtCases.map((courtCase) => ({
@@ -125,6 +140,7 @@ export const contentRouter = {
             description: courtCase.description || "",
             type: "case" as const,
             isAIGenerated: false,
+            thumbnailUrl: courtCase.thumbnailUrl || undefined,
           })),
         ];
 
@@ -143,6 +159,7 @@ export const contentRouter = {
           description: bill.description || bill.summary || "",
           type: "bill" as const,
           isAIGenerated: false,
+          thumbnailUrl: bill.thumbnailUrl || undefined,
         }));
       }
 
@@ -158,6 +175,7 @@ export const contentRouter = {
           description: content.description || "",
           type: "general" as const,
           isAIGenerated: false,
+          thumbnailUrl: content.thumbnailUrl || undefined,
         }));
       }
 
@@ -173,6 +191,7 @@ export const contentRouter = {
           description: courtCase.description || "",
           type: "case" as const,
           isAIGenerated: false,
+          thumbnailUrl: courtCase.thumbnailUrl || undefined,
         }));
       }
 
@@ -201,6 +220,8 @@ export const contentRouter = {
           description: b.description || b.summary || "",
           type: "bill" as const,
           isAIGenerated: !!b.aiGeneratedArticle,
+          thumbnailUrl: b.thumbnailUrl || undefined,
+          images: b.images || undefined,
           articleContent: b.aiGeneratedArticle || b.fullText || "No content available",
           originalContent: b.fullText || "Full text not available",
         };
@@ -220,6 +241,8 @@ export const contentRouter = {
           description: c.description || "",
           type: "general" as const,
           isAIGenerated: !!c.aiGeneratedArticle,
+          thumbnailUrl: c.thumbnailUrl || undefined,
+          images: c.images || undefined,
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
           originalContent: c.fullText || "Full text not available",
         };
@@ -239,6 +262,8 @@ export const contentRouter = {
           description: c.description || "",
           type: "case" as const,
           isAIGenerated: !!c.aiGeneratedArticle,
+          thumbnailUrl: c.thumbnailUrl || undefined,
+          images: c.images || undefined,
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
           originalContent: c.fullText || "Full text not available",
         };
