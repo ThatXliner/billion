@@ -118,7 +118,7 @@ export default function FeedScreen() {
 
         {/* Description */}
         <Text style={[typography.body, styles.cardDescription, { color: theme.textSecondary }]}>
-          {item.description}
+          {JSON.stringify(item)}
         </Text>
 
         {/* Article Preview */}
@@ -147,7 +147,7 @@ export default function FeedScreen() {
       </View>
 
       {/* Action Buttons - Floating with no background */}
-      <View
+      {/*<View
         style={[styles.bottomOverlay, { paddingBottom: insets.bottom + 80 }]}
         lightColor="transparent"
         darkColor="transparent"
@@ -189,7 +189,7 @@ export default function FeedScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </View>*/}
     </View>
   );
 

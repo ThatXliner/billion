@@ -91,6 +91,12 @@ export const videoRouter = {
         .orderBy(desc(CourtCase.createdAt))
         .limit(20);
 
+      const prompt = `You are now a professional marketing copywriter. You will output a JSON object with 3 keys.
+      1. The first key description will be a 50-word description of the following article. It should be as catchy and interesting as a news headline, as this will be part of a text-based feed (like Twitter) which users will scroll past.
+      2. The second key image will be a prompt which will be fed into an image-generation AI model to create visuals to go along
+      3. The third key title is self-explanatory
+      Here is the article:`;
+
       // Convert database content to feed format
       const dbContentForFeed = [
         ...bills.map((bill) => ({

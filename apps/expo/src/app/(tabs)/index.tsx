@@ -69,6 +69,7 @@ const ContentCardComponent = ({
       activeOpacity={0.9}
     >
       <BlurView
+        intensity={100}
         style={styles.modernCardContent}
         lightColor="transparent"
         darkColor="transparent"
@@ -349,5 +350,14 @@ const styles = StyleSheet.create({
   modernCardButton: {
     alignSelf: "flex-start",
     marginTop: sp[2],
+    // paddingVertical: sp[2],
+    // paddingHorizontal: sp[3],
+    // borderRadius: rd.md,
+    // backgroundColor: theme.background,
+    // shadowColor: theme.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    // elevation: 2,
   },
 });
