@@ -6,7 +6,6 @@ import {
   StatusBar,
   StyleSheet,
   TouchableOpacity,
-  useColorScheme,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -14,25 +13,31 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 
 import type { VideoPost } from "@acme/api";
 import { Button } from "@acme/ui/button-native";
-import {
-  colors,
-  darkTheme,
-  fontSize,
-  fontWeight,
-  lightTheme,
-  radius,
-  spacing,
-} from "@acme/ui/theme-tokens";
 
 import { Text, View } from "~/components/Themed";
+import {
+  actions,
+  badges,
+  cards,
+  colors,
+  fontSize,
+  fontWeight,
+  getTypeBadgeColor,
+  layout,
+  rd,
+  sp,
+  typography,
+  useTheme,
+} from "~/styles";
 import { trpc } from "~/utils/api";
+import { Image } from "expo-image";
 
 const { height: screenHeight } = Dimensions.get("window");
+
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === "dark" ? darkTheme : lightTheme;
+  const { theme } = useTheme();
   const [likedVideos, setLikedVideos] = useState<Set<string>>(new Set());
 
   // Use infinite query for video feed
@@ -73,21 +78,7 @@ export default function FeedScreen() {
     }
   };
 
-  const getTypeBadgeColor = (type: VideoPost["type"]) => {
-    switch (type) {
-      case "bill":
-        return colors.purple[600]; // Purple for bills
-      case "order":
-        return colors.indigo[600]; // Indigo for orders
-      case "case":
-        return colors.cyan[600]; // Cyan for cases
-      default:
-        return theme.muted; // Muted for general
-    }
-  };
-
   const renderVideoItem = ({ item }: { item: VideoPost; index: number }) => (
-    // I have no idea why TypeScript is crashing out here
     <View
       style={[
         styles.videoContainer,
@@ -99,7 +90,7 @@ export default function FeedScreen() {
       {/* Content Card */}
       <View
         style={[
-          styles.contentCard,
+          cards.elevated,
           {
             backgroundColor: theme.card,
             borderWidth: 1,
@@ -112,24 +103,31 @@ export default function FeedScreen() {
         {/* Type Badge */}
         <View
           style={[
-            styles.typeBadge,
+            badges.base,
             { backgroundColor: getTypeBadgeColor(item.type) },
           ]}
           lightColor="transparent"
           darkColor="transparent"
         >
-          <Text style={styles.typeBadgeText}>{item.type.toUpperCase()}</Text>
+          <Text style={badges.text}>{item.type.toUpperCase()}</Text>
         </View>
 
         {/* Title */}
-        <Text style={[styles.cardTitle, { color: theme.foreground }]}>
+        <Text style={[typography.h1, styles.cardTitle, { color: theme.foreground }]}>
           {item.title}
         </Text>
 
         {/* Description */}
-        <Text style={[styles.cardDescription, { color: theme.textSecondary }]}>
-          {item.description}
-        </Text>
+        <Image
+             style={{ width: "100%", height: 200 }}
+               source="https://picsum.photos/seed/696/3000/2000"
+               // placeholder={{ blurhash }}
+               // contentFit="cover"
+               transition={1000}
+       />
+        {/*<Text style={[typography.body, styles.cardDescription, { color: theme.textSecondary }]}>
+          {JSON.stringify(item)}
+        </Text>*/}
 
         {/* Article Preview */}
         <Text style={[styles.articlePreview, { color: theme.mutedForeground }]}>
@@ -157,56 +155,56 @@ export default function FeedScreen() {
       </View>
 
       {/* Action Buttons - Floating with no background */}
-      <View
+      {/*<View
         style={[styles.bottomOverlay, { paddingBottom: insets.bottom + 80 }]}
         lightColor="transparent"
         darkColor="transparent"
       >
         <View
-          style={styles.actionsContainer}
+          style={actions.container}
           lightColor="transparent"
           darkColor="transparent"
         >
           <TouchableOpacity
-            style={styles.actionButton}
+            style={actions.button}
             onPress={() => handleLike(item.id)}
           >
             <Text
               style={[
-                styles.actionIcon,
+                actions.icon,
                 { filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))" },
                 likedVideos.has(item.id) && styles.actionIconLiked,
               ]}
             >
               {likedVideos.has(item.id) ? "❤️" : "🤍"}
             </Text>
-            <Text style={[styles.actionText, { color: theme.foreground }]}>
+            <Text style={[actions.text, { color: theme.foreground }]}>
               {item.likes + (likedVideos.has(item.id) ? 1 : 0)}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionIcon}>💬</Text>
-            <Text style={[styles.actionText, { color: theme.foreground }]}>
+          <TouchableOpacity style={actions.button}>
+            <Text style={actions.icon}>💬</Text>
+            <Text style={[actions.text, { color: theme.foreground }]}>
               {item.comments}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionIcon}>📤</Text>
-            <Text style={[styles.actionText, { color: theme.foreground }]}>
+          <TouchableOpacity style={actions.button}>
+            <Text style={actions.icon}>📤</Text>
+            <Text style={[actions.text, { color: theme.foreground }]}>
               {item.shares}
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </View>*/}
     </View>
   );
 
   // Show loading state while fetching initial videos
   if (isLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+      <View style={[layout.fullCenter, { backgroundColor: theme.background }]}>
         <StatusBar hidden />
         <ActivityIndicator size="large" color={theme.primary} />
         <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
@@ -219,12 +217,12 @@ export default function FeedScreen() {
   // Show error state if fetching failed
   if (error) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+      <View style={[layout.fullCenter, { backgroundColor: theme.background }]}>
         <StatusBar hidden />
-        <Text style={[styles.errorText, { color: theme.danger }]}>
+        <Text style={[typography.h4, { color: theme.danger }]}>
           Error loading videos
         </Text>
-        <Text style={[styles.errorSubtext, { color: theme.textSecondary }]}>
+        <Text style={[typography.body, styles.errorSubtext, { color: theme.textSecondary }]}>
           Please try again later
         </Text>
       </View>
@@ -232,7 +230,7 @@ export default function FeedScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={layout.container}>
       <StatusBar hidden />
       <FlatList
         data={videos}
@@ -259,76 +257,41 @@ export default function FeedScreen() {
   );
 }
 
+// import {
+//   spacing,
+// } from "@acme/ui/theme-tokens";
+// const sp = (key: keyof typeof spacing): number => spacing[key] * 16;
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   loadingText: {
-    marginTop: spacing[4] * 16,
+    marginTop: sp[4],
     fontSize: fontSize.base,
-  },
-  errorText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
   },
   errorSubtext: {
-    marginTop: spacing[2] * 16,
-    fontSize: fontSize.base,
+    marginTop: sp[2],
   },
   videoContainer: {
     position: "relative",
     width: "100%",
-    padding: spacing[5] * 16,
+    padding: sp[5],
     justifyContent: "center",
   },
-  contentCard: {
-    borderRadius: radius.xl * 16,
-    padding: spacing[6] * 16,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  typeBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: spacing[3] * 16,
-    paddingVertical: spacing[1] * 16,
-    borderRadius: radius.md * 16,
-    marginBottom: spacing[4] * 16,
-  },
-  typeBadgeText: {
-    color: colors.white,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    letterSpacing: 0.5,
-  },
   cardTitle: {
-    fontSize: fontSize["3xl"],
-    fontWeight: fontWeight.bold,
-    marginBottom: spacing[3] * 16,
-    lineHeight: fontSize["3xl"] * 1.2,
+    marginBottom: sp[3],
+    marginTop: sp[4],
   },
   cardDescription: {
-    fontSize: fontSize.base,
-    marginBottom: spacing[4] * 16,
-    lineHeight: fontSize.base * 1.5,
+    marginBottom: sp[4],
   },
   articlePreview: {
     fontSize: fontSize.sm,
-    marginBottom: spacing[4] * 16,
+    marginBottom: sp[4],
     lineHeight: fontSize.sm * 1.6,
     fontStyle: "italic",
   },
   author: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
-    marginBottom: spacing[5] * 16,
+    marginBottom: sp[5],
   },
   readButton: {
     width: "100%",
@@ -336,28 +299,10 @@ const styles = StyleSheet.create({
   bottomOverlay: {
     position: "absolute",
     bottom: 0,
-    right: spacing[5] * 16,
+    right: sp[5],
     alignItems: "flex-end",
-  },
-  actionsContainer: {
-    alignItems: "center",
-    justifyContent: "flex-end",
-  },
-  actionButton: {
-    marginBottom: spacing[4] * 16,
-    alignItems: "center",
-    backgroundColor: "transparent",
-  },
-  actionIcon: {
-    marginBottom: spacing[1] * 16,
-    fontSize: fontSize["2xl"],
   },
   actionIconLiked: {
     transform: [{ scale: 1.25 }],
-  },
-  actionText: {
-    textAlign: "center",
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
   },
 });
