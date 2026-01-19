@@ -104,14 +104,14 @@ Write the article now using the 4-section structure above:`,
 export async function upsertBill(billData: {
   billNumber: string;
   title: string;
-  description?: string;
-  sponsor?: string;
-  status?: string;
-  introducedDate?: Date;
-  congress?: number;
-  chamber?: string;
-  summary?: string;
-  fullText?: string;
+  description: string;
+  sponsor: string;
+  status: string;
+  introducedDate: Date;
+  congress: number;
+  chamber: string;
+  summary: string;
+  fullText: string;
   url: string;
   sourceWebsite: string;
 }) {
@@ -150,17 +150,11 @@ export async function upsertBill(billData: {
     aiGeneratedArticle,
     contentForHash
   }
-  // console.log(test);
+  console.log(test);
 
   const [result] = await db
     .insert(Bill)
-    .values({
-      ...billData,
-      description,
-      aiGeneratedArticle: aiGeneratedArticle,
-      contentHash,
-      versions: [],
-    })
+    .values(test)
     .onConflictDoUpdate({
       target: [Bill.billNumber, Bill.sourceWebsite],
       set: (excluded) => {
