@@ -1,11 +1,45 @@
 import type { TRPCRouterRecord } from "@trpc/server";
 import { z } from "zod/v4";
 
-import { desc, eq } from "@acme/db";
+import { desc, eq, sql } from "@acme/db";
 import { db } from "@acme/db/client";
 import { Bill, CourtCase, GovernmentContent } from "@acme/db/schema";
 
 import { publicProcedure } from "../trpc";
+
+// Helper function to get thumbnail URL for any content
+export async function getThumbnailForContent(
+  id: string, 
+  type: "bill" | "case" | "general"
+): Promise<string | null> {
+  try {
+    if (type === "bill") {
+      const result = await db
+        .select({ thumbnailUrl: Bill.thumbnailUrl })
+        .from(Bill)
+        .where(eq(Bill.id, id))
+        .limit(1);
+      return result[0]?.thumbnailUrl || null;
+    } else if (type === "case") {
+      const result = await db
+        .select({ thumbnailUrl: CourtCase.thumbnailUrl })
+        .from(CourtCase)
+        .where(eq(CourtCase.id, id))
+        .limit(1);
+      return result[0]?.thumbnailUrl || null;
+    } else {
+      const result = await db
+        .select({ thumbnailUrl: GovernmentContent.thumbnailUrl })
+        .from(GovernmentContent)
+        .where(eq(GovernmentContent.id, id))
+        .limit(1);
+      return result[0]?.thumbnailUrl || null;
+    }
+  } catch (error) {
+    console.error(`Error fetching thumbnail for ${type} ${id}:`, error);
+    return null;
+  }
+}
 
 // Schema for content card
 const ContentCardSchema = z.object({
@@ -19,20 +53,10 @@ const ContentCardSchema = z.object({
 
 export type ContentCard = z.infer<typeof ContentCardSchema>;
 
-// Schema for image data
-const ImageSchema = z.object({
-  url: z.string(),
-  alt: z.string(),
-  source: z.string(),
-  sourceUrl: z.string(),
-});
-
 // Schema for detailed content
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ContentDetailSchema = ContentCardSchema.extend({
   articleContent: z.string(),
   originalContent: z.string(),
-  images: z.array(ImageSchema).optional(),
 });
 
 export type ContentDetail = z.infer<typeof ContentDetailSchema>;
@@ -221,7 +245,6 @@ export const contentRouter = {
           type: "bill" as const,
           isAIGenerated: !!b.aiGeneratedArticle,
           thumbnailUrl: b.thumbnailUrl || undefined,
-          images: b.images || undefined,
           articleContent: b.aiGeneratedArticle || b.fullText || "No content available",
           originalContent: b.fullText || "Full text not available",
         };
@@ -242,7 +265,6 @@ export const contentRouter = {
           type: "general" as const,
           isAIGenerated: !!c.aiGeneratedArticle,
           thumbnailUrl: c.thumbnailUrl || undefined,
-          images: c.images || undefined,
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
           originalContent: c.fullText || "Full text not available",
         };
@@ -263,7 +285,6 @@ export const contentRouter = {
           type: "case" as const,
           isAIGenerated: !!c.aiGeneratedArticle,
           thumbnailUrl: c.thumbnailUrl || undefined,
-          images: c.images || undefined,
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
           originalContent: c.fullText || "Full text not available",
         };

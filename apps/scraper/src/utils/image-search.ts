@@ -56,12 +56,18 @@ export async function searchImages(
       return [];
     }
 
-    return data.items.slice(0, count).map((item: any) => ({
-      url: item.link, // Direct link to the image
-      alt: item.title || `Image related to ${query}`,
-      source: item.displayLink || 'Google Images',
-      sourceUrl: item.image?.contextLink || item.link,
-    }));
+    return data.items.slice(0, count).map((item: any) => {
+      // Try to get the highest quality image available from Google's image object
+      // Fall back to thumbnailLink if the original link doesn't work
+      const imageUrl = item.image?.thumbnailLink || item.link;
+      
+      return {
+        url: imageUrl,
+        alt: item.title || `Image related to ${query}`,
+        source: item.displayLink || 'Google Images',
+        sourceUrl: item.image?.contextLink || item.link,
+      };
+    });
   } catch (error) {
     console.error('Error searching for images:', error);
     return [];
