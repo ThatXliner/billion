@@ -1,7 +1,9 @@
 import { CheerioCrawler } from "crawlee";
 import TurndownService from "turndown";
 
-import { generateAISummary, upsertPresidentialAction, resetMetrics, printMetricsSummary } from "../utils/db.js";
+import { generateAISummary } from "../utils/ai/text-generation.js";
+import { upsertPresidentialAction } from "../utils/db/operations.js";
+import { resetMetrics, printMetricsSummary } from "../utils/db/metrics.js";
 
 // Convert all-caps text to title case
 function toTitleCase(text: string): string {

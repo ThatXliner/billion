@@ -1,5 +1,6 @@
 import { PlaywrightCrawler, Dataset } from 'crawlee';
-import { upsertBill, resetMetrics, printMetricsSummary } from '../utils/db.js';
+import { upsertBill } from '../utils/db/operations.js';
+import { resetMetrics, printMetricsSummary } from '../utils/db/metrics.js';
 
 export async function scrapeCongress() {
   console.log('Starting Congress.gov scraper...');
