@@ -4,7 +4,7 @@ import { db } from '@acme/db/client';
 import { Bill, GovernmentContent, CourtCase } from '@acme/db/schema';
 import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
-import { searchImages, generateImageSearchKeywords, getThumbnailImage, type ImageResult } from './image-search.js';
+import { generateImageSearchKeywords, getThumbnailImage } from './image-search.js';
 
 // Utility to create a hash of content for version tracking
 export function createContentHash(content: string): string {
@@ -137,21 +137,19 @@ export async function upsertBill(billData: {
     );
   }
 
-  // Search for relevant images
+  // Search for thumbnail image
   let thumbnailUrl: string | null = null;
-  let images: ImageResult[] = [];
   if (billData.fullText) {
-    console.log(`Searching for images for bill: ${billData.title}`);
+    console.log(`Searching for thumbnail for bill: ${billData.title}`);
     const searchQuery = await generateImageSearchKeywords(
       billData.title,
-      billData.fullText,
+      billData.fullText || '',
       'bill'
     );
     console.log(`Image search query: ${searchQuery}`);
     
-    // Get thumbnail and additional images
+    // Get thumbnail only
     thumbnailUrl = await getThumbnailImage(searchQuery);
-    images = await searchImages(searchQuery, 3);
   }
 
   const contentForHash = JSON.stringify({
@@ -170,32 +168,26 @@ export async function upsertBill(billData: {
       description,
       aiGeneratedArticle: aiGeneratedArticle || undefined,
       thumbnailUrl: thumbnailUrl || undefined,
-      images: images.length > 0 ? images : undefined,
       contentHash,
       versions: [],
     })
     .onConflictDoUpdate({
       target: [Bill.billNumber, Bill.sourceWebsite],
-      set: (excluded) => {
-        // Only update if content hash has changed
-        // This requires a subquery approach or we need to handle version tracking differently
-        return {
-          title: excluded.title,
-          description: excluded.description,
-          sponsor: excluded.sponsor,
-          status: excluded.status,
-          introducedDate: excluded.introducedDate,
-          congress: excluded.congress,
-          chamber: excluded.chamber,
-          summary: excluded.summary,
-          fullText: excluded.fullText,
-          aiGeneratedArticle: excluded.aiGeneratedArticle,
-          thumbnailUrl: excluded.thumbnailUrl,
-          images: excluded.images,
-          url: excluded.url,
-          contentHash: excluded.contentHash,
-          updatedAt: new Date(),
-        };
+      set: {
+        title: billData.title,
+        description: description,
+        sponsor: billData.sponsor,
+        status: billData.status,
+        introducedDate: billData.introducedDate,
+        congress: billData.congress,
+        chamber: billData.chamber,
+        summary: billData.summary,
+        fullText: billData.fullText,
+        aiGeneratedArticle: aiGeneratedArticle || undefined,
+        thumbnailUrl: thumbnailUrl || undefined,
+        url: billData.url,
+        contentHash,
+        updatedAt: new Date(),
       },
     })
     .returning();
@@ -225,11 +217,10 @@ export async function upsertGovernmentContent(contentData: {
     );
   }
 
-  // Search for relevant images
+  // Search for thumbnail image
   let thumbnailUrl: string | null = null;
-  let images: ImageResult[] = [];
   if (contentData.fullText) {
-    console.log(`Searching for images for ${contentData.type}: ${contentData.title}`);
+    console.log(`Searching for thumbnail for ${contentData.type}: ${contentData.title}`);
     const searchQuery = await generateImageSearchKeywords(
       contentData.title,
       contentData.fullText,
@@ -237,9 +228,8 @@ export async function upsertGovernmentContent(contentData: {
     );
     console.log(`Image search query: ${searchQuery}`);
     
-    // Get thumbnail and additional images
+    // Get thumbnail only
     thumbnailUrl = await getThumbnailImage(searchQuery);
-    images = await searchImages(searchQuery, 3);
   }
 
   const contentForHash = JSON.stringify({
@@ -255,7 +245,6 @@ export async function upsertGovernmentContent(contentData: {
       ...contentData,
       aiGeneratedArticle: aiGeneratedArticle || undefined,
       thumbnailUrl: thumbnailUrl || undefined,
-      images: images.length > 0 ? images : undefined,
       contentHash,
       versions: [],
     })
@@ -269,7 +258,6 @@ export async function upsertGovernmentContent(contentData: {
         fullText: contentData.fullText,
         aiGeneratedArticle: aiGeneratedArticle || undefined,
         thumbnailUrl: thumbnailUrl || undefined,
-        images: images.length > 0 ? images : undefined,
         source: contentData.source,
         contentHash,
         updatedAt: new Date(),
@@ -329,11 +317,10 @@ export async function upsertCourtCase(caseData: {
     );
   }
 
-  // Search for relevant images
+  // Search for thumbnail image
   let thumbnailUrl: string | null = null;
-  let images: ImageResult[] = [];
   if (caseData.fullText) {
-    console.log(`Searching for images for court case: ${caseData.title}`);
+    console.log(`Searching for thumbnail for court case: ${caseData.title}`);
     const searchQuery = await generateImageSearchKeywords(
       caseData.title,
       caseData.fullText,
@@ -341,9 +328,8 @@ export async function upsertCourtCase(caseData: {
     );
     console.log(`Image search query: ${searchQuery}`);
     
-    // Get thumbnail and additional images
+    // Get thumbnail only
     thumbnailUrl = await getThumbnailImage(searchQuery);
-    images = await searchImages(searchQuery, 3);
   }
 
   const contentForHash = JSON.stringify({
@@ -361,7 +347,6 @@ export async function upsertCourtCase(caseData: {
       description,
       aiGeneratedArticle: aiGeneratedArticle || undefined,
       thumbnailUrl: thumbnailUrl || undefined,
-      images: images.length > 0 ? images : undefined,
       contentHash,
       versions: [],
     })
@@ -376,7 +361,6 @@ export async function upsertCourtCase(caseData: {
         fullText: caseData.fullText,
         aiGeneratedArticle: aiGeneratedArticle || undefined,
         thumbnailUrl: thumbnailUrl || undefined,
-        images: images.length > 0 ? images : undefined,
         url: caseData.url,
         contentHash,
         updatedAt: new Date(),
