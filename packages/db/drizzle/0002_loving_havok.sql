@@ -1,0 +1,2 @@
+ALTER TABLE "bill" ADD CONSTRAINT "bill_billNumber_sourceWebsite_unique" UNIQUE("bill_number","source_website");--> statement-breakpoint
+ALTER TABLE "court_case" ADD CONSTRAINT "court_case_caseNumber_unique" UNIQUE("case_number");
