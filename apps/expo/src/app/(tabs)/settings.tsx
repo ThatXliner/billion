@@ -8,9 +8,17 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors, fontSize, fontWeight, spacing } from "@acme/ui/theme-tokens";
-
 import { Text, View } from "~/components/Themed";
+import {
+  colors,
+  fontSize,
+  fontWeight,
+  layout,
+  settings,
+  sp,
+  typography,
+  useTheme,
+} from "~/styles";
 
 interface SettingsSection {
   title: string;
@@ -29,6 +37,7 @@ interface SettingsItem {
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const { theme, isDark } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [autoplay, setAutoplay] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
@@ -207,24 +216,24 @@ export default function SettingsScreen() {
         return (
           <View
             key={item.id}
-            style={styles.settingsItem}
+            style={[settings.item, { borderBottomColor: theme.border }]}
             lightColor="transparent"
             darkColor="transparent"
           >
             <View
-              style={styles.settingsItemTextContainer}
+              style={settings.itemTextContainer}
               lightColor="transparent"
               darkColor="transparent"
             >
-              <Text style={styles.settingsItemTitle}>{item.title}</Text>
+              <Text style={[settings.itemTitle, { color: theme.foreground }]}>{item.title}</Text>
               {item.subtitle && (
-                <Text style={styles.settingsItemSubtitle}>{item.subtitle}</Text>
+                <Text style={[settings.itemSubtitle, { color: theme.textSecondary }]}>{item.subtitle}</Text>
               )}
             </View>
             <Switch
               value={item.value}
               onValueChange={item.onToggle}
-              trackColor={{ false: "#e0e0e0", true: colors.blue[500] }}
+              trackColor={{ false: theme.muted, true: theme.primary }}
               thumbColor={colors.white}
             />
           </View>
@@ -234,20 +243,20 @@ export default function SettingsScreen() {
         return (
           <TouchableOpacity
             key={item.id}
-            style={styles.settingsItem}
+            style={[settings.item, { borderBottomColor: theme.border }]}
             onPress={item.onPress}
           >
             <View
-              style={styles.settingsItemTextContainer}
+              style={settings.itemTextContainer}
               lightColor="transparent"
               darkColor="transparent"
             >
-              <Text style={styles.settingsItemTitle}>{item.title}</Text>
+              <Text style={[settings.itemTitle, { color: theme.foreground }]}>{item.title}</Text>
               {item.subtitle && (
-                <Text style={styles.settingsItemSubtitle}>{item.subtitle}</Text>
+                <Text style={[settings.itemSubtitle, { color: theme.textSecondary }]}>{item.subtitle}</Text>
               )}
             </View>
-            <Text style={styles.chevron}>›</Text>
+            <Text style={[settings.chevron, { color: theme.mutedForeground }]}>›</Text>
           </TouchableOpacity>
         );
 
@@ -256,15 +265,17 @@ export default function SettingsScreen() {
           <TouchableOpacity
             key={item.id}
             style={[
-              styles.settingsItem,
-              item.id === "delete" && styles.deleteAction,
+              settings.item,
+              { borderBottomColor: theme.border },
+              item.id === "delete" && localStyles.deleteAction,
             ]}
             onPress={item.onPress}
           >
             <Text
               style={[
-                styles.settingsItemTitle,
-                item.id === "delete" && styles.deleteText,
+                settings.itemTitle,
+                { color: theme.foreground },
+                item.id === "delete" && { color: theme.danger, textAlign: "center" },
               ]}
             >
               {item.title}
@@ -278,27 +289,27 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-        <Text style={styles.headerText}>Settings</Text>
+    <View style={[layout.container, { backgroundColor: theme.background }]}>
+      <View style={[localStyles.header, { paddingTop: insets.top + 20, borderBottomColor: theme.border, backgroundColor: theme.card }]}>
+        <Text style={[typography.h2, { color: theme.foreground }]}>Settings</Text>
       </View>
 
       <ScrollView
-        style={styles.scrollView}
+        style={layout.scrollView}
         showsVerticalScrollIndicator={false}
       >
         {settingsSections.map((section) => (
           <View
             key={section.title}
-            style={styles.section}
+            style={settings.section}
             lightColor="transparent"
             darkColor="transparent"
           >
-            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <Text style={[settings.sectionTitle, { color: theme.textSecondary }]}>{section.title}</Text>
             <View
-              style={styles.sectionContent}
-              lightColor={colors.white}
-              darkColor={colors.navy[700]}
+              style={[settings.sectionContent, { borderColor: theme.border, backgroundColor: theme.card }]}
+              lightColor={theme.card}
+              darkColor={theme.card}
             >
               {section.items.map(renderSettingsItem)}
             </View>
@@ -306,95 +317,28 @@ export default function SettingsScreen() {
         ))}
 
         <View
-          style={styles.versionContainer}
+          style={localStyles.versionContainer}
           lightColor="transparent"
           darkColor="transparent"
         >
-          <Text style={styles.versionText}>Version 1.0.0</Text>
+          <Text style={[typography.caption, { color: theme.mutedForeground }]}>Version 1.0.0</Text>
         </View>
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.gray[100],
-  },
+const localStyles = StyleSheet.create({
   header: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing[5] * 16,
-    paddingBottom: spacing[5] * 16,
-  },
-  headerText: {
-    fontSize: fontSize["2xl"],
-    fontWeight: fontWeight.bold,
-    color: colors.gray[800],
-  },
-  scrollView: {
-    flex: 1,
-  },
-  section: {
-    marginTop: spacing[8] * 16,
-  },
-  sectionTitle: {
-    marginHorizontal: spacing[5] * 16,
-    marginBottom: spacing[3] * 16,
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    color: colors.gray[600],
-  },
-  sectionContent: {
-    borderBottomWidth: 1,
-    borderTopWidth: 1,
-    borderColor: colors.gray[200],
-    backgroundColor: colors.white,
-  },
-  settingsItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[100],
-    paddingHorizontal: spacing[5] * 16,
-    paddingVertical: spacing[4] * 16,
-  },
-  settingsItemTextContainer: {
-    flex: 1,
-  },
-  settingsItemTitle: {
-    marginBottom: spacing[1] * 16,
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.medium,
-    color: colors.gray[800],
-  },
-  settingsItemSubtitle: {
-    fontSize: fontSize.sm,
-    lineHeight: spacing[5] * 16,
-    color: colors.gray[600],
-  },
-  chevron: {
-    marginLeft: spacing[3] * 16,
-    fontSize: fontSize.xl,
-    color: colors.gray[300],
+    paddingHorizontal: sp(5),
+    paddingBottom: sp(5),
   },
   deleteAction: {
     justifyContent: "center",
   },
-  deleteText: {
-    textAlign: "center",
-    color: colors.red[500],
-  },
   versionContainer: {
     alignItems: "center",
-    paddingVertical: spacing[10] * 16,
-  },
-  versionText: {
-    fontSize: fontSize.sm,
-    color: colors.gray[400],
+    paddingVertical: sp(10),
   },
 });

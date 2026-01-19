@@ -3,11 +3,14 @@ import { StatusBar } from "expo-status-bar";
 
 import EditScreenInfo from "~/components/EditScreenInfo";
 import { Text, View } from "~/components/Themed";
+import { layout, sp, typography, useTheme } from "~/styles";
 
 export default function ModalScreen() {
+  const { theme } = useTheme();
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Modal</Text>
+    <View style={[layout.fullCenter]}>
+      <Text style={[typography.h3]}>Modal</Text>
       <View
         style={styles.separator}
         lightColor="#eee"
@@ -22,17 +25,8 @@ export default function ModalScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-  },
   separator: {
-    marginVertical: 30,
+    marginVertical: sp(8),
     height: 1,
     width: "80%",
   },
