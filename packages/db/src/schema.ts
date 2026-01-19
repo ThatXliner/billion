@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable } from "drizzle-orm/pg-core";
+import { pgTable, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -52,6 +52,8 @@ export const Bill = pgTable("bill", (t) => ({
   updatedAt: t
     .timestamp({ mode: "date", withTimezone: true })
     .$onUpdateFn(() => sql`now()`),
+}), (table) => ({
+  uniqueBillNumberSource: unique().on(table.billNumber, table.sourceWebsite),
 }));
 
 export const CreateBillSchema = createInsertSchema(Bill).omit({
@@ -125,6 +127,8 @@ export const CourtCase = pgTable("court_case", (t) => ({
   updatedAt: t
     .timestamp({ mode: "date", withTimezone: true })
     .$onUpdateFn(() => sql`now()`),
+}), (table) => ({
+  uniqueCaseNumber: unique().on(table.caseNumber),
 }));
 
 export const CreateCourtCaseSchema = createInsertSchema(CourtCase).omit({

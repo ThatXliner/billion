@@ -6,6 +6,60 @@ import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
 import { generateImageSearchKeywords, getThumbnailImage } from './image-search.js';
 
+// Metrics tracking for scraper runs
+export interface ScraperMetrics {
+  totalProcessed: number;
+  newEntries: number;
+  existingUnchanged: number;
+  existingChanged: number;
+  aiArticlesGenerated: number;
+  imagesSearched: number;
+}
+
+// Global metrics object for the current run
+let currentMetrics: ScraperMetrics = {
+  totalProcessed: 0,
+  newEntries: 0,
+  existingUnchanged: 0,
+  existingChanged: 0,
+  aiArticlesGenerated: 0,
+  imagesSearched: 0,
+};
+
+// Reset metrics for a new scraper run
+export function resetMetrics(): void {
+  currentMetrics = {
+    totalProcessed: 0,
+    newEntries: 0,
+    existingUnchanged: 0,
+    existingChanged: 0,
+    aiArticlesGenerated: 0,
+    imagesSearched: 0,
+  };
+}
+
+// Get current metrics
+export function getMetrics(): ScraperMetrics {
+  return { ...currentMetrics };
+}
+
+// Print metrics summary
+export function printMetricsSummary(scraperName: string): void {
+  const apiCallsSaved = currentMetrics.existingUnchanged * 4; // 3 OpenAI + 1 Google per unchanged item
+
+  console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`${scraperName} Metrics Summary`);
+  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`Total Processed:      ${currentMetrics.totalProcessed}`);
+  console.log(`New Entries:          ${currentMetrics.newEntries}`);
+  console.log(`Existing (Unchanged): ${currentMetrics.existingUnchanged}`);
+  console.log(`Existing (Changed):   ${currentMetrics.existingChanged}`);
+  console.log(`AI Articles Generated: ${currentMetrics.aiArticlesGenerated}`);
+  console.log(`Images Searched:      ${currentMetrics.imagesSearched}`);
+  console.log(`API Calls Saved:      ~${apiCallsSaved} (from skipping unchanged content)`);
+  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+}
+
 // Utility to create a hash of content for version tracking
 export function createContentHash(content: string): string {
   return createHash("sha256").update(content).digest("hex");
@@ -101,6 +155,115 @@ Write the article now using the 4-section structure above:`,
   }
 }
 
+// Check if a bill already exists and retrieve its metadata
+async function checkExistingBill(
+  billNumber: string,
+  sourceWebsite: string
+): Promise<{
+  exists: boolean;
+  contentHash?: string;
+  hasArticle: boolean;
+  hasThumbnail: boolean;
+} | null> {
+  try {
+    const [existing] = await db
+      .select({
+        contentHash: Bill.contentHash,
+        aiGeneratedArticle: Bill.aiGeneratedArticle,
+        thumbnailUrl: Bill.thumbnailUrl,
+      })
+      .from(Bill)
+      .where(and(eq(Bill.billNumber, billNumber), eq(Bill.sourceWebsite, sourceWebsite)))
+      .limit(1);
+
+    if (!existing) {
+      return null;
+    }
+
+    return {
+      exists: true,
+      contentHash: existing.contentHash,
+      hasArticle: !!existing.aiGeneratedArticle,
+      hasThumbnail: !!existing.thumbnailUrl,
+    };
+  } catch (error) {
+    console.error("Error checking existing bill:", error);
+    return null;
+  }
+}
+
+// Check if government content already exists and retrieve its metadata
+async function checkExistingGovernmentContent(
+  url: string
+): Promise<{
+  exists: boolean;
+  contentHash?: string;
+  hasArticle: boolean;
+  hasThumbnail: boolean;
+} | null> {
+  try {
+    const [existing] = await db
+      .select({
+        contentHash: GovernmentContent.contentHash,
+        aiGeneratedArticle: GovernmentContent.aiGeneratedArticle,
+        thumbnailUrl: GovernmentContent.thumbnailUrl,
+      })
+      .from(GovernmentContent)
+      .where(eq(GovernmentContent.url, url))
+      .limit(1);
+
+    if (!existing) {
+      return null;
+    }
+
+    return {
+      exists: true,
+      contentHash: existing.contentHash,
+      hasArticle: !!existing.aiGeneratedArticle,
+      hasThumbnail: !!existing.thumbnailUrl,
+    };
+  } catch (error) {
+    console.error("Error checking existing government content:", error);
+    return null;
+  }
+}
+
+// Check if a court case already exists and retrieve its metadata
+async function checkExistingCourtCase(
+  caseNumber: string
+): Promise<{
+  exists: boolean;
+  contentHash?: string;
+  hasArticle: boolean;
+  hasThumbnail: boolean;
+} | null> {
+  try {
+    const [existing] = await db
+      .select({
+        contentHash: CourtCase.contentHash,
+        aiGeneratedArticle: CourtCase.aiGeneratedArticle,
+        thumbnailUrl: CourtCase.thumbnailUrl,
+      })
+      .from(CourtCase)
+      .where(eq(CourtCase.caseNumber, caseNumber))
+      .limit(1);
+
+    if (!existing) {
+      return null;
+    }
+
+    return {
+      exists: true,
+      contentHash: existing.contentHash,
+      hasArticle: !!existing.aiGeneratedArticle,
+      hasThumbnail: !!existing.thumbnailUrl,
+    };
+  } catch (error) {
+    console.error("Error checking existing court case:", error);
+    return null;
+  }
+}
+
 // Insert or update a bill with version tracking
 export async function upsertBill(billData: {
   billNumber: string;
@@ -116,9 +279,52 @@ export async function upsertBill(billData: {
   url: string;
   sourceWebsite: string;
 }) {
+  // Generate contentHash for incoming data
+  const contentForHash = JSON.stringify({
+    title: billData.title,
+    description: billData.description,
+    status: billData.status,
+    summary: billData.summary,
+    fullText: billData.fullText,
+  });
+  const newContentHash = createContentHash(contentForHash);
+
+  // Check if entry exists
+  const existing = await checkExistingBill(
+    billData.billNumber,
+    billData.sourceWebsite
+  );
+
+  // Track metrics
+  currentMetrics.totalProcessed++;
+
+  // Determine what needs to be generated
+  let shouldGenerateArticle = false;
+  let shouldGenerateImage = false;
+
+  if (!existing) {
+    // New entry - generate everything
+    shouldGenerateArticle = !!billData.fullText;
+    shouldGenerateImage = !!billData.fullText;
+    currentMetrics.newEntries++;
+    console.log(`New bill detected: ${billData.billNumber}`);
+  } else if (existing.contentHash !== newContentHash) {
+    // Content changed - regenerate article, keep image
+    shouldGenerateArticle = !!billData.fullText;
+    shouldGenerateImage = !existing.hasThumbnail && !!billData.fullText;
+    currentMetrics.existingChanged++;
+    console.log(`Content changed for bill: ${billData.billNumber}`);
+  } else {
+    // Content unchanged
+    shouldGenerateArticle = false;
+    shouldGenerateImage = !existing.hasThumbnail && !!billData.fullText;
+    currentMetrics.existingUnchanged++;
+    console.log(`No changes for bill: ${billData.billNumber}, skipping AI generation`);
+  }
+
   // Generate AI summary if description is not provided
   let description = billData.description;
-  if (!description && (billData.summary || billData.fullText)) {
+  if (!description && (billData.summary || billData.fullText) && shouldGenerateArticle) {
     console.log(`Generating AI summary for bill: ${billData.title}`);
     description = await generateAISummary(
       billData.title,
@@ -126,20 +332,24 @@ export async function upsertBill(billData: {
     );
   }
 
-  // Generate AI article if fullText is available
-  let aiGeneratedArticle = "";
-  if (billData.fullText) {
+  // Conditionally generate AI article
+  let aiGeneratedArticle: string | undefined = undefined;
+  if (shouldGenerateArticle && billData.fullText) {
+    console.log(`Generating AI article for bill: ${billData.title}`);
     aiGeneratedArticle = await generateAIArticle(
       billData.title,
       billData.fullText,
       "bill",
       billData.url,
     );
+    currentMetrics.aiArticlesGenerated++;
+  } else if (existing?.hasArticle) {
+    console.log(`Using existing AI article for bill: ${billData.billNumber}`);
   }
 
-  // Search for thumbnail image
-  let thumbnailUrl: string | null = null;
-  if (billData.fullText) {
+  // Conditionally search for thumbnail
+  let thumbnailUrl: string | null | undefined = undefined;
+  if (shouldGenerateImage) {
     console.log(`Searching for thumbnail for bill: ${billData.title}`);
     const searchQuery = await generateImageSearchKeywords(
       billData.title,
@@ -147,19 +357,11 @@ export async function upsertBill(billData: {
       'bill'
     );
     console.log(`Image search query: ${searchQuery}`);
-    
-    // Get thumbnail only
     thumbnailUrl = await getThumbnailImage(searchQuery);
+    currentMetrics.imagesSearched++;
+  } else if (existing?.hasThumbnail) {
+    console.log(`Using existing thumbnail for bill: ${billData.billNumber}`);
   }
-
-  const contentForHash = JSON.stringify({
-    title: billData.title,
-    description: description,
-    status: billData.status,
-    summary: billData.summary,
-    fullText: billData.fullText,
-  });
-  const contentHash = createContentHash(contentForHash);
 
   const [result] = await db
     .insert(Bill)
@@ -167,8 +369,8 @@ export async function upsertBill(billData: {
       ...billData,
       description,
       aiGeneratedArticle: aiGeneratedArticle || undefined,
-      thumbnailUrl: thumbnailUrl || undefined,
-      contentHash,
+      thumbnailUrl: thumbnailUrl === undefined ? undefined : thumbnailUrl || undefined,
+      contentHash: newContentHash,
       versions: [],
     })
     .onConflictDoUpdate({
@@ -183,10 +385,11 @@ export async function upsertBill(billData: {
         chamber: billData.chamber,
         summary: billData.summary,
         fullText: billData.fullText,
-        aiGeneratedArticle: aiGeneratedArticle || undefined,
-        thumbnailUrl: thumbnailUrl || undefined,
+        // Only update these if new values were generated
+        ...(aiGeneratedArticle !== undefined && { aiGeneratedArticle }),
+        ...(thumbnailUrl !== undefined && { thumbnailUrl: thumbnailUrl || undefined }),
         url: billData.url,
-        contentHash,
+        contentHash: newContentHash,
         updatedAt: new Date(),
       },
     })
@@ -206,46 +409,82 @@ export async function upsertGovernmentContent(contentData: {
   url: string;
   source?: string;
 }) {
-  // Generate AI article if fullText is available
-  let aiGeneratedArticle = "";
-  if (contentData.fullText) {
+  // Generate contentHash for incoming data
+  const contentForHash = JSON.stringify({
+    title: contentData.title,
+    description: contentData.description,
+    fullText: contentData.fullText,
+  });
+  const newContentHash = createContentHash(contentForHash);
+
+  // Check if entry exists
+  const existing = await checkExistingGovernmentContent(contentData.url);
+
+  // Track metrics
+  currentMetrics.totalProcessed++;
+
+  // Determine what needs to be generated
+  let shouldGenerateArticle = false;
+  let shouldGenerateImage = false;
+
+  if (!existing) {
+    // New entry - generate everything
+    shouldGenerateArticle = !!contentData.fullText;
+    shouldGenerateImage = !!contentData.fullText;
+    currentMetrics.newEntries++;
+    console.log(`New government content detected: ${contentData.title}`);
+  } else if (existing.contentHash !== newContentHash) {
+    // Content changed - regenerate article, keep image
+    shouldGenerateArticle = !!contentData.fullText;
+    shouldGenerateImage = !existing.hasThumbnail && !!contentData.fullText;
+    currentMetrics.existingChanged++;
+    console.log(`Content changed for government content: ${contentData.title}`);
+  } else {
+    // Content unchanged
+    shouldGenerateArticle = false;
+    shouldGenerateImage = !existing.hasThumbnail && !!contentData.fullText;
+    currentMetrics.existingUnchanged++;
+    console.log(`No changes for government content: ${contentData.title}, skipping AI generation`);
+  }
+
+  // Conditionally generate AI article
+  let aiGeneratedArticle: string | undefined = undefined;
+  if (shouldGenerateArticle && contentData.fullText) {
+    console.log(`Generating AI article for ${contentData.type}: ${contentData.title}`);
     aiGeneratedArticle = await generateAIArticle(
       contentData.title,
       contentData.fullText,
       contentData.type,
       contentData.url,
     );
+    currentMetrics.aiArticlesGenerated++;
+  } else if (existing?.hasArticle) {
+    console.log(`Using existing AI article for government content: ${contentData.title}`);
   }
 
-  // Search for thumbnail image
-  let thumbnailUrl: string | null = null;
-  if (contentData.fullText) {
+  // Conditionally search for thumbnail
+  let thumbnailUrl: string | null | undefined = undefined;
+  if (shouldGenerateImage) {
     console.log(`Searching for thumbnail for ${contentData.type}: ${contentData.title}`);
     const searchQuery = await generateImageSearchKeywords(
       contentData.title,
-      contentData.fullText,
+      contentData.fullText || '',
       contentData.type
     );
     console.log(`Image search query: ${searchQuery}`);
-    
-    // Get thumbnail only
     thumbnailUrl = await getThumbnailImage(searchQuery);
+    currentMetrics.imagesSearched++;
+  } else if (existing?.hasThumbnail) {
+    console.log(`Using existing thumbnail for government content: ${contentData.title}`);
   }
-
-  const contentForHash = JSON.stringify({
-    title: contentData.title,
-    description: contentData.description,
-    fullText: contentData.fullText,
-  });
-  const contentHash = createContentHash(contentForHash);
 
   const [result] = await db
     .insert(GovernmentContent)
     .values({
       ...contentData,
       aiGeneratedArticle: aiGeneratedArticle || undefined,
-      thumbnailUrl: thumbnailUrl || undefined,
-      contentHash,
+      thumbnailUrl: thumbnailUrl === undefined ? undefined : thumbnailUrl || undefined,
+      contentHash: newContentHash,
       versions: [],
     })
     .onConflictDoUpdate({
@@ -256,10 +495,11 @@ export async function upsertGovernmentContent(contentData: {
         publishedDate: contentData.publishedDate,
         description: contentData.description,
         fullText: contentData.fullText,
-        aiGeneratedArticle: aiGeneratedArticle || undefined,
-        thumbnailUrl: thumbnailUrl || undefined,
+        // Only update these if new values were generated
+        ...(aiGeneratedArticle !== undefined && { aiGeneratedArticle }),
+        ...(thumbnailUrl !== undefined && { thumbnailUrl: thumbnailUrl || undefined }),
         source: contentData.source,
-        contentHash,
+        contentHash: newContentHash,
         updatedAt: new Date(),
       },
     })
@@ -299,46 +539,82 @@ export async function upsertCourtCase(caseData: {
   fullText?: string;
   url: string;
 }) {
+  // Generate contentHash for incoming data
+  const contentForHash = JSON.stringify({
+    title: caseData.title,
+    description: caseData.description,
+    status: caseData.status,
+    fullText: caseData.fullText,
+  });
+  const newContentHash = createContentHash(contentForHash);
+
+  // Check if entry exists
+  const existing = await checkExistingCourtCase(caseData.caseNumber);
+
+  // Track metrics
+  currentMetrics.totalProcessed++;
+
+  // Determine what needs to be generated
+  let shouldGenerateArticle = false;
+  let shouldGenerateImage = false;
+
+  if (!existing) {
+    // New entry - generate everything
+    shouldGenerateArticle = !!caseData.fullText;
+    shouldGenerateImage = !!caseData.fullText;
+    currentMetrics.newEntries++;
+    console.log(`New court case detected: ${caseData.caseNumber}`);
+  } else if (existing.contentHash !== newContentHash) {
+    // Content changed - regenerate article, keep image
+    shouldGenerateArticle = !!caseData.fullText;
+    shouldGenerateImage = !existing.hasThumbnail && !!caseData.fullText;
+    currentMetrics.existingChanged++;
+    console.log(`Content changed for court case: ${caseData.caseNumber}`);
+  } else {
+    // Content unchanged
+    shouldGenerateArticle = false;
+    shouldGenerateImage = !existing.hasThumbnail && !!caseData.fullText;
+    currentMetrics.existingUnchanged++;
+    console.log(`No changes for court case: ${caseData.caseNumber}, skipping AI generation`);
+  }
+
   // Generate AI summary if description is not provided
   let description = caseData.description;
-  if (!description && caseData.fullText) {
+  if (!description && caseData.fullText && shouldGenerateArticle) {
     console.log(`Generating AI summary for court case: ${caseData.title}`);
     description = await generateAISummary(caseData.title, caseData.fullText);
   }
 
-  // Generate AI article if fullText is available
-  let aiGeneratedArticle = "";
-  if (caseData.fullText) {
+  // Conditionally generate AI article
+  let aiGeneratedArticle: string | undefined = undefined;
+  if (shouldGenerateArticle && caseData.fullText) {
+    console.log(`Generating AI article for court case: ${caseData.title}`);
     aiGeneratedArticle = await generateAIArticle(
       caseData.title,
       caseData.fullText,
       "court case",
       caseData.url,
     );
+    currentMetrics.aiArticlesGenerated++;
+  } else if (existing?.hasArticle) {
+    console.log(`Using existing AI article for court case: ${caseData.caseNumber}`);
   }
 
-  // Search for thumbnail image
-  let thumbnailUrl: string | null = null;
-  if (caseData.fullText) {
+  // Conditionally search for thumbnail
+  let thumbnailUrl: string | null | undefined = undefined;
+  if (shouldGenerateImage) {
     console.log(`Searching for thumbnail for court case: ${caseData.title}`);
     const searchQuery = await generateImageSearchKeywords(
       caseData.title,
-      caseData.fullText,
+      caseData.fullText || '',
       'court case'
     );
     console.log(`Image search query: ${searchQuery}`);
-    
-    // Get thumbnail only
     thumbnailUrl = await getThumbnailImage(searchQuery);
+    currentMetrics.imagesSearched++;
+  } else if (existing?.hasThumbnail) {
+    console.log(`Using existing thumbnail for court case: ${caseData.caseNumber}`);
   }
-
-  const contentForHash = JSON.stringify({
-    title: caseData.title,
-    description: description,
-    status: caseData.status,
-    fullText: caseData.fullText,
-  });
-  const contentHash = createContentHash(contentForHash);
 
   const [result] = await db
     .insert(CourtCase)
@@ -346,8 +622,8 @@ export async function upsertCourtCase(caseData: {
       ...caseData,
       description,
       aiGeneratedArticle: aiGeneratedArticle || undefined,
-      thumbnailUrl: thumbnailUrl || undefined,
-      contentHash,
+      thumbnailUrl: thumbnailUrl === undefined ? undefined : thumbnailUrl || undefined,
+      contentHash: newContentHash,
       versions: [],
     })
     .onConflictDoUpdate({
@@ -359,10 +635,11 @@ export async function upsertCourtCase(caseData: {
         description: description,
         status: caseData.status,
         fullText: caseData.fullText,
-        aiGeneratedArticle: aiGeneratedArticle || undefined,
-        thumbnailUrl: thumbnailUrl || undefined,
+        // Only update these if new values were generated
+        ...(aiGeneratedArticle !== undefined && { aiGeneratedArticle }),
+        ...(thumbnailUrl !== undefined && { thumbnailUrl: thumbnailUrl || undefined }),
         url: caseData.url,
-        contentHash,
+        contentHash: newContentHash,
         updatedAt: new Date(),
       },
     })

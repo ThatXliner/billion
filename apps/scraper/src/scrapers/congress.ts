@@ -1,8 +1,11 @@
 import { PlaywrightCrawler, Dataset } from 'crawlee';
-import { upsertBill } from '../utils/db.js';
+import { upsertBill, resetMetrics, printMetricsSummary } from '../utils/db.js';
 
 export async function scrapeCongress() {
   console.log('Starting Congress.gov scraper...');
+
+  // Reset metrics for this scraper run
+  resetMetrics();
 
   const crawler = new PlaywrightCrawler({
     async requestHandler({ request, page, log }) {
@@ -151,4 +154,7 @@ export async function scrapeCongress() {
   }
 
   console.log('Congress.gov scraper completed');
+
+  // Print metrics summary
+  printMetricsSummary("Congress.gov");
 }

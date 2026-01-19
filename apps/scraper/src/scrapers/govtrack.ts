@@ -1,9 +1,12 @@
 import { CheerioCrawler } from "crawlee";
 
-import { upsertBill } from "../utils/db.js";
+import { upsertBill, resetMetrics, printMetricsSummary } from "../utils/db.js";
 
 export async function scrapeGovTrack() {
   console.log("Starting GovTrack scraper...");
+
+  // Reset metrics for this scraper run
+  resetMetrics();
 
   const collectedLinks = new Set<string>();
   const maxBills = 20;
@@ -125,4 +128,7 @@ export async function scrapeGovTrack() {
   }
 
   console.log("GovTrack scraper completed");
+
+  // Print metrics summary
+  printMetricsSummary("GovTrack");
 }
