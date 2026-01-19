@@ -58,6 +58,7 @@ const ContentCardComponent = ({
         {
           backgroundColor: theme.card,
           borderColor: colors.cyan[600],
+          borderWidth: 0
         },
       ]}
       onPress={() => {
@@ -100,8 +101,8 @@ const ContentCardComponent = ({
         </Text>
 
         {/* Action buttons */}
-        <View style={styles.buttonContainer}>
-          <Button
+        {/*<View style={styles.buttonContainer}>*/}
+          {/*<Button
             variant="default"
             size="sm"
             style={styles.modernCardButton}
@@ -110,7 +111,7 @@ const ContentCardComponent = ({
             }}
           >
             Watch Short
-          </Button>
+          </Button>*/}
           <Button
             variant="outline"
             size="sm"
@@ -121,7 +122,7 @@ const ContentCardComponent = ({
           >
             Read More
           </Button>
-        </View>
+        {/*</View>*/}
       </View>
     </TouchableOpacity>
   );
