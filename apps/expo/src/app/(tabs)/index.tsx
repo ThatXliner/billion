@@ -10,8 +10,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import Fuse from "fuse.js";
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 
 import type { VideoPost } from "@acme/api";
 import { Button } from "@acme/ui/button-native";
@@ -29,7 +27,6 @@ import {
   fontWeight,
   layout,
   sp,
-  rd,
   type Theme,
   typography,
   useTheme,
@@ -68,8 +65,7 @@ const ContentCardComponent = ({
       }}
       activeOpacity={0.9}
     >
-      <BlurView
-        intensity={100}
+      <View
         style={styles.modernCardContent}
         lightColor="transparent"
         darkColor="transparent"
@@ -100,21 +96,33 @@ const ContentCardComponent = ({
             },
           ]}
         >
-          Summary: {item.description}
+          {item.description}
         </Text>
 
-        {/* Single gradient button */}
-        <Button
-          variant="default"
-          size="sm"
-          style={styles.modernCardButton}
-          onPress={() => {
-            router.push(`/article-detail?id=${item.id}`);
-          }}
-        >
-          Watch Short
-        </Button>
-      </BlurView>
+        {/* Action buttons */}
+        <View style={styles.buttonContainer}>
+          <Button
+            variant="default"
+            size="sm"
+            style={styles.modernCardButton}
+            onPress={() => {
+              router.push(`/article-detail?id=${item.id}`);
+            }}
+          >
+            Watch Short
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            style={styles.modernCardButton}
+            onPress={() => {
+              router.push(`/article-detail?id=${item.id}`);
+            }}
+          >
+            Read More
+          </Button>
+        </View>
+      </View>
     </TouchableOpacity>
   );
 };
@@ -224,23 +232,7 @@ export default function BrowseScreen() {
   const tabContainerStyles = createTabContainerStyles(theme);
 
   return (
-    <BlurView style={layout.container} intensity={50} tint="light">
-      <LinearGradient
-          // colors={['#120c4f', '#3b2fa3']}
-          colors={['#0f0c29', // near-black indigo
-            '#302b63', // deep violet
-            '#3f3a8a']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-
-        {/*<LinearGradient
-          colors={['rgba(255,255,255,0.08)', 'transparent']}
-          start={{ x: 0.8, y: 0 }}
-          end={{ x: 0.2, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />*/}
+    <View style={layout.container}>
       {/* Wireframe wave background decoration */}
       {/*<WireframeWave />*/}
 
@@ -308,7 +300,7 @@ export default function BrowseScreen() {
           </>
         )}
       </ScrollView>
-    </BlurView>
+    </View>
   );
 }
 
@@ -318,7 +310,6 @@ const styles = StyleSheet.create({
     padding: sp[5],
   },
   centerContainer: {
-    borderRadius: rd.xl,
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -347,17 +338,14 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
     marginBottom: sp[1],
   },
-  modernCardButton: {
-    alignSelf: "flex-start",
+  buttonContainer: {
+    flexDirection: "row",
+    gap: sp[3],
     marginTop: sp[2],
-    // paddingVertical: sp[2],
-    // paddingHorizontal: sp[3],
-    // borderRadius: rd.md,
-    // backgroundColor: theme.background,
-    // shadowColor: theme.shadow,
+  },
+  modernCardButton: {
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    // elevation: 2,
   },
 });
