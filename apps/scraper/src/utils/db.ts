@@ -176,26 +176,22 @@ export async function upsertBill(billData: {
     })
     .onConflictDoUpdate({
       target: [Bill.billNumber, Bill.sourceWebsite],
-      set: (excluded) => {
-        // Only update if content hash has changed
-        // This requires a subquery approach or we need to handle version tracking differently
-        return {
-          title: excluded.title,
-          description: excluded.description,
-          sponsor: excluded.sponsor,
-          status: excluded.status,
-          introducedDate: excluded.introducedDate,
-          congress: excluded.congress,
-          chamber: excluded.chamber,
-          summary: excluded.summary,
-          fullText: excluded.fullText,
-          aiGeneratedArticle: excluded.aiGeneratedArticle,
-          thumbnailUrl: excluded.thumbnailUrl,
-          images: excluded.images,
-          url: excluded.url,
-          contentHash: excluded.contentHash,
-          updatedAt: new Date(),
-        };
+      set: {
+        title: billData.title,
+        description: description,
+        sponsor: billData.sponsor,
+        status: billData.status,
+        introducedDate: billData.introducedDate,
+        congress: billData.congress,
+        chamber: billData.chamber,
+        summary: billData.summary,
+        fullText: billData.fullText,
+        aiGeneratedArticle: aiGeneratedArticle || undefined,
+        thumbnailUrl: thumbnailUrl || undefined,
+        images: images.length > 0 ? images : undefined,
+        url: billData.url,
+        contentHash,
+        updatedAt: new Date(),
       },
     })
     .returning();

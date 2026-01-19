@@ -1,62 +1,66 @@
 /**
  * Image search utilities for finding relevant photos for articles
- * Uses Pexels API to find high-quality, relevant images
- * Get your free API key instantly at: https://www.pexels.com/api/
+ * Uses Google Custom Search API to find high-quality, relevant images
  */
 
 export interface ImageResult {
   url: string; // Direct URL to the image
   alt: string; // Alt text description
-  source: string; // Source attribution (e.g., "Pexels")
+  source: string; // Source attribution (website domain)
   sourceUrl: string; // URL to the original source
 }
 
 /**
- * Search for relevant images based on keywords
+ * Search for relevant images based on keywords using Google Custom Search
  * @param query - Search query (keywords)
- * @param count - Number of images to retrieve (default: 3)
+ * @param count - Number of images to retrieve (default: 3, max: 10)
  * @returns Array of image results
  */
 export async function searchImages(
   query: string,
   count: number = 3,
 ): Promise<ImageResult[]> {
-  const accessKey = process.env.PEXELS_API_KEY;
+  const apiKey = process.env.GOOGLE_API_KEY;
+  const searchEngineId = process.env.GOOGLE_SEARCH_ENGINE_ID;
 
-  if (!accessKey) {
-    console.warn('PEXELS_API_KEY not set, skipping image search');
+  if (!apiKey || !searchEngineId) {
+    console.warn(
+      'GOOGLE_API_KEY or GOOGLE_SEARCH_ENGINE_ID not set, skipping image search',
+    );
     return [];
   }
 
   try {
-    const url = new URL('https://api.pexels.com/v1/search');
-    url.searchParams.set('query', query);
-    url.searchParams.set('per_page', count.toString());
-    url.searchParams.set('orientation', 'landscape');
+    const url = new URL('https://www.googleapis.com/customsearch/v1');
+    url.searchParams.set('key', apiKey);
+    url.searchParams.set('cx', searchEngineId);
+    url.searchParams.set('q', query);
+    url.searchParams.set('searchType', 'image');
+    url.searchParams.set('num', Math.min(count, 10).toString());
 
-    const response = await fetch(url.toString(), {
-      headers: {
-        Authorization: accessKey,
-      },
-    });
+    const response = await fetch(url.toString());
 
     if (!response.ok) {
-      console.error(`Pexels API error: ${response.status} ${response.statusText}`);
+      console.error(
+        `Google Custom Search API error: ${response.status} ${response.statusText}`,
+      );
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error details:', errorData);
       return [];
     }
 
     const data = await response.json();
 
-    if (!data.photos || data.photos.length === 0) {
+    if (!data.items || data.items.length === 0) {
       console.log(`No images found for query: ${query}`);
       return [];
     }
 
-    return data.photos.map((photo: any) => ({
-      url: photo.src.original, // Use original URL - cleaner and more reliable
-      alt: photo.alt || `Image related to ${query}`,
-      source: `Photo by ${photo.photographer} on Pexels`,
-      sourceUrl: photo.url,
+    return data.items.slice(0, count).map((item: any) => ({
+      url: item.link, // Direct link to the image
+      alt: item.title || `Image related to ${query}`,
+      source: item.displayLink || 'Google Images',
+      sourceUrl: item.image?.contextLink || item.link,
     }));
   } catch (error) {
     console.error('Error searching for images:', error);
