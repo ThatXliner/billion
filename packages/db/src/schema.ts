@@ -35,7 +35,11 @@ export const Bill = pgTable("bill", (t) => ({
   chamber: t.varchar({ length: 50 }), // "House" or "Senate"
   summary: t.text(),
   fullText: t.text(),
-  aiGeneratedArticle: t.text(), // AI-generated accessible article version
+  aiGeneratedArticle: t.text(), // AI-generated accessible article version (default depth: 3)
+  articleGenerations: t
+    .jsonb()
+    .$type<{ depth: number; content: string; generatedAt: string }[]>()
+    .default([]), // Cached articles at different depth levels (1-5)
   thumbnailUrl: t.text(), // URL of the thumbnail image
   images: t
     .jsonb()
@@ -68,7 +72,11 @@ export const GovernmentContent = pgTable("government_content", (t) => ({
   publishedDate: t.timestamp().notNull(),
   description: t.text(),
   fullText: t.text(),
-  aiGeneratedArticle: t.text(), // AI-generated accessible article version
+  aiGeneratedArticle: t.text(), // AI-generated accessible article version (default depth: 3)
+  articleGenerations: t
+    .jsonb()
+    .$type<{ depth: number; content: string; generatedAt: string }[]>()
+    .default([]), // Cached articles at different depth levels (1-5)
   thumbnailUrl: t.text(), // URL of the thumbnail image
   images: t
     .jsonb()
@@ -109,7 +117,11 @@ export const CourtCase = pgTable("court_case", (t) => ({
   description: t.text(),
   status: t.varchar({ length: 100 }), // e.g., "Pending", "Decided"
   fullText: t.text(),
-  aiGeneratedArticle: t.text(), // AI-generated accessible article version
+  aiGeneratedArticle: t.text(), // AI-generated accessible article version (default depth: 3)
+  articleGenerations: t
+    .jsonb()
+    .$type<{ depth: number; content: string; generatedAt: string }[]>()
+    .default([]), // Cached articles at different depth levels (1-5)
   thumbnailUrl: t.text(), // URL of the thumbnail image
   images: t
     .jsonb()

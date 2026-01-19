@@ -6,6 +6,11 @@ import { db } from "@acme/db/client";
 import { Bill, CourtCase, GovernmentContent } from "@acme/db/schema";
 
 import { publicProcedure } from "../trpc";
+import {
+  getOrGenerateArticle,
+  DEPTH_DESCRIPTIONS,
+  type ArticleDepth,
+} from "../utils/article-depth";
 
 // Helper function to get thumbnail URL for any content
 export async function getThumbnailForContent(
@@ -291,5 +296,82 @@ export const contentRouter = {
       }
 
       throw new Error(`Content with id ${input.id} not found`);
+    }),
+
+  // Get article at specific depth level
+  getArticleAtDepth: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        type: z.enum(["bill", "case", "general"]),
+        depth: z.union([
+          z.literal(1),
+          z.literal(2),
+          z.literal(3),
+          z.literal(4),
+          z.literal(5),
+        ]),
+      }),
+    )
+    .query(async ({ input }) => {
+      const result = await getOrGenerateArticle(
+        input.id,
+        input.type,
+        input.depth as ArticleDepth,
+      );
+      return {
+        content: result.content,
+        cached: result.cached,
+        depth: input.depth,
+        depthDescription: DEPTH_DESCRIPTIONS[input.depth as ArticleDepth],
+      };
+    }),
+
+  // Get available depth levels and their descriptions
+  getDepthLevels: publicProcedure.query(async () => {
+    return Object.entries(DEPTH_DESCRIPTIONS).map(([depth, description]) => ({
+      depth: Number(depth) as ArticleDepth,
+      description,
+    }));
+  }),
+
+  // Check which depth levels are cached for a content item
+  getCachedDepths: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        type: z.enum(["bill", "case", "general"]),
+      }),
+    )
+    .query(async ({ input }) => {
+      const table =
+        input.type === "bill"
+          ? Bill
+          : input.type === "case"
+            ? CourtCase
+            : GovernmentContent;
+
+      const [content] = await db
+        .select({ articleGenerations: table.articleGenerations })
+        .from(table)
+        .where(eq(table.id, input.id))
+        .limit(1);
+
+      if (!content) {
+        return { cachedDepths: [] };
+      }
+
+      const generations = (content.articleGenerations as {
+        depth: number;
+        content: string;
+        generatedAt: string;
+      }[]) || [];
+
+      return {
+        cachedDepths: generations.map((g) => ({
+          depth: g.depth as ArticleDepth,
+          generatedAt: g.generatedAt,
+        })),
+      };
     }),
 } satisfies TRPCRouterRecord;
