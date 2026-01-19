@@ -125,7 +125,7 @@ export default function FeedScreen() {
                // contentFit="cover"
                transition={1000}
        />
-        {/*<Text style={[typography.body, styles.cardDescription, { color: theme.textSecondary }]}>
+      {/*<Text style={[typography.body, styles.cardDescription, { color: theme.textSecondary }]}>
           {JSON.stringify(item)}
         </Text>*/}
 
