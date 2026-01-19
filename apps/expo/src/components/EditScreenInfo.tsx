@@ -59,11 +59,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 50,
   },
   homeScreenFilename: {
-    marginVertical: sp(2),
+    marginVertical: sp[2],
   },
   codeHighlightContainer: {
     borderRadius: 3,
-    paddingHorizontal: sp(1),
+    paddingHorizontal: sp[1],
   },
   getStartedText: {
     fontSize: 17,
@@ -71,12 +71,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   helpContainer: {
-    marginTop: sp(4),
-    marginHorizontal: sp(5),
+    marginTop: sp[4],
+    marginHorizontal: sp[5],
     alignItems: "center",
   },
   helpLink: {
-    paddingVertical: sp(4),
+    paddingVertical: sp[4],
   },
   helpLinkText: {
     textAlign: "center",

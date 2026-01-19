@@ -295,7 +295,7 @@ export default function BrowseScreen() {
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    padding: sp(5),
+    padding: sp[5],
   },
   centerContainer: {
     flex: 1,
@@ -307,27 +307,27 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
   },
   emptySubtext: {
-    marginTop: sp(2),
+    marginTop: sp[2],
   },
   resultsText: {
     fontSize: fontSize.sm,
-    marginBottom: sp(3),
+    marginBottom: sp[3],
     fontWeight: fontWeight.medium,
   },
   // Modern card styles
   modernCard: {
-    marginBottom: sp(4),
+    marginBottom: sp[4],
   },
   modernCardContent: {
-    gap: sp(3),
+    gap: sp[3],
   },
   categoryLabel: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
-    marginBottom: sp(1),
+    marginBottom: sp[1],
   },
   modernCardButton: {
     alignSelf: "flex-start",
-    marginTop: sp(2),
+    marginTop: sp[2],
   },
 });

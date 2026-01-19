@@ -26,7 +26,7 @@ export default function ModalScreen() {
 
 const styles = StyleSheet.create({
   separator: {
-    marginVertical: sp(8),
+    marginVertical: sp[8],
     height: 1,
     width: "80%",
   },

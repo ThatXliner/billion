@@ -255,35 +255,35 @@ export default function FeedScreen() {
 // const sp = (key: keyof typeof spacing): number => spacing[key] * 16;
 const styles = StyleSheet.create({
   loadingText: {
-    marginTop: sp(4),
+    marginTop: sp[4],
     fontSize: fontSize.base,
   },
   errorSubtext: {
-    marginTop: sp(2),
+    marginTop: sp[2],
   },
   videoContainer: {
     position: "relative",
     width: "100%",
-    padding: sp(5),
+    padding: sp[5],
     justifyContent: "center",
   },
   cardTitle: {
-    marginBottom: sp(3),
-    marginTop: sp(4),
+    marginBottom: sp[3],
+    marginTop: sp[4],
   },
   cardDescription: {
-    marginBottom: sp(4),
+    marginBottom: sp[4],
   },
   articlePreview: {
     fontSize: fontSize.sm,
-    marginBottom: sp(4),
+    marginBottom: sp[4],
     lineHeight: fontSize.sm * 1.6,
     fontStyle: "italic",
   },
   author: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
-    marginBottom: sp(5),
+    marginBottom: sp[5],
   },
   readButton: {
     width: "100%",
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   bottomOverlay: {
     position: "absolute",
     bottom: 0,
-    right: sp(5),
+    right: sp[5],
     alignItems: "flex-end",
   },
   actionIconLiked: {

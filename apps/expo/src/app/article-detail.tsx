@@ -176,7 +176,7 @@ export default function ArticleDetailScreen() {
               {
                 backgroundColor: theme.card,
                 borderColor: colors.cyan[700],
-                marginTop: sp(5),
+                marginTop: sp[5],
                 marginBottom: sp(20),
               },
             ]}
@@ -225,19 +225,19 @@ export default function ArticleDetailScreen() {
 
 const localStyles = StyleSheet.create({
   loadingText: {
-    marginTop: sp(4),
+    marginTop: sp[4],
   },
   errorContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: sp(5),
+    padding: sp[5],
   },
   errorButton: {
     borderRadius: rd("md"),
-    paddingHorizontal: sp(8),
-    paddingVertical: sp(3),
-    marginTop: sp(4),
+    paddingHorizontal: sp[8],
+    paddingVertical: sp[3],
+    marginTop: sp[4],
   },
   errorButtonText: {
     fontSize: 16,
@@ -247,26 +247,26 @@ const localStyles = StyleSheet.create({
     borderRadius: rd("md"),
   },
   scrollViewContent: {
-    padding: sp(5),
+    padding: sp[5],
     paddingBottom: sp(10),
   },
   articleTitle: {
-    marginBottom: sp(3),
-    marginTop: sp(4),
+    marginBottom: sp[3],
+    marginTop: sp[4],
   },
   articleDescription: {
-    marginBottom: sp(4),
+    marginBottom: sp[4],
   },
   floatingActions: {
     position: "absolute",
     top: "50%",
-    right: sp(5),
+    right: sp[5],
     transform: [{ translateY: -80 }],
-    gap: sp(4),
+    gap: sp[4],
   },
   floatingCloseButton: {
     position: "absolute",
-    bottom: sp(8),
-    right: sp(5),
+    bottom: sp[8],
+    right: sp[5],
   },
 });

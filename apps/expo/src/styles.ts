@@ -8,19 +8,19 @@
 
 import { StyleSheet, useColorScheme } from "react-native";
 
-// Re-export everything from theme-tokens so you only need to import from one place
-export {
+import {
   colors,
   darkTheme,
-  lightTheme,
   fontSize,
   fontWeight,
-  spacing,
+  lightTheme,
   radius,
   shadows,
+  spacing,
 } from "@acme/ui/theme-tokens";
 
-import {
+// Re-export everything from theme-tokens so you only need to import from one place
+export {
   colors,
   darkTheme,
   lightTheme,
@@ -37,25 +37,51 @@ import {
 
 export type Theme = typeof darkTheme;
 
-export function useTheme(): { theme: Theme; colorScheme: "light" | "dark"; isDark: boolean } {
+export function useTheme(): {
+  theme: Theme;
+  colorScheme: "light" | "dark";
+  isDark: boolean;
+} {
   const colorScheme = useColorScheme() ?? "dark";
   const theme = colorScheme === "dark" ? darkTheme : lightTheme;
   return { theme, colorScheme, isDark: colorScheme === "dark" };
 }
 
 // ============================================================================
-// SPACING HELPERS - Converts rem-based spacing to pixels (multiply by 16)
+// SPACING HELPERS - Pre-computed pixel values for use in StyleSheet.create()
 // ============================================================================
 
-/** Convert spacing token to pixels */
-export const sp = (key: keyof typeof spacing): number => spacing[key] * 16;
-
-/** Convert radius token to pixels */
-export const rd = (key: keyof typeof radius): number => {
-  const value = radius[key];
-  return typeof value === "number" ? value * 16 : value;
-};
-
+/** Pre-computed spacing values in pixels (spacing token * 16) */
+export const sp = {
+  0: 0,
+  1: 4, // 0.25 * 16
+  2: 8, // 0.5 * 16
+  3: 12, // 0.75 * 16
+  4: 16, // 1 * 16
+  5: 20, // 1.25 * 16
+  6: 24, // 1.5 * 16
+  8: 32, // 2 * 16
+  10: 40, // 2.5 * 16
+  12: 48, // 3 * 16
+  16: 64, // 4 * 16
+  20: 80, // 5 * 16
+  24: 96, // 6 * 16
+} as const;
+// export const sp = (key: keyof typeof spacing): number => spacing[key] * 16;
+/** Pre-computed radius values in pixels (radius token * 16) */
+export const rd = {
+  none: 0,
+  sm: 6, // 0.375 * 16
+  md: 8, // 0.5 * 16
+  lg: 12, // 0.75 * 16
+  xl: 16, // 1 * 16
+  "2xl": 24, // 1.5 * 16
+  full: 9999,
+} as const;
+// export const rd = (key: keyof typeof radius): number => {
+//   const value = radius[key];
+//   return typeof value === "number" ? value * 16 : value;
+// };
 // ============================================================================
 // COMMON LAYOUT STYLES
 // ============================================================================
@@ -147,15 +173,15 @@ export const typography = StyleSheet.create({
 export const cards = StyleSheet.create({
   // Base card
   base: {
-    borderRadius: rd("xl"),
-    padding: sp(5),
+    borderRadius: rd.xl,
+    padding: sp[5],
   },
 
   // Card with border (modern style)
   bordered: {
-    borderRadius: rd("xl"),
+    borderRadius: rd.xl,
     borderWidth: 2,
-    padding: sp(5),
+    padding: sp[5],
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -165,15 +191,15 @@ export const cards = StyleSheet.create({
 
   // Content card (for articles, etc.)
   content: {
-    borderRadius: rd("lg"),
+    borderRadius: rd.lg,
     borderWidth: 2,
-    padding: sp(5),
+    padding: sp[5],
   },
 
   // Elevated card with heavy shadow
   elevated: {
-    borderRadius: rd("xl"),
-    padding: sp(6),
+    borderRadius: rd.xl,
+    padding: sp[6],
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
@@ -188,13 +214,13 @@ export const cards = StyleSheet.create({
 
 export const headers = StyleSheet.create({
   container: {
-    paddingHorizontal: sp(5),
-    paddingBottom: sp(5),
+    paddingHorizontal: sp[5],
+    paddingBottom: sp[5],
   },
   title: {
     fontSize: fontSize["2xl"],
     fontWeight: fontWeight.bold,
-    marginBottom: sp(4),
+    marginBottom: sp[4],
   },
   withBorder: {
     borderBottomWidth: 1,
@@ -208,16 +234,16 @@ export const headers = StyleSheet.create({
 export const inputs = StyleSheet.create({
   search: {
     borderWidth: 1,
-    borderRadius: rd("lg"),
-    paddingHorizontal: sp(4),
-    paddingVertical: sp(3),
+    borderRadius: rd.lg,
+    paddingHorizontal: sp[4],
+    paddingVertical: sp[3],
     fontSize: fontSize.base,
   },
   text: {
     borderWidth: 1,
-    borderRadius: rd("md"),
-    paddingHorizontal: sp(4),
-    paddingVertical: sp(3),
+    borderRadius: rd.md,
+    paddingHorizontal: sp[4],
+    paddingVertical: sp[3],
     fontSize: fontSize.base,
   },
 });
@@ -229,9 +255,9 @@ export const inputs = StyleSheet.create({
 export const buttons = StyleSheet.create({
   // Tab button base
   tab: {
-    paddingHorizontal: sp(3),
-    paddingVertical: sp(1) + 2,
-    borderRadius: rd("md"),
+    paddingHorizontal: sp[3],
+    paddingVertical: sp[1] + 2,
+    borderRadius: rd.md,
   },
   tabText: {
     fontSize: fontSize.sm,
@@ -267,9 +293,9 @@ export const buttons = StyleSheet.create({
 export const badges = StyleSheet.create({
   base: {
     alignSelf: "flex-start",
-    paddingHorizontal: sp(3),
-    paddingVertical: sp(1),
-    borderRadius: rd("sm"),
+    paddingHorizontal: sp[3],
+    paddingVertical: sp[1],
+    borderRadius: rd.sm,
   },
   text: {
     color: colors.white,
@@ -285,11 +311,11 @@ export const badges = StyleSheet.create({
 
 export const settings = StyleSheet.create({
   section: {
-    marginTop: sp(8),
+    marginTop: sp[8],
   },
   sectionTitle: {
-    marginHorizontal: sp(5),
-    marginBottom: sp(3),
+    marginHorizontal: sp[5],
+    marginBottom: sp[3],
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
     textTransform: "uppercase",
@@ -303,23 +329,23 @@ export const settings = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
-    paddingHorizontal: sp(5),
-    paddingVertical: sp(4),
+    paddingHorizontal: sp[5],
+    paddingVertical: sp[4],
   },
   itemTextContainer: {
     flex: 1,
   },
   itemTitle: {
-    marginBottom: sp(1),
+    marginBottom: sp[1],
     fontSize: fontSize.base,
     fontWeight: fontWeight.medium,
   },
   itemSubtitle: {
     fontSize: fontSize.sm,
-    lineHeight: sp(5),
+    lineHeight: sp[5],
   },
   chevron: {
-    marginLeft: sp(3),
+    marginLeft: sp[3],
     fontSize: fontSize.xl,
   },
 });
@@ -334,12 +360,12 @@ export const actions = StyleSheet.create({
     justifyContent: "flex-end",
   },
   button: {
-    marginBottom: sp(4),
+    marginBottom: sp[4],
     alignItems: "center",
     backgroundColor: "transparent",
   },
   icon: {
-    marginBottom: sp(1),
+    marginBottom: sp[1],
     fontSize: fontSize["2xl"],
   },
   text: {
@@ -357,32 +383,32 @@ export function getMarkdownStyles(theme: Theme) {
   return {
     body: {
       fontSize: fontSize.base,
-      lineHeight: sp(6),
+      lineHeight: sp[6],
       color: theme.foreground,
     },
     heading1: {
       fontSize: fontSize["2xl"],
       fontWeight: fontWeight.bold,
-      marginBottom: sp(4),
+      marginBottom: sp[4],
       color: theme.foreground,
     },
     heading2: {
       fontSize: fontSize.xl,
       fontWeight: fontWeight.bold,
-      marginBottom: sp(3),
+      marginBottom: sp[3],
       color: theme.foreground,
     },
     heading3: {
       fontSize: fontSize.lg,
       fontWeight: fontWeight.semibold,
-      marginBottom: sp(2),
+      marginBottom: sp[2],
       color: theme.foreground,
     },
     paragraph: {
-      marginBottom: sp(4),
+      marginBottom: sp[4],
     },
     listItem: {
-      marginBottom: sp(2),
+      marginBottom: sp[2],
     },
     strong: {
       fontWeight: fontWeight.bold,
@@ -398,24 +424,24 @@ export function getMarkdownStyles(theme: Theme) {
       backgroundColor: theme.muted,
       borderLeftWidth: 4,
       borderLeftColor: theme.accent,
-      paddingLeft: sp(4),
-      paddingVertical: sp(2),
-      marginVertical: sp(3),
+      paddingLeft: sp[4],
+      paddingVertical: sp[2],
+      marginVertical: sp[3],
     },
     code_inline: {
       backgroundColor: theme.muted,
       color: theme.foreground,
-      paddingHorizontal: sp(2),
-      paddingVertical: sp(1),
+      paddingHorizontal: sp[2],
+      paddingVertical: sp[1],
       borderRadius: rd("sm"),
       fontFamily: "monospace",
     },
     code_block: {
       backgroundColor: theme.muted,
       color: theme.foreground,
-      padding: sp(4),
+      padding: sp[4],
       borderRadius: rd("md"),
-      marginVertical: sp(3),
+      marginVertical: sp[3],
       fontFamily: "monospace",
     },
   };
@@ -433,7 +459,11 @@ export const typeBadgeColors = {
 } as const;
 
 export function getTypeBadgeColor(type: string, fallback?: string): string {
-  return typeBadgeColors[type as keyof typeof typeBadgeColors] ?? fallback ?? typeBadgeColors.general;
+  return (
+    typeBadgeColors[type as keyof typeof typeBadgeColors] ??
+    fallback ??
+    typeBadgeColors.general
+  );
 }
 
 // ============================================================================
@@ -445,15 +475,15 @@ export function createHeaderStyles(theme: Theme, insetTop: number) {
   return {
     container: {
       backgroundColor: theme.background,
-      paddingHorizontal: sp(5),
-      paddingBottom: sp(5),
+      paddingHorizontal: sp[5],
+      paddingBottom: sp[5],
       paddingTop: insetTop + 20,
     },
     title: {
       fontSize: fontSize["2xl"],
       fontWeight: fontWeight.bold,
       color: theme.foreground,
-      marginBottom: sp(4),
+      marginBottom: sp[4],
     },
   };
 }
@@ -465,8 +495,8 @@ export function createSearchStyles(theme: Theme) {
     borderWidth: 1,
     borderColor: theme.border,
     borderRadius: rd("lg"),
-    paddingHorizontal: sp(4),
-    paddingVertical: sp(3),
+    paddingHorizontal: sp[4],
+    paddingVertical: sp[3],
     fontSize: fontSize.base,
     color: theme.foreground,
   };
@@ -479,9 +509,9 @@ export function createTabContainerStyles(theme: Theme) {
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
     backgroundColor: theme.background,
-    paddingHorizontal: sp(5),
-    paddingVertical: sp(3),
-    gap: sp(2),
+    paddingHorizontal: sp[5],
+    paddingVertical: sp[3],
+    gap: sp[2],
   };
 }
 

@@ -331,8 +331,8 @@ export default function SettingsScreen() {
 const localStyles = StyleSheet.create({
   header: {
     borderBottomWidth: 1,
-    paddingHorizontal: sp(5),
-    paddingBottom: sp(5),
+    paddingHorizontal: sp[5],
+    paddingBottom: sp[5],
   },
   deleteAction: {
     justifyContent: "center",

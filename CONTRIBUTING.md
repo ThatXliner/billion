@@ -20,7 +20,7 @@ The generator sets up the `package.json`, `tsconfig.json` and a `index.ts`, as w
 
 ## Expo App Styling
 
-All styling in the Expo app is consolidated into a single location: `apps/expo/src/styles/index.ts`
+All styling in the Expo app is consolidated into a single location: `apps/expo/src/styles.ts` (although more work is on the way to further consolidate it into the ui package?)
 
 **Import everything from `~/styles`** - no need to import from `@acme/ui/theme-tokens` directly.
 
@@ -43,7 +43,7 @@ import {
   shadows,         // Shadow presets for light/dark modes
 
   // Pixel conversion helpers
-  sp,              // sp(5) → spacing[5] * 16 → 20px
+  sp,              // sp[5] → spacing[5] * 16 → 20px
   rd,              // rd("lg") → radius.lg * 16 → 12px
 
   // Pre-built StyleSheet objects
@@ -79,7 +79,7 @@ export default function MyScreen() {
       <Text style={[typography.h1, { color: theme.foreground }]}>
         Hello World
       </Text>
-      <View style={[cards.bordered, { marginTop: sp(4), backgroundColor: theme.card }]}>
+      <View style={[cards.bordered, { marginTop: sp[4], backgroundColor: theme.card }]}>
         <Text style={[typography.body, { color: theme.textSecondary }]}>
           Card content
         </Text>
@@ -98,7 +98,7 @@ The spacing and radius tokens in `theme-tokens.ts` are defined in rem units (for
 spacing[5] = 1.25  // 1.25rem
 
 // sp() multiplies by 16 to get pixels
-sp(5) = 1.25 * 16 = 20  // 20px
+sp[5] = 1.25 * 16 = 20  // 20px
 
 // Same for radius
 radius.lg = 0.75  // 0.75rem
