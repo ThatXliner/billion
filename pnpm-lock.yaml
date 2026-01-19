@@ -123,6 +123,9 @@ importers:
       expo:
         specifier: ~54.0.13
         version: 54.0.13(@babel/core@7.28.4)(@expo/metro-runtime@6.1.1)(bufferutil@4.0.8)(expo-router@6.0.12)(graphql@15.8.0)(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.1.12)(bufferutil@4.0.8)(react@19.1.1))(react@19.1.1)
+      expo-blur:
+        specifier: ~15.0.8
+        version: 15.0.8(expo@54.0.13)(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.1.12)(bufferutil@4.0.8)(react@19.1.1))(react@19.1.1)
       expo-constants:
         specifier: ~18.0.9
         version: 18.0.9(expo@54.0.13)(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.1.12)(bufferutil@4.0.8)(react@19.1.1))
@@ -5145,6 +5148,13 @@ packages:
 
   expo-asset@12.0.9:
     resolution: {integrity: sha512-vrdRoyhGhBmd0nJcssTSk1Ypx3Mbn/eXaaBCQVkL0MJ8IOZpAObAjfD5CTy8+8RofcHEQdh3wwZVCs7crvfOeg==}
+    peerDependencies:
+      expo: '*'
+      react: '*'
+      react-native: '*'
+
+  expo-blur@15.0.8:
+    resolution: {integrity: sha512-rWyE1NBRZEu9WD+X+5l7gyPRszw7n12cW3IRNAb5i6KFzaBp8cxqT5oeaphJapqURvcqhkOZn2k5EtBSbsuU7w==}
     peerDependencies:
       expo: '*'
       react: '*'
@@ -11707,7 +11717,7 @@ snapshots:
       debug: 4.4.3
       invariant: 2.2.4
       metro: 0.83.3(bufferutil@4.0.8)(utf-8-validate@6.0.4)
-      metro-config: 0.83.3(bufferutil@4.0.8)(utf-8-validate@6.0.4)
+      metro-config: 0.83.3(bufferutil@4.0.8)
       metro-core: 0.83.3
       semver: 7.7.3
     transitivePeerDependencies:
@@ -13989,6 +13999,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  expo-blur@15.0.8(expo@54.0.13)(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.1.12)(bufferutil@4.0.8)(react@19.1.1))(react@19.1.1):
+    dependencies:
+      expo: 54.0.13(@babel/core@7.28.4)(@expo/metro-runtime@6.1.1)(bufferutil@4.0.8)(expo-router@6.0.12)(graphql@15.8.0)(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.1.12)(bufferutil@4.0.8)(react@19.1.1))(react@19.1.1)
+      react: 19.1.1
+      react-native: 0.81.4(@babel/core@7.28.4)(@types/react@19.1.12)(bufferutil@4.0.8)(react@19.1.1)
+
   expo-constants@18.0.9(expo@54.0.13)(react-native@0.81.4(@babel/core@7.28.4)(@types/react@19.1.12)(bufferutil@4.0.8)(react@19.1.1)):
     dependencies:
       '@expo/config': 12.0.10
@@ -15569,21 +15585,6 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  metro-config@0.83.3(bufferutil@4.0.8)(utf-8-validate@6.0.4):
-    dependencies:
-      connect: 3.7.0
-      flow-enums-runtime: 0.0.6
-      jest-validate: 29.7.0
-      metro: 0.83.3(bufferutil@4.0.8)(utf-8-validate@6.0.4)
-      metro-cache: 0.83.3
-      metro-core: 0.83.3
-      metro-runtime: 0.83.3
-      yaml: 2.8.1
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-
   metro-core@0.83.1:
     dependencies:
       flow-enums-runtime: 0.0.6
@@ -15973,7 +15974,7 @@ snapshots:
       metro-babel-transformer: 0.83.3
       metro-cache: 0.83.3
       metro-cache-key: 0.83.3
-      metro-config: 0.83.3(bufferutil@4.0.8)(utf-8-validate@6.0.4)
+      metro-config: 0.83.3(bufferutil@4.0.8)
       metro-core: 0.83.3
       metro-file-map: 0.83.3
       metro-resolver: 0.83.3

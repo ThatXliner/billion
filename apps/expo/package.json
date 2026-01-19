@@ -24,6 +24,7 @@
     "@trpc/tanstack-react-query": "catalog:",
     "better-auth": "catalog:",
     "expo": "~54.0.13",
+    "expo-blur": "~15.0.8",
     "expo-constants": "~18.0.9",
     "expo-dev-client": "~6.0.15",
     "expo-linear-gradient": "~15.0.8",

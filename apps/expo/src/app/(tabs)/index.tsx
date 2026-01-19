@@ -10,6 +10,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import Fuse from "fuse.js";
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 import type { VideoPost } from "@acme/api";
 import { Button } from "@acme/ui/button-native";
@@ -27,6 +29,7 @@ import {
   fontWeight,
   layout,
   sp,
+  rd,
   type Theme,
   typography,
   useTheme,
@@ -65,7 +68,7 @@ const ContentCardComponent = ({
       }}
       activeOpacity={0.9}
     >
-      <View
+      <BlurView
         style={styles.modernCardContent}
         lightColor="transparent"
         darkColor="transparent"
@@ -110,7 +113,7 @@ const ContentCardComponent = ({
         >
           Watch Short
         </Button>
-      </View>
+      </BlurView>
     </TouchableOpacity>
   );
 };
@@ -220,7 +223,23 @@ export default function BrowseScreen() {
   const tabContainerStyles = createTabContainerStyles(theme);
 
   return (
-    <View style={layout.container}>
+    <BlurView style={layout.container} intensity={50} tint="light">
+      <LinearGradient
+          // colors={['#120c4f', '#3b2fa3']}
+          colors={['#0f0c29', // near-black indigo
+            '#302b63', // deep violet
+            '#3f3a8a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+
+        {/*<LinearGradient
+          colors={['rgba(255,255,255,0.08)', 'transparent']}
+          start={{ x: 0.8, y: 0 }}
+          end={{ x: 0.2, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />*/}
       {/* Wireframe wave background decoration */}
       {/*<WireframeWave />*/}
 
@@ -288,7 +307,7 @@ export default function BrowseScreen() {
           </>
         )}
       </ScrollView>
-    </View>
+    </BlurView>
   );
 }
 
@@ -298,6 +317,7 @@ const styles = StyleSheet.create({
     padding: sp[5],
   },
   centerContainer: {
+    borderRadius: rd.xl,
     flex: 1,
     alignItems: "center",
     justifyContent: "center",

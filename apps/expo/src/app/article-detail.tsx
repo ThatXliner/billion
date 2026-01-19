@@ -177,7 +177,7 @@ export default function ArticleDetailScreen() {
                 backgroundColor: theme.card,
                 borderColor: colors.cyan[700],
                 marginTop: sp[5],
-                marginBottom: sp(20),
+                marginBottom: sp[20],
               },
             ]}
           >
@@ -190,7 +190,7 @@ export default function ArticleDetailScreen() {
         </ScrollView>
 
         {/* Floating action icons on right side */}
-        <View style={localStyles.floatingActions} pointerEvents="box-none">
+        <View style={{...localStyles.floatingActions}} pointerEvents="box-none">
           <TouchableOpacity style={buttons.floating}>
             <Ionicons
               name="heart-outline"
@@ -211,11 +211,12 @@ export default function ArticleDetailScreen() {
             <Ionicons name="share-outline" size={24} color={theme.foreground} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[buttons.floatingLarge, localStyles.floatingCloseButton, { backgroundColor: theme.primary }]}
+            style={buttons.floating}
+            // style={[buttons.floatingLarge, localStyles.floatingCloseButton, { backgroundColor: theme.primary }]}
             onPress={() => router.back()}
             activeOpacity={0.8}
           >
-            <Ionicons name="close" size={24} color={theme.primaryForeground} />
+            <Ionicons name="close" size={24} color={theme.foreground} />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
