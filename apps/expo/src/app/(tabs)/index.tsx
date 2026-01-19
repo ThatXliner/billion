@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: sp(10),
+    paddingVertical: sp[10],
   },
   errorText: {
     fontSize: fontSize.base,

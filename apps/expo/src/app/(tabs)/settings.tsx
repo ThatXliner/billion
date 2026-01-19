@@ -339,6 +339,6 @@ const localStyles = StyleSheet.create({
   },
   versionContainer: {
     alignItems: "center",
-    paddingVertical: sp(10),
+    paddingVertical: sp[10],
   },
 });

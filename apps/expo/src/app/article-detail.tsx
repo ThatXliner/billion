@@ -234,7 +234,7 @@ const localStyles = StyleSheet.create({
     padding: sp[5],
   },
   errorButton: {
-    borderRadius: rd("md"),
+    borderRadius: rd["md"],
     paddingHorizontal: sp[8],
     paddingVertical: sp[3],
     marginTop: sp[4],
@@ -244,11 +244,11 @@ const localStyles = StyleSheet.create({
     fontWeight: "600",
   },
   tabButton: {
-    borderRadius: rd("md"),
+    borderRadius: rd["md"],
   },
   scrollViewContent: {
     padding: sp[5],
-    paddingBottom: sp(10),
+    paddingBottom: sp[10],
   },
   articleTitle: {
     marginBottom: sp[3],
