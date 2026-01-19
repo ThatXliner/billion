@@ -5,19 +5,20 @@
   "description": "This is an example of a Crawlee project.",
   "dependencies": {
     "@acme/db": "workspace:*",
-    "@ai-sdk/openai": "^2.0.57",
-    "ai": "^5.0.82",
-    "crawlee": "^3.0.0",
-    "dotenv": "^16.4.7",
-    "playwright": "*",
-    "turndown": "^7.2.2"
+    "@ai-sdk/openai": "^2.0.89",
+    "ai": "^6.0.41",
+    "crawlee": "^3.15.3",
+    "dotenv": "^16.6.1",
+    "playwright": "^1.57.0",
+    "turndown": "^7.2.2",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@apify/tsconfig": "^0.1.0",
-    "@types/node": "^22.18.12",
+    "@apify/tsconfig": "^0.1.1",
+    "@types/node": "^22.19.7",
     "@types/turndown": "^5.0.6",
-    "tsx": "^4.4.0",
-    "typescript": "~5.9.0"
+    "tsx": "^4.21.0",
+    "typescript": "~5.9.3"
   },
   "scripts": {
     "dev": "pnpm run start:dev",

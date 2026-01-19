@@ -1,14 +1,9 @@
 /**
- * Image search utilities for finding relevant photos for articles
- * Uses Google Custom Search API to find high-quality, relevant images
+ * Google Custom Search API integration
+ * Searches for relevant images using Google's Custom Search API
  */
 
-export interface ImageResult {
-  url: string; // Direct URL to the image
-  alt: string; // Alt text description
-  source: string; // Source attribution (website domain)
-  sourceUrl: string; // URL to the original source
-}
+import type { ImageResult } from '../types.js';
 
 /**
  * Search for relevant images based on keywords using Google Custom Search
@@ -60,7 +55,7 @@ export async function searchImages(
       // Try to get the highest quality image available from Google's image object
       // Fall back to thumbnailLink if the original link doesn't work
       const imageUrl = item.image?.thumbnailLink || item.link;
-      
+
       return {
         url: imageUrl,
         alt: item.title || `Image related to ${query}`,
@@ -75,64 +70,10 @@ export async function searchImages(
 }
 
 /**
- * Generate search keywords from article title and content
- * Uses AI to extract the most relevant visual concepts
- * @param title - Article title
- * @param content - Article content
- * @param type - Content type (bill, order, case, etc.)
- * @returns Search query string
- */
-export async function generateImageSearchKeywords(
-  title: string,
-  content: string,
-  type: string,
-): Promise<string> {
-  try {
-    const { openai } = await import('@ai-sdk/openai');
-    const { generateText } = await import('ai');
-
-    const { text } = await generateText({
-      model: openai('gpt-4o-mini'),
-      prompt: `Given this ${type} title and content, generate 2-4 search keywords for finding relevant stock photos. Focus on concrete, visual, photographic concepts that would actually appear in news photography or documentary images.
-
-GOOD examples (specific, visual, photographic):
-- capitol building washington dc
-- hospital doctor medical equipment
-- construction workers infrastructure
-- classroom students education
-- solar panels renewable energy
-
-BAD examples (too abstract, no clear visual):
-- government policy legislation
-- economic impact financial
-- social justice equality
-
-Title: ${title}
-
-Content: ${content.substring(0, 500)}
-
-Return ONLY 2-4 specific visual keywords separated by spaces. No quotes, no explanation:`,
-    });
-
-    return text.trim().replace(/['"]/g, ''); // Remove any quotes
-  } catch (error) {
-    console.error('Error generating image search keywords:', error);
-    // Fallback: use simple keyword extraction from title
-    return title
-      .toLowerCase()
-      .replace(/[^\w\s]/g, '')
-      .split(/\s+/)
-      .filter(word => word.length > 3)
-      .slice(0, 3)
-      .join(' ');
-  }
-}
-
-/**
- * Get thumbnail image for article
+ * Get a single thumbnail image for an article
  * Returns the first/best image from search results
  * @param query - Search query
- * @returns Single image result or null
+ * @returns Single image URL or null
  */
 export async function getThumbnailImage(query: string): Promise<string | null> {
   const images = await searchImages(query, 1);
