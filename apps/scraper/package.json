@@ -10,7 +10,8 @@
     "crawlee": "^3.0.0",
     "dotenv": "^16.4.7",
     "playwright": "*",
-    "turndown": "^7.2.2"
+    "turndown": "^7.2.2",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@apify/tsconfig": "^0.1.0",

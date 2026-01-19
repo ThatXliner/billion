@@ -1,47 +1,21 @@
 /**
- * Shared TypeScript interfaces for the scraper application
+ * Shared TypeScript types for the scraper application
+ * All types are derived from Drizzle schemas - NO DUPLICATION!
  */
 
-// Bill data structure
-export interface BillData {
-  billNumber: string;
-  title: string;
-  description?: string;
-  sponsor?: string;
-  status?: string;
-  introducedDate?: Date;
-  congress?: number;
-  chamber?: string;
-  summary?: string;
-  fullText?: string;
-  url: string;
-  sourceWebsite: string;
-}
+import type { z } from 'zod/v4';
+import {
+  CreateBillSchema,
+  CreateGovernmentContentSchema,
+  CreateCourtCaseSchema,
+} from '@acme/db/schema';
 
-// Government content data structure
-export interface GovernmentContentData {
-  title: string;
-  type: string;
-  publishedDate: Date;
-  description?: string;
-  fullText?: string;
-  url: string;
-  source?: string;
-}
+// Infer TypeScript types from Zod schemas (which are derived from Drizzle)
+export type BillData = z.infer<typeof CreateBillSchema>;
+export type GovernmentContentData = z.infer<typeof CreateGovernmentContentSchema>;
+export type CourtCaseData = z.infer<typeof CreateCourtCaseSchema>;
 
-// Court case data structure
-export interface CourtCaseData {
-  caseNumber: string;
-  title: string;
-  court: string;
-  filedDate?: Date;
-  description?: string;
-  status?: string;
-  fullText?: string;
-  url: string;
-}
-
-// Image result from search
+// Image result type (used in images JSONB field, defined in schema)
 export interface ImageResult {
   url: string;
   alt: string;
@@ -49,7 +23,7 @@ export interface ImageResult {
   sourceUrl: string;
 }
 
-// Metrics tracking for scraper runs
+// Metrics tracking for scraper runs (not a database entity)
 export interface ScraperMetrics {
   totalProcessed: number;
   newEntries: number;
@@ -59,7 +33,7 @@ export interface ScraperMetrics {
   imagesSearched: number;
 }
 
-// Existing record check result
+// Existing record check result (helper return type, not a database entity)
 export interface ExistingRecordCheck {
   exists: boolean;
   contentHash?: string;
