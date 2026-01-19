@@ -4,7 +4,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  useColorScheme,
 } from "react-native";
 import Markdown from "react-native-markdown-display";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,17 +12,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@acme/ui/button-native";
-import {
-  colors,
-  darkTheme,
-  fontSize,
-  fontWeight,
-  lightTheme,
-  radius,
-  spacing,
-} from "@acme/ui/theme-tokens";
 
 import { Text, View } from "~/components/Themed";
+// import { WireframeWave } from "~/components/WireframeWave";
+import {
+  badges,
+  buttons,
+  cards,
+  colors,
+  createTabContainerStyles,
+  getMarkdownStyles,
+  layout,
+  rd,
+  sp,
+  typography,
+  useTheme,
+} from "~/styles";
 import { trpc } from "~/utils/api";
 
 const TabButton = ({
@@ -38,16 +42,16 @@ const TabButton = ({
   <Button
     variant={active ? "default" : "ghost"}
     size="sm"
-    style={styles.tabButton}
+    style={localStyles.tabButton}
     onPress={onPress}
   >
     {title}
   </Button>
 );
+
 export default function ArticleDetailScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === "dark" ? darkTheme : lightTheme;
+  const { theme } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [selectedTab, setSelectedTab] = useState<"article" | "original">(
@@ -74,9 +78,9 @@ export default function ArticleDetailScreen() {
             headerBackTitle: "Back",
           }}
         />
-        <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
+        <View style={[layout.fullCenter, { backgroundColor: theme.background }]}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+          <Text style={[localStyles.loadingText, { color: theme.textSecondary }]}>
             Loading content...
           </Text>
         </View>
@@ -94,15 +98,15 @@ export default function ArticleDetailScreen() {
             headerBackTitle: "Back",
           }}
         />
-        <View style={[styles.errorContainer, { backgroundColor: theme.background }]}>
-          <Text style={[styles.errorTitle, { color: theme.danger }]}>
+        <View style={[localStyles.errorContainer, { backgroundColor: theme.background }]}>
+          <Text style={[typography.h4, { color: theme.danger }]}>
             {error ? "Failed to load content" : "Content not found"}
           </Text>
           <TouchableOpacity
-            style={[styles.errorButton, { backgroundColor: theme.primary }]}
+            style={[localStyles.errorButton, { backgroundColor: theme.primary }]}
             onPress={() => router.back()}
           >
-            <Text style={[styles.errorButtonText, { color: theme.primaryForeground }]}>
+            <Text style={[localStyles.errorButtonText, { color: theme.primaryForeground }]}>
               Go Back
             </Text>
           </TouchableOpacity>
@@ -111,20 +115,19 @@ export default function ArticleDetailScreen() {
     );
   }
 
+  const tabContainerStyles = createTabContainerStyles(theme);
+  const markdownStyles = getMarkdownStyles(theme);
+
   return (
     <>
-      {/*<Stack.Screen
-        options={{
-          title: content.title,
-          headerBackTitle: "Back",
-        }}
-      />*/}
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      <SafeAreaView style={layout.container} edges={["top"]}>
+        {/* Wireframe wave background */}
+        {/*<WireframeWave />*/}
+
         <View
           style={[
-            styles.tabContainer,
+            tabContainerStyles,
             {
-              backgroundColor: theme.background,
               borderBottomColor: theme.border,
             },
           ]}
@@ -142,86 +145,43 @@ export default function ArticleDetailScreen() {
         </View>
 
         <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollViewContent}
+          style={layout.scrollView}
+          contentContainerStyle={localStyles.scrollViewContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Type badge at top */}
+          <View
+            style={[badges.base, { backgroundColor: colors.cyan[600] }]}
+            lightColor="transparent"
+            darkColor="transparent"
+          >
+            <Text style={badges.text}>GENERAL</Text>
+          </View>
+
+          {/* Article title */}
+          <Text style={[typography.h1, localStyles.articleTitle, { color: theme.foreground }]}>
+            {content.title}
+          </Text>
+
+          {/* Short description */}
+          <Text
+            style={[typography.bodySmall, localStyles.articleDescription, { color: theme.textSecondary }]}
+          >
+            {content.description}
+          </Text>
+
           <View
             style={[
-              styles.contentCard,
+              cards.content,
               {
                 backgroundColor: theme.card,
-                borderColor: theme.border,
+                borderColor: colors.cyan[700],
+                marginTop: sp[5],
+                marginBottom: sp[20],
               },
             ]}
           >
-            <Markdown
-              style={{
-                body: {
-                  fontSize: fontSize.base,
-                  lineHeight: spacing[6] * 16,
-                  color: theme.foreground,
-                },
-                heading1: {
-                  fontSize: fontSize["2xl"],
-                  fontWeight: fontWeight.bold,
-                  marginBottom: spacing[4] * 16,
-                  color: theme.foreground,
-                },
-                heading2: {
-                  fontSize: fontSize.xl,
-                  fontWeight: fontWeight.bold,
-                  marginBottom: spacing[3] * 16,
-                  color: theme.foreground,
-                },
-                heading3: {
-                  fontSize: fontSize.lg,
-                  fontWeight: fontWeight.semibold,
-                  marginBottom: spacing[2] * 16,
-                  color: theme.foreground,
-                },
-                paragraph: {
-                  marginBottom: spacing[4] * 16,
-                },
-                listItem: {
-                  marginBottom: spacing[2] * 16,
-                },
-                strong: {
-                  fontWeight: fontWeight.bold,
-                },
-                em: {
-                  fontStyle: "italic",
-                },
-                link: {
-                  color: theme.accent,
-                  textDecorationLine: "underline",
-                },
-                blockquote: {
-                  backgroundColor: theme.muted,
-                  borderLeftWidth: 4,
-                  borderLeftColor: theme.accent,
-                  paddingLeft: spacing[4] * 16,
-                  paddingVertical: spacing[2] * 16,
-                  marginVertical: spacing[3] * 16,
-                },
-                code_inline: {
-                  backgroundColor: theme.muted,
-                  color: theme.foreground,
-                  paddingHorizontal: spacing[2] * 16,
-                  paddingVertical: spacing[1] * 16,
-                  borderRadius: radius.sm * 16,
-                  fontFamily: "monospace",
-                },
-                code_block: {
-                  backgroundColor: theme.muted,
-                  color: theme.foreground,
-                  padding: spacing[4] * 16,
-                  borderRadius: radius.md * 16,
-                  marginVertical: spacing[3] * 16,
-                  fontFamily: "monospace",
-                },
-              }}
-            >
+            <Markdown style={markdownStyles}>
               {selectedTab === "article"
                 ? content.articleContent
                 : content.originalContent}
@@ -229,90 +189,85 @@ export default function ArticleDetailScreen() {
           </View>
         </ScrollView>
 
-        {/* Floating close button */}
-        <TouchableOpacity
-          style={[styles.floatingCloseButton, { backgroundColor: theme.primary }]}
-          onPress={() => router.back()}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="close" size={24} color={theme.primaryForeground} />
-        </TouchableOpacity>
+        {/* Floating action icons on right side */}
+        <View style={{...localStyles.floatingActions}} pointerEvents="box-none">
+          <TouchableOpacity style={buttons.floating}>
+            <Ionicons
+              name="heart-outline"
+              size={24}
+              color={theme.foreground}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={buttons.floating}>
+            <Ionicons
+              name="chatbubble-outline"
+              size={24}
+              color={theme.foreground}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={buttons.floating}>
+            <Ionicons name="share-outline" size={24} color={theme.foreground} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={buttons.floating}
+            // style={[buttons.floatingLarge, localStyles.floatingCloseButton, { backgroundColor: theme.primary }]}
+            onPress={() => router.back()}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="close" size={24} color={theme.foreground} />
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     </>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  centerContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+const localStyles = StyleSheet.create({
   loadingText: {
-    marginTop: spacing[4] * 16,
+    marginTop: sp[4],
   },
   errorContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: spacing[5] * 16,
-  },
-  errorTitle: {
-    marginBottom: spacing[4] * 16,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
+    padding: sp[5],
   },
   errorButton: {
-    borderRadius: radius.md * 16,
-    paddingHorizontal: spacing[8] * 16,
-    paddingVertical: spacing[3] * 16,
+    borderRadius: rd["md"],
+    paddingHorizontal: sp[8],
+    paddingVertical: sp[3],
+    marginTop: sp[4],
   },
   errorButtonText: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-  },
-  tabContainer: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    paddingHorizontal: spacing[5] * 16,
-    paddingVertical: spacing[4] * 16,
-    gap: spacing[3] * 16,
+    fontSize: 16,
+    fontWeight: "600",
   },
   tabButton: {
-    borderRadius: radius.md * 16,
-  },
-  scrollView: {
-    flex: 1,
+    borderRadius: rd["md"],
   },
   scrollViewContent: {
-    padding: spacing[5] * 16,
-    paddingBottom: spacing[10] * 16, // Extra padding at bottom to prevent cutoff
+    padding: sp[5],
+    paddingBottom: sp[10],
   },
-  contentCard: {
-    borderRadius: radius.lg * 16,
-    borderWidth: 1,
-    padding: spacing[5] * 16,
-    marginBottom: spacing[20] * 16, // Extra space at bottom for comfortable reading
+  articleTitle: {
+    marginBottom: sp[3],
+    marginTop: sp[4],
+  },
+  articleDescription: {
+    marginBottom: sp[4],
+  },
+  floatingActions: {
+    position: "absolute",
+    top: "50%",
+    right: sp[5],
+    transform: [{ translateY: -80 }],
+    gap: sp[4],
   },
   floatingCloseButton: {
     position: "absolute",
-    bottom: spacing[8] * 16,
-    right: spacing[5] * 16,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
+    bottom: sp[8],
+    right: sp[5],
   },
 });

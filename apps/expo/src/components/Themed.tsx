@@ -1,4 +1,5 @@
 /**
+ * Theme-aware Text and View components
  * Learn more about Light and Dark modes:
  * https://docs.expo.io/guides/color-schemes/
  */
@@ -6,10 +7,9 @@
 import {
   Text as DefaultText,
   View as RNView,
-  useColorScheme,
 } from "react-native";
 
-import { darkTheme, lightTheme } from "@acme/ui/theme-tokens";
+import { type Theme, useTheme } from "~/styles";
 
 interface ThemeProps {
   lightColor?: string;
@@ -19,15 +19,14 @@ const DefaultView = RNView;
 export type TextProps = ThemeProps & DefaultText["props"];
 export type ViewProps = ThemeProps & React.ComponentProps<typeof DefaultView>;
 
-type ThemeColorKey = keyof typeof lightTheme;
+type ThemeColorKey = keyof Theme;
 
 export function useThemeColor(
   props: { light?: string; dark?: string },
   colorName: ThemeColorKey,
 ) {
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === "dark" ? darkTheme : lightTheme;
-  const colorFromProps = colorScheme === "dark" ? props.dark : props.light;
+  const { theme, isDark } = useTheme();
+  const colorFromProps = isDark ? props.dark : props.light;
 
   if (colorFromProps) {
     return colorFromProps;

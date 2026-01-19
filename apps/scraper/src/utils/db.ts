@@ -8,7 +8,7 @@ import { generateImageSearchKeywords, getThumbnailImage } from './image-search.j
 
 // Utility to create a hash of content for version tracking
 export function createContentHash(content: string): string {
-  return createHash('sha256').update(content).digest('hex');
+  return createHash("sha256").update(content).digest("hex");
 }
 
 // Generate AI summary using OpenAI
@@ -18,7 +18,7 @@ export async function generateAISummary(
 ): Promise<string> {
   try {
     const { text } = await generateText({
-      model: openai('gpt-4o-mini'),
+      model: openai("gpt-4o-mini"),
       prompt: `Generate a concise, engaging summary (max 100 characters) for this government content. Focus on the key action or impact.
 
 Title: ${title}
@@ -31,9 +31,9 @@ Summary (max 100 characters):`,
     // Ensure it's under 100 characters
     return text.trim().substring(0, 100);
   } catch (error) {
-    console.error('Error generating AI summary:', error);
+    console.error("Error generating AI summary:", error);
     // Fallback to simple truncation
-    return content.substring(0, 97) + '...';
+    return content.substring(0, 97) + "...";
   }
 }
 
@@ -48,7 +48,7 @@ export async function generateAIArticle(
     console.log(`Generating AI article for: ${title}`);
 
     const { text } = await generateText({
-      model: openai('gpt-4o-mini'),
+      model: openai("gpt-4o-mini"),
       prompt: `You are an expert at making government and legal content accessible and engaging for everyday people. Transform the following ${type} into a well-structured, markdown-formatted article.
 
 **Structure your article with these 4 sections:**
@@ -95,9 +95,9 @@ Write the article now using the 4-section structure above:`,
 
     return text.trim();
   } catch (error) {
-    console.error('Error generating AI article:', error);
+    console.error("Error generating AI article:", error);
     // Return empty string on error - will fall back to fullText in UI
-    return '';
+    return "";
   }
 }
 
@@ -122,18 +122,18 @@ export async function upsertBill(billData: {
     console.log(`Generating AI summary for bill: ${billData.title}`);
     description = await generateAISummary(
       billData.title,
-      billData.summary || billData.fullText || ''
+      billData.summary || billData.fullText || "",
     );
   }
 
   // Generate AI article if fullText is available
-  let aiGeneratedArticle = '';
+  let aiGeneratedArticle = "";
   if (billData.fullText) {
     aiGeneratedArticle = await generateAIArticle(
       billData.title,
       billData.fullText,
-      'bill',
-      billData.url
+      "bill",
+      billData.url,
     );
   }
 
@@ -207,13 +207,13 @@ export async function upsertGovernmentContent(contentData: {
   source?: string;
 }) {
   // Generate AI article if fullText is available
-  let aiGeneratedArticle = '';
+  let aiGeneratedArticle = "";
   if (contentData.fullText) {
     aiGeneratedArticle = await generateAIArticle(
       contentData.title,
       contentData.fullText,
       contentData.type,
-      contentData.url
+      contentData.url,
     );
   }
 
@@ -282,8 +282,9 @@ export async function upsertPresidentialAction(actionData: {
 }) {
   return upsertGovernmentContent({
     ...actionData,
-    publishedDate: actionData.publishedDate || actionData.issuedDate || new Date(),
-    source: actionData.source || 'whitehouse.gov',
+    publishedDate:
+      actionData.publishedDate || actionData.issuedDate || new Date(),
+    source: actionData.source || "whitehouse.gov",
   });
 }
 
@@ -302,20 +303,17 @@ export async function upsertCourtCase(caseData: {
   let description = caseData.description;
   if (!description && caseData.fullText) {
     console.log(`Generating AI summary for court case: ${caseData.title}`);
-    description = await generateAISummary(
-      caseData.title,
-      caseData.fullText
-    );
+    description = await generateAISummary(caseData.title, caseData.fullText);
   }
 
   // Generate AI article if fullText is available
-  let aiGeneratedArticle = '';
+  let aiGeneratedArticle = "";
   if (caseData.fullText) {
     aiGeneratedArticle = await generateAIArticle(
       caseData.title,
       caseData.fullText,
-      'court case',
-      caseData.url
+      "court case",
+      caseData.url,
     );
   }
 
