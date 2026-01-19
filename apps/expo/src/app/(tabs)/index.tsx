@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import Fuse from "fuse.js";
-
+import { Image } from 'expo-image';
 import type { VideoPost } from "@acme/api";
 import { Button } from "@acme/ui/button-native";
 
@@ -49,7 +49,13 @@ const ContentCardComponent = ({
   theme: Theme;
 }) => {
   const router = useRouter();
-
+  const getTitleFontSize = (titleLength: number) => {
+      if (titleLength < 40) return fontSize.xl;      // ~20px for short titles
+      if (titleLength < 60) return fontSize.lg;      // ~18px for medium titles
+      if (titleLength < 80) return fontSize.base;    // ~16px for longer titles
+      return fontSize.sm;                            // ~14px for very long titles
+    };
+  const titleFontSize = getTitleFontSize(item.title.length);
   return (
     <TouchableOpacity
       style={[
@@ -77,16 +83,27 @@ const ContentCardComponent = ({
         </Text>
 
         {/* Title */}
-        <Text
-          style={[
-            typography.h3,
-            {
-              color: theme.foreground,
-            },
-          ]}
-        >
-          {item.title}
-        </Text>
+        <View style={{backgroundColor: theme.card, flex:1,flexDirection:'row', gap: sp[3],}}>
+           <Image
+                style={{ width: 50, height: 50 }}
+                  source="https://picsum.photos/seed/696/3000/2000"
+                  // placeholder={{ blurhash }}
+                  // contentFit="cover"
+                  transition={1000}
+          />
+          <Text
+                  style={[
+                    typography.h3,
+                    {
+                      color: theme.foreground,
+                      fontSize: titleFontSize
+                    },
+                  ]}
+                >
+                  {item.title}
+              </Text>
+        </View>
+
 
         {/* Description */}
         <Text

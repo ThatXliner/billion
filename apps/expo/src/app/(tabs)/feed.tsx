@@ -30,6 +30,7 @@ import {
   useTheme,
 } from "~/styles";
 import { trpc } from "~/utils/api";
+import { Image } from "expo-image";
 
 const { height: screenHeight } = Dimensions.get("window");
 
@@ -117,9 +118,16 @@ export default function FeedScreen() {
         </Text>
 
         {/* Description */}
-        <Text style={[typography.body, styles.cardDescription, { color: theme.textSecondary }]}>
+        <Image
+             style={{ width: "100%", height: 200 }}
+               source="https://picsum.photos/seed/696/3000/2000"
+               // placeholder={{ blurhash }}
+               // contentFit="cover"
+               transition={1000}
+       />
+        {/*<Text style={[typography.body, styles.cardDescription, { color: theme.textSecondary }]}>
           {JSON.stringify(item)}
-        </Text>
+        </Text>*/}
 
         {/* Article Preview */}
         <Text style={[styles.articlePreview, { color: theme.mutedForeground }]}>
