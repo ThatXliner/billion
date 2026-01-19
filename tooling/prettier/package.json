@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@acme/tsconfig": "workspace:*",
-    "@types/node": "^22.18.12",
+    "@types/node": "^22.19.7",
     "typescript": "catalog:"
   },
   "prettier": "@acme/prettier-config"
