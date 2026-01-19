@@ -144,13 +144,20 @@ export async function upsertBill(billData: {
     fullText: billData.fullText,
   });
   const contentHash = createContentHash(contentForHash);
+  let test = {
+    ...billData,
+    description,
+    aiGeneratedArticle,
+    contentForHash
+  }
+  // console.log(test);
 
   const [result] = await db
     .insert(Bill)
     .values({
       ...billData,
       description,
-      aiGeneratedArticle: aiGeneratedArticle || undefined,
+      aiGeneratedArticle: aiGeneratedArticle,
       contentHash,
       versions: [],
     })

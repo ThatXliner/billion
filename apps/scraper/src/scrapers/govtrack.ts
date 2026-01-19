@@ -1,6 +1,7 @@
 import { CheerioCrawler } from "crawlee";
 
 import { upsertBill } from "../utils/db.js";
+import { sum } from "@acme/db";
 
 export async function scrapeGovTrack() {
   console.log("Starting GovTrack scraper...");
@@ -97,9 +98,9 @@ export async function scrapeGovTrack() {
           const billUrl = request.url.replace(/\/text$/, "");
           
           const billData = {
-            billNumber,
+            billNumber ,
             title,
-            description: summary,
+            description:summary,
             sponsor,
             status,
             introducedDate,
@@ -111,12 +112,16 @@ export async function scrapeGovTrack() {
             sourceWebsite: "govtrack",
           };
 
-          console.log(fullText);
+          // console.log(fullText);
           
           log.info(`Scraped bill with full text: ${billNumber} - ${title} (${fullText.length} characters)`);
           
           // Save complete bill data with full text
-          await upsertBill(billData);
+
+          if (fullText!='') { 
+            await upsertBill(billData);
+          }
+          
         } catch (error) {
           console.log(error);
           log.error(`Error scraping full text from ${request.url}:`, error);
