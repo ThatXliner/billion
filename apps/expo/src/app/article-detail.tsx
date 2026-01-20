@@ -184,6 +184,24 @@ export default function ArticleDetailScreen() {
             {content.description}
           </Text>
 
+          {/* Show "View Original" button in Original tab */}
+          {selectedTab === "original" && content.url && (
+            <TouchableOpacity
+              style={[
+                buttons.primary,
+                localStyles.viewOriginalButton,
+                { backgroundColor: theme.primary }
+              ]}
+              onPress={handleOpenOriginal}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="open-outline" size={20} color={theme.primaryForeground} style={{ marginRight: sp[2] }} />
+              <Text style={[typography.bodySmall, { color: theme.primaryForeground, fontWeight: "600" }]}>
+                View on Original Site
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <View
             style={[
               cards.content,
@@ -224,16 +242,6 @@ export default function ArticleDetailScreen() {
           {/*<TouchableOpacity style={buttons.floating}>
             <Ionicons name="share-outline" size={24} color={theme.foreground} />
           </TouchableOpacity>*/}
-
-          {content.url && (
-            <TouchableOpacity
-              style={buttons.floating}
-              onPress={handleOpenOriginal}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="open-outline" size={24} color={theme.primaryForeground} />
-            </TouchableOpacity>
-          )}
 
           <TouchableOpacity
             style={buttons.floating}
@@ -282,6 +290,15 @@ const localStyles = StyleSheet.create({
   },
   articleDescription: {
     marginBottom: sp[4],
+  },
+  viewOriginalButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: sp[3],
+    paddingHorizontal: sp[4],
+    borderRadius: rd["md"],
+    marginTop: sp[4],
   },
   floatingActions: {
     position: "absolute",
