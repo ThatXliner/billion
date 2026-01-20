@@ -3,14 +3,24 @@ import { CheerioCrawler } from "crawlee";
 import { printMetricsSummary, resetMetrics } from "../utils/db/metrics.js";
 import { upsertBill } from "../utils/db/operations.js";
 
-export async function scrapeGovTrack() {
+interface GovTrackScraperConfig {
+  maxBills?: number;      // Default: 100
+  maxRequests?: number;   // Default: 500
+  congress?: number;      // Default: 119
+}
+
+export async function scrapeGovTrack(config: GovTrackScraperConfig = {}) {
+  const {
+    maxBills = 100,
+    maxRequests = 500,
+    congress = 119
+  } = config;
   console.log("Starting GovTrack scraper...");
 
   // Reset metrics for this scraper run
   resetMetrics();
 
   const collectedLinks = new Set<string>();
-  const maxBills = 20;
 
   const crawler = new CheerioCrawler({
     async requestHandler({ request, $, log, crawler }) {
@@ -39,6 +49,18 @@ export async function scrapeGovTrack() {
         });
 
         log.info(`Found ${collectedLinks.size} total bill links so far`);
+
+        // Look for pagination links
+        if (collectedLinks.size < maxBills) {
+          const nextPageLink = $('a.next-page, a[rel="next"], a:contains("Next")').attr('href');
+          if (nextPageLink) {
+            const fullNextUrl = nextPageLink.startsWith('http')
+              ? nextPageLink
+              : `https://www.govtrack.us${nextPageLink}`;
+            log.info(`Found next page: ${fullNextUrl}`);
+            await crawler.addRequests([fullNextUrl]);
+          }
+        }
       }
       // Handle bill text pages
       else if (request.url.includes("/text")) {
@@ -113,18 +135,18 @@ export async function scrapeGovTrack() {
           const billUrl = request.url.replace(/\/text$/, "");
 
           const billData = {
-            billNumber: "q",
-            title: "2",
-            description: "summary",
-            sponsor: "2",
-            status: "2",
-            introducedDate: new Date(),
-            congress: 1,
-            chamber: "2",
-            summary: "h",
+            billNumber,
+            title,
+            description: summary,
+            sponsor,
+            status,
+            introducedDate,
+            congress,
+            chamber,
+            summary,
             fullText,
             url: billUrl,
-            sourceWebsite: "govtrack",
+            sourceWebsite: "govtrack" as const,
           };
 
           // console.log(fullText);
@@ -144,7 +166,7 @@ export async function scrapeGovTrack() {
         }
       }
     },
-    maxRequestsPerCrawl: 100, // Increased to accommodate text pages
+    maxRequestsPerCrawl: maxRequests,
     requestHandlerTimeoutSecs: 60,
   });
 

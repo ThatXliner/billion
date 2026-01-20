@@ -1,178 +1,166 @@
-import { Dataset, PlaywrightCrawler } from "crawlee";
+import { Dataset, CheerioCrawler } from "crawlee";
 
 import { printMetricsSummary, resetMetrics } from "../utils/db/metrics.js";
 import { upsertBill } from "../utils/db/operations.js";
 
-export async function scrapeCongress() {
+interface CongressScraperConfig {
+  maxBills?: number;        // Default: 100
+  maxRequests?: number;     // Default: 500
+  congress?: number;        // Default: 119
+  chamber?: 'House' | 'Senate';  // Default: 'House'
+}
+
+export async function scrapeCongress(config: CongressScraperConfig = {}) {
+  const {
+    maxBills = 100,
+    maxRequests = 500,
+    congress = 119,
+    chamber = 'House'
+  } = config;
   console.log("Starting Congress.gov scraper...");
 
   // Reset metrics for this scraper run
   resetMetrics();
 
-  const crawler = new PlaywrightCrawler({
-    async requestHandler({ request, page, log }) {
+  const crawler = new CheerioCrawler({
+    async requestHandler({ request, $, log, crawler }) {
       log.info(`Scraping ${request.loadedUrl}`);
-
-      // Wait for the page to load
-      await page.waitForLoadState("networkidle");
 
       // Handle the browse/listing page
       if (
-        request.url.includes(
-          "/search?q=%7B%22congress%22%3A119%2C%22chamber%22%3A%22House%22%2C%22type%22%3A%22bills%22%7D&pageSort=documentNumber%3Adesc",
-        )
+        request.url.includes("/search?q=") && request.url.includes("type%22%3A%22bills")
       ) {
-        // Wait for the page content to load
-        await page.waitForTimeout(2000);
-
         // Extract bill links with the correct format
-        const billLinks = await page.$$eval(
-          'a[href*="/bill/"]',
-          (links) =>
-            links
-              .map((link) => (link as HTMLAnchorElement).href)
-              // Match the pattern: /bill/119th-congress/house-bill/NUMBER
-              .filter((href) =>
-                /\/bill\/\d+(?:th|st|nd|rd)-congress\/(?:house|senate)-bill\/\d+/i.test(
-                  href,
-                ),
-              )
-              // Ensure we have the full congress.gov URL
-              .map((href) => {
-                // If it's a relative URL, make it absolute
-                if (href.startsWith("/")) {
-                  return `https://www.congress.gov${href}`;
-                }
-                return href;
-              })
-              .slice(0, 20), // Limit to first 20 bills for testing
-        );
+        const billLinks: string[] = [];
+        $('a[href*="/bill/"]').each((_, element) => {
+          const href = $(element).attr('href');
+          if (href && /\/bill\/\d+(?:th|st|nd|rd)-congress\/(?:house|senate)-bill\/\d+/i.test(href)) {
+            // Make absolute URL if relative
+            const fullUrl = href.startsWith('/')
+              ? `https://www.congress.gov${href}`
+              : href;
+            billLinks.push(fullUrl);
+          }
+        });
 
-        log.info(`Found ${billLinks.length} bill links from Congress.gov`);
-        log.info(`${billLinks}`);
+        // Remove duplicates and apply limit
+        const uniqueBillLinks = [...new Set(billLinks)].slice(0, maxBills);
+
+        log.info(`Found ${uniqueBillLinks.length} bill links from Congress.gov`);
 
         // Return bill links to be processed
         await Dataset.pushData({
           type: "congressBillLinks",
-          links: [...new Set(billLinks)], // Remove duplicates
+          links: uniqueBillLinks,
         });
+
+        // Look for pagination - next page link
+        if (uniqueBillLinks.length < maxBills) {
+          const nextPageLink = $('a.next, a[rel="next"], a:contains("Next")').attr('href');
+          if (nextPageLink) {
+            const fullNextUrl = nextPageLink.startsWith('http')
+              ? nextPageLink
+              : `https://www.congress.gov${nextPageLink}`;
+            log.info(`Found next page: ${fullNextUrl}`);
+            await crawler.addRequests([fullNextUrl]);
+          }
+        }
       }
-      // Handle individual bill pages - updated regex pattern
+      // Handle individual bill pages
       else if (
         /\/bill\/\d+(?:th|st|nd|rd)-congress\/(?:house|senate)-bill\/\d+/i.test(
           request.url,
         )
       ) {
         try {
-          // Wait for main content to load with a timeout
-          await page
-            .waitForSelector("h1, .bill-number", { timeout: 1000 })
-            .catch(() => {
-              log.warning(
-                "Main content selector not found, continuing anyway...",
-              );
-            });
+          // Extract bill number
+          let billNumber = "Unknown";
+          const billNumberText = $(".bill-number, h1").first().text().trim();
+          if (billNumberText) {
+            const match = billNumberText.match(
+              /([HS]\.\s?(?:R\.|J\.\s?Res\.|Con\.\s?Res\.|Res\.)\s?\d+)/i,
+            );
+            billNumber = match ? match[1]!.trim() : billNumberText.split(" ")[0] || "Unknown";
+          }
 
-          // Extract bill number with timeout
-          const billNumber = await page
-            .locator(".bill-number, h1")
-            .first()
-            .textContent({ timeout: 500 })
-            .then((text) => {
-              const match = text?.match(
-                /([HS]\.\s?(?:R\.|J\.\s?Res\.|Con\.\s?Res\.|Res\.)\s?\d+)/i,
-              );
-              return match
-                ? match[1]!.trim()
-                : text?.trim().split(" ")[0] || "";
-            })
-            .catch(() => {
-              log.warning("Could not extract bill number");
-              return "Unknown";
-            });
+          // Extract title
+          let title = "Unknown";
+          const titleText = $(".bill-title, h1").first().text().trim();
+          if (titleText) {
+            // Remove bill number from title if present
+            let cleanTitle = titleText
+              .replace(/[HS]\.\s?(?:R\.|J\.\s?Res\.|Con\.\s?Res\.|Res\.)\s?\d+/i, "")
+              .trim();
 
-          // Extract title with timeout
-          const title = await page
-            .locator(".bill-title, h1")
-            .first()
-            .textContent({ timeout: 500 })
-            .then((text) => {
-              // Remove bill number from title if present
-              return (
-                text
-                  ?.replace(
-                    /[HS]\.\s?(?:R\.|J\.\s?Res\.|Con\.\s?Res\.|Res\.)\s?\d+/i,
-                    "",
-                  )
-                  .trim() || ""
-              );
-            })
-            .catch(() => {
-              log.warning("Could not extract title");
-              return "Unknown";
-            });
+            // Clean up extra content (JavaScript, metadata, etc.)
+            // Take only the first line or up to the first newline/special marker
+            cleanTitle = cleanTitle.split('\n')[0]!.trim();
+            cleanTitle = cleanTitle.split('$(document)')[0]!.trim();
+            cleanTitle = cleanTitle.split('Congress (')[0]!.trim();
 
-          // Extract sponsor with timeout
-          const sponsor = await page
-            .locator("text=/Sponsor:/i")
-            .locator("..")
-            .textContent({ timeout: 500 })
-            .then((text) => text?.replace(/Sponsor:/i, "").trim())
-            .catch(() => undefined);
+            // Truncate to 250 chars to fit DB limit (256) with some buffer
+            title = cleanTitle.slice(0, 250) || "Unknown";
+          }
 
-          // Extract status with timeout
-          const status = await page
-            .locator('.bill-status, [class*="status"]')
-            .first()
-            .textContent({ timeout: 500 })
-            .then((text) => text?.trim())
-            .catch(() => "Unknown");
+          // Extract sponsor
+          let sponsor: string | undefined;
+          $('*:contains("Sponsor:")').each((_, element) => {
+            const text = $(element).text();
+            if (text.includes("Sponsor:")) {
+              let cleanSponsor = text.replace(/Sponsor:/i, "").trim();
+              // Take first line and truncate to fit DB
+              cleanSponsor = cleanSponsor.split('\n')[0]!.trim().slice(0, 250);
+              sponsor = cleanSponsor || undefined;
+              return false; // break
+            }
+          });
 
-          // Extract introduced date with timeout
-          const introducedDateStr = await page
-            .locator("text=/Introduced:/i")
-            .locator("..")
-            .textContent({ timeout: 500 })
-            .then((text) => text?.replace(/Introduced:/i, "").trim())
-            .catch(() => undefined);
+          // Extract status
+          let status = $('.bill-status, [class*="status"]').first().text().trim() || "Unknown";
+          // Clean and truncate status
+          status = status.split('\n')[0]!.trim().slice(0, 250) || "Unknown";
 
-          const introducedDate = introducedDateStr
-            ? new Date(introducedDateStr)
-            : undefined;
+          // Extract introduced date
+          let introducedDate: Date | undefined;
+          $('*:contains("Introduced:")').each((_, element) => {
+            const text = $(element).text();
+            if (text.includes("Introduced:")) {
+              const dateStr = text.replace(/Introduced:/i, "").trim();
+              introducedDate = new Date(dateStr);
+              return false; // break
+            }
+          });
 
-          // Extract congress number from URL (more reliable with the new format)
+          // Extract congress number from URL
           const congressMatch = request.url.match(
             /\/bill\/(\d+)(?:th|st|nd|rd)-congress/i,
           );
-          const congress = congressMatch
+          const congressNum = congressMatch
             ? parseInt(congressMatch[1]!)
             : undefined;
 
-          // Extract chamber from URL (more reliable with the new format)
+          // Extract chamber from URL
           const chamberMatch = request.url.match(/\/(house|senate)-bill\//i);
-          const chamber = chamberMatch
-            ? chamberMatch[1]!.charAt(0).toUpperCase() +
-              chamberMatch[1]!.slice(1)
+          const chamberValue = chamberMatch
+            ? chamberMatch[1]!.charAt(0).toUpperCase() + chamberMatch[1]!.slice(1)
             : billNumber.toLowerCase().startsWith("h.")
               ? "House"
               : "Senate";
 
-          // Extract summary with timeout
-          const summary = await page
-            .locator('.summary, [class*="summary"]')
-            .first()
-            .textContent({ timeout: 5000 })
-            .then((text) => text?.trim())
-            .catch(() => undefined);
-          console.log(summary);
+          // Extract summary
+          let summary = $('.summary, [class*="summary"]').first().text().trim() || undefined;
+          if (summary) {
+            // Clean up and truncate (summary doesn't have strict DB limit but keep it reasonable)
+            summary = summary.split('$(document)')[0]!.trim();
+            summary = summary.slice(0, 1000); // Reasonable limit for summary
+          }
 
-          // Try to get full text with timeout
-          const fullText = await page
-            .locator('.bill-text, [class*="text"]')
-            .first()
-            .textContent({ timeout: 5000 })
-            .then((text) => text?.trim())
-            .catch(() => undefined);
+          // Try to get full text
+          let fullText = $('.bill-text, [class*="text"]').first().text().trim() || undefined;
+          if (fullText) {
+            // Clean up JavaScript and metadata
+            fullText = fullText.split('$(document)')[0]!.trim();
+          }
 
           const billData = {
             billNumber,
@@ -181,32 +169,32 @@ export async function scrapeCongress() {
             sponsor,
             status,
             introducedDate,
-            congress,
-            chamber,
+            congress: congressNum,
+            chamber: chamberValue,
             summary,
             fullText,
             url: request.url,
-            sourceWebsite: "congress.gov",
+            sourceWebsite: "congress.gov" as const,
           };
 
           log.info(`Scraped bill from Congress.gov: ${billNumber} - ${title}`);
 
           // Save to database
-          // await upsertBill(billData);
+          await upsertBill(billData);
         } catch (error) {
           log.error(`Error scraping bill from ${request.url}:`, error);
         }
       }
     },
-    maxRequestsPerCrawl: 50, // Limit for testing
-    headless: true,
+    maxRequestsPerCrawl: maxRequests,
     requestHandlerTimeoutSecs: 60,
   });
 
+  // Build the URL dynamically from config
+  const searchUrl = `https://www.congress.gov/search?q=%7B%22congress%22%3A${congress}%2C%22chamber%22%3A%22${chamber}%22%2C%22type%22%3A%22bills%22%7D&pageSort=documentNumber%3Adesc`;
+
   // Start with the browse page
-  await crawler.run([
-    "https://www.congress.gov/search?q=%7B%22congress%22%3A119%2C%22chamber%22%3A%22House%22%2C%22type%22%3A%22bills%22%7D&pageSort=documentNumber%3Adesc",
-  ]);
+  await crawler.run([searchUrl]);
 
   // Get the bill links from the dataset
   const dataset = await Dataset.open();
