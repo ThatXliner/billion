@@ -117,17 +117,15 @@ export default function FeedScreen() {
           {item.title}
         </Text>
 
-        {/* Description */}
-        <Image
-             style={{ width: "100%", height: 200 }}
-               source="https://picsum.photos/seed/696/3000/2000"
-               // placeholder={{ blurhash }}
-               // contentFit="cover"
-               transition={1000}
-       />
-      {/*<Text style={[typography.body, styles.cardDescription, { color: theme.textSecondary }]}>
-          {JSON.stringify(item)}
-        </Text>*/}
+        {/* Image */}
+        {item.imageUri && (
+          <Image
+            style={{ width: "100%", height: 200 }}
+            source={{ uri: item.imageUri }}
+            contentFit="cover"
+            transition={1000}
+          />
+        )}
 
         {/* Article Preview */}
         <Text style={[styles.articlePreview, { color: theme.mutedForeground }]}>
@@ -145,9 +143,8 @@ export default function FeedScreen() {
           size="lg"
           style={styles.readButton}
           onPress={() => {
-            // Extract original content ID from feed ID (format: "1-0", "2-1", etc.)
-            const contentId = item.id.split("-")[0];
-            router.push(`/article-detail?id=${contentId}`);
+            // Use originalContentId from video
+            router.push(`/article-detail?id=${item.originalContentId}`);
           }}
         >
           Read Full Article

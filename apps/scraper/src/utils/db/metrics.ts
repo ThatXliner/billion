@@ -13,6 +13,8 @@ let currentMetrics: ScraperMetrics = {
   existingChanged: 0,
   aiArticlesGenerated: 0,
   imagesSearched: 0,
+  videosGenerated: 0,
+  videosSkipped: 0,
 };
 
 /**
@@ -26,6 +28,8 @@ export function resetMetrics(): void {
     existingChanged: 0,
     aiArticlesGenerated: 0,
     imagesSearched: 0,
+    videosGenerated: 0,
+    videosSkipped: 0,
   };
 }
 
@@ -80,6 +84,20 @@ export function incrementImagesSearched(): void {
 }
 
 /**
+ * Increment videos generated count
+ */
+export function incrementVideosGenerated(): void {
+  currentMetrics.videosGenerated++;
+}
+
+/**
+ * Increment videos skipped count
+ */
+export function incrementVideosSkipped(): void {
+  currentMetrics.videosSkipped++;
+}
+
+/**
  * Print formatted metrics summary
  * @param scraperName - Name of the scraper (for display)
  */
@@ -95,6 +113,8 @@ export function printMetricsSummary(scraperName: string): void {
   console.log(`Existing (Changed):   ${currentMetrics.existingChanged}`);
   console.log(`AI Articles Generated: ${currentMetrics.aiArticlesGenerated}`);
   console.log(`Images Searched:      ${currentMetrics.imagesSearched}`);
+  console.log(`Videos Generated:     ${currentMetrics.videosGenerated}`);
+  console.log(`Videos Skipped:       ${currentMetrics.videosSkipped}`);
   console.log(`API Calls Saved:      ~${apiCallsSaved} (from skipping unchanged content)`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
 }

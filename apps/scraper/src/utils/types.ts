@@ -31,6 +31,8 @@ export interface ScraperMetrics {
   existingChanged: number;
   aiArticlesGenerated: number;
   imagesSearched: number;
+  videosGenerated: number;
+  videosSkipped: number;
 }
 
 // Existing record check result (helper return type, not a database entity)
