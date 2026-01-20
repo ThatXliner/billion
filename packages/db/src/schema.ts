@@ -79,6 +79,10 @@ export const GovernmentContent = pgTable("government_content", (t) => ({
     .jsonb()
     .$type<{ depth: number; content: string; generatedAt: string }[]>()
     .default([]), // Cached articles at different depth levels (1-5)
+  citations: t
+    .jsonb()
+    .$type<{ number: number; text: string; url: string; title?: string }[]>()
+    .default([]), // Citations used in AI-generated articles for fact verification
   thumbnailUrl: t.text(), // URL of the thumbnail image
   images: t
     .jsonb()
@@ -124,6 +128,10 @@ export const CourtCase = pgTable("court_case", (t) => ({
     .jsonb()
     .$type<{ depth: number; content: string; generatedAt: string }[]>()
     .default([]), // Cached articles at different depth levels (1-5)
+  citations: t
+    .jsonb()
+    .$type<{ number: number; text: string; url: string; title?: string }[]>()
+    .default([]), // Citations used in AI-generated articles for fact verification
   thumbnailUrl: t.text(), // URL of the thumbnail image
   images: t
     .jsonb()

@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@acme/ui/button-native";
 
 import { Text, View } from "~/components/Themed";
+import { Citations } from "~/components/Citations";
 // import { WireframeWave } from "~/components/WireframeWave";
 import {
   badges,
@@ -177,7 +178,7 @@ export default function ArticleDetailScreen() {
                 backgroundColor: theme.card,
                 borderColor: colors.cyan[700],
                 marginTop: sp[5],
-                marginBottom: sp[20],
+                marginBottom: sp[5],
               },
             ]}
           >
@@ -187,6 +188,14 @@ export default function ArticleDetailScreen() {
                 : content.originalContent}
             </Markdown>
           </View>
+
+          {/* Show citations only for AI-generated articles */}
+          {selectedTab === "article" && content.isAIGenerated && content.citations && (
+            <Citations citations={content.citations} />
+          )}
+
+          {/* Add bottom padding */}
+          <View style={{ height: sp[20], backgroundColor: "transparent" }} />
         </ScrollView>
 
         {/* Floating action icons on right side */}

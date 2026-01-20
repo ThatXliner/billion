@@ -117,6 +117,49 @@ Include specific data, quotes, and expert perspectives throughout.`,
 }
 
 /**
+ * Extract citations from markdown article text
+ * Looks for a "## Sources" section and parses [1], [2], etc.
+ */
+function extractCitations(articleText: string): {
+  number: number;
+  text: string;
+  url: string;
+  title?: string;
+}[] {
+  const citations: { number: number; text: string; url: string; title?: string }[] = [];
+  
+  // Find the Sources section
+  const sourcesMatch = articleText.match(/## Sources\n([\s\S]*?)($|##)/);
+  if (!sourcesMatch || !sourcesMatch[1]) return citations;
+  
+  const sourcesSection = sourcesMatch[1];
+  
+  // Match citation lines like: [1] Description - URL
+  const citationRegex = /\[(\d+)\]\s*([^-\n]+?)\s*-\s*(https?:\/\/[^\s\n]+)/g;
+  let match;
+  
+  while ((match = citationRegex.exec(sourcesSection)) !== null) {
+    const [, number, text, url] = match;
+    if (number && text && url) {
+      citations.push({
+        number: parseInt(number),
+        text: text.trim(),
+        url: url.trim(),
+      });
+    }
+  }
+  
+  return citations;
+}
+
+/**
+ * Remove the Sources section from article text (since we'll display citations separately)
+ */
+function removeSourcesSection(articleText: string): string {
+  return articleText.replace(/## Sources\n[\s\S]*?($|(?=## [^S]))/g, '').trim();
+}
+
+/**
  * Generate an AI article at a specific depth level
  */
 export async function generateArticleAtDepth(
@@ -125,7 +168,7 @@ export async function generateArticleAtDepth(
   type: string,
   url: string,
   depth: ArticleDepth,
-): Promise<string> {
+): Promise<{ article: string; citations: { number: number; text: string; url: string; title?: string }[] }> {
   const { wordCount, instructions } = getDepthPrompt(depth);
 
   const result = await generateText({
@@ -151,10 +194,32 @@ Full Text: ${fullText.substring(0, 5000)}
 - Use 8th-grade reading level language
 - Focus on facts and balance - remain objective
 
+**CRITICAL - Citations:**
+You MUST include inline citations throughout the article to verify claims and facts. Use this format:
+- Add [1], [2], [3] etc. after claims that need verification
+- At the end of the article, add a "## Sources" section with:
+  [1] Brief description of what this source verifies - URL
+  [2] Brief description - URL
+- For bills: cite congress.gov, govtrack.us, official bill pages
+- For court cases: cite official court websites, legal databases
+- For government content: cite whitehouse.gov, official agency sites
+- Always include the original source URL as the first citation
+
+Example:
+The bill proposes $50 billion in funding [1] and has bipartisan support [2].
+
+## Sources
+[1] Bill text and funding details - https://congress.gov/bill/...
+[2] Co-sponsor information - https://govtrack.us/...
+
 Write the article now:`,
   });
 
-  return result.text.trim();
+  const fullArticle = result.text.trim();
+  const citations = extractCitations(fullArticle);
+  const article = removeSourcesSection(fullArticle);
+
+  return { article, citations };
 }
 
 /**
@@ -206,7 +271,7 @@ export async function getOrGenerateArticle(
     throw new Error("Cannot generate article: fullText is missing");
   }
 
-  const newArticle = await generateArticleAtDepth(
+  const { article: newArticle, citations } = await generateArticleAtDepth(
     content.title,
     content.fullText,
     contentType === "bill"
@@ -228,9 +293,15 @@ export async function getOrGenerateArticle(
     },
   ];
 
+  // Update both article generations and citations
+  const updateData: any = { 
+    articleGenerations: updatedGenerations,
+    citations: citations,
+  };
+  
   await db
     .update(table)
-    .set({ articleGenerations: updatedGenerations as any })
+    .set(updateData)
     .where(eq(table.id, contentId));
 
   return { content: newArticle, cached: false };

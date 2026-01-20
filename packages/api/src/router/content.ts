@@ -242,7 +242,7 @@ export const contentRouter = {
         .where(eq(Bill.id, input.id))
         .limit(1);
       if (bill.length > 0) {
-        const b = bill[0]!;
+        const b = bill[0]! as any;
         return {
           id: b.id,
           title: b.title,
@@ -250,6 +250,7 @@ export const contentRouter = {
           type: "bill" as const,
           isAIGenerated: !!b.aiGeneratedArticle,
           thumbnailUrl: b.thumbnailUrl || undefined,
+          citations: (b.citations as { number: number; text: string; url: string; title?: string }[]) || [],
           articleContent: b.aiGeneratedArticle || b.fullText || "No content available",
           originalContent: b.fullText || "Full text not available",
         };
@@ -262,7 +263,7 @@ export const contentRouter = {
         .where(eq(GovernmentContent.id, input.id))
         .limit(1);
       if (content.length > 0) {
-        const c = content[0]!;
+        const c = content[0]! as any;
         return {
           id: c.id,
           title: c.title,
@@ -270,6 +271,7 @@ export const contentRouter = {
           type: "general" as const,
           isAIGenerated: !!c.aiGeneratedArticle,
           thumbnailUrl: c.thumbnailUrl || undefined,
+          citations: (c.citations as { number: number; text: string; url: string; title?: string }[]) || [],
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
           originalContent: c.fullText || "Full text not available",
         };
@@ -282,7 +284,7 @@ export const contentRouter = {
         .where(eq(CourtCase.id, input.id))
         .limit(1);
       if (courtCase.length > 0) {
-        const c = courtCase[0]!;
+        const c = courtCase[0]! as any;
         return {
           id: c.id,
           title: c.title,
@@ -290,6 +292,7 @@ export const contentRouter = {
           type: "case" as const,
           isAIGenerated: !!c.aiGeneratedArticle,
           thumbnailUrl: c.thumbnailUrl || undefined,
+          citations: (c.citations as { number: number; text: string; url: string; title?: string }[]) || [],
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
           originalContent: c.fullText || "Full text not available",
         };
