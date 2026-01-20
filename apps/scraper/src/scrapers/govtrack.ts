@@ -4,17 +4,13 @@ import { printMetricsSummary, resetMetrics } from "../utils/db/metrics.js";
 import { upsertBill } from "../utils/db/operations.js";
 
 interface GovTrackScraperConfig {
-  maxBills?: number;      // Default: 100
-  maxRequests?: number;   // Default: 500
-  congress?: number;      // Default: 119
+  maxBills?: number; // Default: 100
+  maxRequests?: number; // Default: 500
+  congress?: number; // Default: 119
 }
 
 export async function scrapeGovTrack(config: GovTrackScraperConfig = {}) {
-  const {
-    maxBills = 100,
-    maxRequests = 500,
-    congress = 119
-  } = config;
+  const { maxBills = 100, maxRequests = 500, congress = 119 } = config;
   console.log("Starting GovTrack scraper...");
 
   // Reset metrics for this scraper run
@@ -34,43 +30,43 @@ export async function scrapeGovTrack(config: GovTrackScraperConfig = {}) {
           request.url.includes("#docket"))
       ) {
         // Extract bill links from the listing page
-        $('a[href*="/congress/bills/"]').each((_, element) => {
-          const href = $(element).attr("href");
-          if (href && /\/congress\/bills\/\d+\/[a-z]+\d+/.test(href)) {
-            // Convert relative URLs to absolute
-            const fullUrl = href.startsWith("http")
-              ? href
-              : `https://www.govtrack.us${href}`;
+        $('.card > .card-body .card-title > a[href*="/congress/bills/"]').each(
+          (_, element) => {
+            const href = $(element).attr("href");
+            if (href && /\/congress\/bills\/\d+\/[a-z]+\d+/.test(href)) {
+              // Convert relative URLs to absolute
+              const fullUrl = href.startsWith("http")
+                ? href
+                : `https://www.govtrack.us${href}`;
 
-            if (collectedLinks.size < maxBills) {
-              collectedLinks.add(fullUrl);
+              if (collectedLinks.size < maxBills) {
+                collectedLinks.add(fullUrl);
+              }
             }
-          }
-        });
+          },
+        );
 
         log.info(`Found ${collectedLinks.size} total bill links so far`);
 
-        // Look for pagination links
-        if (collectedLinks.size < maxBills) {
-          const nextPageLink = $('a.next-page, a[rel="next"], a:contains("Next")').attr('href');
-          if (nextPageLink) {
-            const fullNextUrl = nextPageLink.startsWith('http')
-              ? nextPageLink
-              : `https://www.govtrack.us${nextPageLink}`;
-            log.info(`Found next page: ${fullNextUrl}`);
-            await crawler.addRequests([fullNextUrl]);
-          }
-        }
+        // // Look for pagination links
+        // if (collectedLinks.size < maxBills) {
+        //   const nextPageLink = $(
+        //     'a.next-page, a[rel="next"], a:contains("Next")',
+        //   ).attr("href");
+        //   if (nextPageLink) {
+        //     const fullNextUrl = nextPageLink.startsWith("http")
+        //       ? nextPageLink
+        //       : `https://www.govtrack.us${nextPageLink}`;
+        //     log.info(`Found next page: ${fullNextUrl}`);
+        //     await crawler.addRequests([fullNextUrl]);
+        //   }
+        // }
       }
       // Handle bill text pages
       else if (request.url.includes("/text")) {
         try {
           // Extract full text from the specific element
-          let fullText = $(
-            "html body.bills div#bodybody div div.container div.row div.col-sm-8.order-1 div#content article.bill",
-          )
-            .text()
-            .trim();
+          let fullText = $("#main_text_content").text().trim();
 
           // Truncate to 1,000 words
           if (fullText) {
@@ -84,10 +80,7 @@ export async function scrapeGovTrack(config: GovTrackScraperConfig = {}) {
           }
 
           // Extract bill number and title from h1
-          const h1Text = $(".h1-multiline > h1:nth-child(1)")
-            .first()
-            .text()
-            .trim();
+          const h1Text = $("#maincontent h1").first().text().trim();
           const h1Parts = h1Text.split(":");
           const billNumber = h1Parts[0]?.trim() || "";
           const title =
@@ -95,13 +88,13 @@ export async function scrapeGovTrack(config: GovTrackScraperConfig = {}) {
 
           // Extract sponsor
           let sponsor: string | undefined;
-          $("p, div").each((_, element) => {
-            const text = $(element).text();
-            if (text.includes("Sponsor:")) {
-              sponsor = text.replace("Sponsor:", "").trim();
-              return false; // break
-            }
-          });
+          // $("p, div").each((_, element) => {
+          //   const text = $(element).text();
+          //   if (text.includes("Sponsor:")) {
+          //     sponsor = text.replace("Sponsor:", "").trim();
+          //     return false; // break
+          //   }
+          // });
 
           // Extract status
           const status = $(".bill-status").first().text().trim() || "Unknown";
