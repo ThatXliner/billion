@@ -5,17 +5,17 @@ import { desc, eq, sql } from "@acme/db";
 import { db } from "@acme/db/client";
 import { Bill, CourtCase, GovernmentContent } from "@acme/db/schema";
 
+import type { ArticleDepth } from "../utils/article-depth";
 import { publicProcedure } from "../trpc";
 import {
-  getOrGenerateArticle,
   DEPTH_DESCRIPTIONS,
-  type ArticleDepth,
+  getOrGenerateArticle,
 } from "../utils/article-depth";
 
 // Helper function to get thumbnail URL for any content
 export async function getThumbnailForContent(
-  id: string, 
-  type: "bill" | "case" | "general"
+  id: string,
+  type: "bill" | "case" | "general",
 ): Promise<string | null> {
   try {
     if (type === "bill") {
@@ -273,6 +273,8 @@ export const contentRouter = {
           thumbnailUrl: c.thumbnailUrl || undefined,
           citations: (c.citations as { number: number; text: string; url: string; title?: string }[]) || [],
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
+          articleContent:
+            c.aiGeneratedArticle || c.fullText || "No content available",
           originalContent: c.fullText || "Full text not available",
         };
       }
@@ -292,8 +294,15 @@ export const contentRouter = {
           type: "case" as const,
           isAIGenerated: !!c.aiGeneratedArticle,
           thumbnailUrl: c.thumbnailUrl || undefined,
+<<<<<<< Updated upstream
           citations: (c.citations as { number: number; text: string; url: string; title?: string }[]) || [],
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
+||||||| Stash base
+          articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
+=======
+          articleContent:
+            c.aiGeneratedArticle || c.fullText || "No content available",
+>>>>>>> Stashed changes
           originalContent: c.fullText || "Full text not available",
         };
       }
@@ -364,16 +373,20 @@ export const contentRouter = {
         return { cachedDepths: [] };
       }
 
-      const generations = (content.articleGenerations as {
-        depth: number;
-        content: string;
-        generatedAt: string;
-      }[]) || [];
+      const generations =
+        (content.articleGenerations as {
+          depth: number;
+          content: string;
+          generatedAt: string;
+        }[]) || [];
 
       return {
         cachedDepths: generations.map((g) => ({
           depth: g.depth as ArticleDepth,
-          generatedAt: g.generatedAt,
+          generatedAt:
+            typeof g.generatedAt === "string"
+              ? g.generatedAt
+              : "new Date(g.generatedAt).toISOString()",
         })),
       };
     }),

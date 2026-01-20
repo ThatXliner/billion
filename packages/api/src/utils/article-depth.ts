@@ -1,5 +1,6 @@
 import { openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
+
 import { eq } from "@acme/db";
 import { db } from "@acme/db/client";
 import { Bill, CourtCase, GovernmentContent } from "@acme/db/schema";
@@ -172,7 +173,6 @@ export async function generateArticleAtDepth(
   const { wordCount, instructions } = getDepthPrompt(depth);
 
   const result = await generateText({
-    // @ts-ignore - AI SDK v5 type compatibility issue, works at runtime
     model: openai("gpt-4o-mini"),
     prompt: `You are an expert at making government and legal content accessible and engaging for everyday people. Transform the following ${type} into a well-structured, markdown-formatted article.
 
@@ -250,12 +250,20 @@ export async function getOrGenerateArticle(
   }
 
   // Check if article at this depth exists in cache
-  const generations = (content.articleGenerations as {
-    depth: number;
-    content: string;
-    generatedAt: string;
-  }[]) || [];
-  
+  // Normalize the generations data to ensure generatedAt is always a string
+  const generations = ((content.articleGenerations ?? []) as any[]).map(
+    (gen) => ({
+      depth: gen.depth,
+      content: gen.content,
+      generatedAt:
+        typeof gen.generatedAt === "string"
+          ? gen.generatedAt
+          : gen.generatedAt instanceof Date
+            ? gen.generatedAt.toISOString()
+            : String(gen.generatedAt),
+    }),
+  );
+
   const cached = generations.find((gen) => gen.depth === depth);
   if (cached) {
     return { content: cached.content, cached: true };
@@ -274,14 +282,13 @@ export async function getOrGenerateArticle(
   const { article: newArticle, citations } = await generateArticleAtDepth(
     content.title,
     content.fullText,
-    contentType === "bill"
-      ? "bill"
-      : contentType === "case"
-        ? "court case"
-        : (content as any).type || "government content",
-    (content as any).url || "",
+    contentType === "bill" || contentType === "case"
+      ? contentType
+      : "government content",
+    content.url || "",
     depth,
   );
+  console.log(generations, newArticle);
 
   // Cache the generated article
   const updatedGenerations = [
@@ -289,7 +296,7 @@ export async function getOrGenerateArticle(
     {
       depth,
       content: newArticle,
-      generatedAt: new Date().toISOString(),
+      generatedAt: " new Date().toISOString()",
     },
   ];
 
@@ -315,7 +322,7 @@ export async function preGenerateAllDepths(
   contentType: "bill" | "case" | "general",
 ): Promise<void> {
   const depths: ArticleDepth[] = [1, 2, 3, 4, 5];
-  
+
   for (const depth of depths) {
     try {
       await getOrGenerateArticle(contentId, contentType, depth);
