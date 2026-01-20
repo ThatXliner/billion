@@ -13,7 +13,9 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@acme/ui/button-native";
 
+import { ArticleDepthControl } from "~/components/ArticleDepthControl";
 import { Text, View } from "~/components/Themed";
+import { Citations } from "~/components/Citations";
 // import { WireframeWave } from "~/components/WireframeWave";
 import {
   badges,
@@ -57,6 +59,7 @@ export default function ArticleDetailScreen() {
   const [selectedTab, setSelectedTab] = useState<"article" | "original">(
     "article",
   );
+  const [depth, setDepth] = useState<1 | 2 | 3 | 4 | 5>(3);
 
   // Fetch content from tRPC
   const {
@@ -66,6 +69,19 @@ export default function ArticleDetailScreen() {
   } = useQuery({
     ...trpc.content.getById.queryOptions({ id }),
     enabled: !!id,
+  });
+
+  // Fetch article at the selected depth
+  const {
+    data: articleAtDepth,
+    isLoading: isLoadingDepth,
+  } = useQuery({
+    ...trpc.content.getArticleAtDepth.queryOptions({
+      id,
+      type: content?.type === "bill" ? "bill" : content?.type === "case" ? "case" : "general",
+      depth,
+    }),
+    enabled: !!id && !!content,
   });
 
   // Handle loading state
@@ -170,6 +186,15 @@ export default function ArticleDetailScreen() {
             {content.description}
           </Text>
 
+          {/* Article Depth Control */}
+          <ArticleDepthControl
+            value={depth}
+            onValueChange={setDepth}
+            isGenerating={isLoadingDepth}
+            isCached={articleAtDepth?.cached}
+            style={localStyles.depthControl}
+          />
+
           <View
             style={[
               cards.content,
@@ -177,16 +202,24 @@ export default function ArticleDetailScreen() {
                 backgroundColor: theme.card,
                 borderColor: colors.cyan[700],
                 marginTop: sp[5],
-                marginBottom: sp[20],
+                marginBottom: sp[5],
               },
             ]}
           >
             <Markdown style={markdownStyles}>
               {selectedTab === "article"
-                ? content.articleContent
+                ? (articleAtDepth?.content || content.articleContent)
                 : content.originalContent}
             </Markdown>
           </View>
+
+          {/* Show citations only for AI-generated articles */}
+          {selectedTab === "article" && content.isAIGenerated && content.citations && (
+            <Citations citations={content.citations} />
+          )}
+
+          {/* Add bottom padding */}
+          <View style={{ height: sp[20], backgroundColor: "transparent" }} />
         </ScrollView>
 
         {/* Floating action icons on right side */}
@@ -256,6 +289,9 @@ const localStyles = StyleSheet.create({
     marginTop: sp[4],
   },
   articleDescription: {
+    marginBottom: sp[4],
+  },
+  depthControl: {
     marginBottom: sp[4],
   },
   floatingActions: {

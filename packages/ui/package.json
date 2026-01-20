@@ -12,6 +12,8 @@
     "./input": "./src/input.tsx",
     "./label": "./src/label.tsx",
     "./separator": "./src/separator.tsx",
+    "./slider": "./src/slider.tsx",
+    "./article-depth-control": "./src/article-depth-control.tsx",
     "./theme": "./src/theme.tsx",
     "./theme-tokens": "./src/theme-tokens.ts",
     "./toast": "./src/toast.tsx"

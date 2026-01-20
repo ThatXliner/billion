@@ -105,6 +105,9 @@ importers:
       '@legendapp/list':
         specifier: ^2.0.11
         version: 2.0.11(react-native@0.81.4(@babel/core@7.28.6)(@types/react@19.1.12)(bufferutil@4.0.8)(react@19.1.1))(react@19.1.1)
+      '@react-native-community/slider':
+        specifier: ^5.0.1
+        version: 5.0.1
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.90.2(react@19.1.1)
@@ -387,9 +390,15 @@ importers:
       '@acme/validators':
         specifier: workspace:*
         version: link:../validators
+      '@ai-sdk/openai':
+        specifier: ^2.0.89
+        version: 2.0.89(zod@4.1.12)
       '@trpc/server':
         specifier: 'catalog:'
         version: 11.6.0(typescript@5.9.3)
+      ai:
+        specifier: ^6.0.41
+        version: 6.0.41(zod@4.1.12)
       superjson:
         specifier: 2.2.2
         version: 2.2.2
@@ -3559,6 +3568,9 @@ packages:
 
   '@radix-ui/rect@1.1.1':
     resolution: {integrity: sha512-HPwpGIzkl28mWyZqG52jiqDJ12waP11Pa1lGoiyUkIEuMLBP0oeK/C89esbXrxsky5we7dfd8U58nm0SgAWpVw==}
+
+  '@react-native-community/slider@5.0.1':
+    resolution: {integrity: sha512-K3JRWkIW4wQ79YJ6+BPZzp1SamoikxfPRw7Yw4B4PElEQmqZFrmH9M5LxvIo460/3QSrZF/wCgi3qizJt7g/iw==}
 
   '@react-native/assets-registry@0.81.4':
     resolution: {integrity: sha512-AMcDadefBIjD10BRqkWw+W/VdvXEomR6aEZ0fhQRAv7igrBzb4PTn4vHKYg+sUK0e3wa74kcMy2DLc/HtnGcMA==}
@@ -12712,6 +12724,8 @@ snapshots:
       '@types/react-dom': 19.1.9(@types/react@19.1.12)
 
   '@radix-ui/rect@1.1.1': {}
+
+  '@react-native-community/slider@5.0.1': {}
 
   '@react-native/assets-registry@0.81.4': {}
 

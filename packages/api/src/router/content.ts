@@ -5,12 +5,17 @@ import { desc, eq, sql } from "@acme/db";
 import { db } from "@acme/db/client";
 import { Bill, CourtCase, GovernmentContent } from "@acme/db/schema";
 
+import type { ArticleDepth } from "../utils/article-depth";
 import { publicProcedure } from "../trpc";
+import {
+  DEPTH_DESCRIPTIONS,
+  getOrGenerateArticle,
+} from "../utils/article-depth";
 
 // Helper function to get thumbnail URL for any content
 export async function getThumbnailForContent(
-  id: string, 
-  type: "bill" | "case" | "general"
+  id: string,
+  type: "bill" | "case" | "general",
 ): Promise<string | null> {
   try {
     if (type === "bill") {
@@ -237,7 +242,7 @@ export const contentRouter = {
         .where(eq(Bill.id, input.id))
         .limit(1);
       if (bill.length > 0) {
-        const b = bill[0]!;
+        const b = bill[0]! as any;
         return {
           id: b.id,
           title: b.title,
@@ -245,7 +250,9 @@ export const contentRouter = {
           type: "bill" as const,
           isAIGenerated: !!b.aiGeneratedArticle,
           thumbnailUrl: b.thumbnailUrl || undefined,
+          citations: (b.citations as { number: number; text: string; url: string; title?: string }[]) || [],
           articleContent: b.aiGeneratedArticle || b.fullText || "No content available",
+
           originalContent: b.fullText || "Full text not available",
         };
       }
@@ -257,7 +264,7 @@ export const contentRouter = {
         .where(eq(GovernmentContent.id, input.id))
         .limit(1);
       if (content.length > 0) {
-        const c = content[0]!;
+        const c = content[0]! as any;
         return {
           id: c.id,
           title: c.title,
@@ -265,6 +272,7 @@ export const contentRouter = {
           type: "general" as const,
           isAIGenerated: !!c.aiGeneratedArticle,
           thumbnailUrl: c.thumbnailUrl || undefined,
+          citations: (c.citations as { number: number; text: string; url: string; title?: string }[]) || [],
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
           originalContent: c.fullText || "Full text not available",
         };
@@ -277,7 +285,7 @@ export const contentRouter = {
         .where(eq(CourtCase.id, input.id))
         .limit(1);
       if (courtCase.length > 0) {
-        const c = courtCase[0]!;
+        const c = courtCase[0]! as any;
         return {
           id: c.id,
           title: c.title,
@@ -285,11 +293,94 @@ export const contentRouter = {
           type: "case" as const,
           isAIGenerated: !!c.aiGeneratedArticle,
           thumbnailUrl: c.thumbnailUrl || undefined,
+
+          citations: (c.citations as { number: number; text: string; url: string; title?: string }[]) || [],
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
           originalContent: c.fullText || "Full text not available",
         };
       }
 
       throw new Error(`Content with id ${input.id} not found`);
+    }),
+
+  // Get article at specific depth level
+  getArticleAtDepth: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        type: z.enum(["bill", "case", "general"]),
+        depth: z.union([
+          z.literal(1),
+          z.literal(2),
+          z.literal(3),
+          z.literal(4),
+          z.literal(5),
+        ]),
+      }),
+    )
+    .query(async ({ input }) => {
+      const result = await getOrGenerateArticle(
+        input.id,
+        input.type,
+        input.depth as ArticleDepth,
+      );
+      return {
+        content: result.content,
+        cached: result.cached,
+        depth: input.depth,
+        depthDescription: DEPTH_DESCRIPTIONS[input.depth as ArticleDepth],
+      };
+    }),
+
+  // Get available depth levels and their descriptions
+  getDepthLevels: publicProcedure.query(async () => {
+    return Object.entries(DEPTH_DESCRIPTIONS).map(([depth, description]) => ({
+      depth: Number(depth) as ArticleDepth,
+      description,
+    }));
+  }),
+
+  // Check which depth levels are cached for a content item
+  getCachedDepths: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        type: z.enum(["bill", "case", "general"]),
+      }),
+    )
+    .query(async ({ input }) => {
+      const table =
+        input.type === "bill"
+          ? Bill
+          : input.type === "case"
+            ? CourtCase
+            : GovernmentContent;
+
+      const [content] = await db
+        .select({ articleGenerations: table.articleGenerations })
+        .from(table)
+        .where(eq(table.id, input.id))
+        .limit(1);
+
+      if (!content) {
+        return { cachedDepths: [] };
+      }
+
+      const generations =
+        (content.articleGenerations as {
+          depth: number;
+          content: string;
+          generatedAt: string;
+        }[]) || [];
+
+      return {
+        cachedDepths: generations.map((g) => ({
+          depth: g.depth as ArticleDepth,
+          generatedAt:
+            typeof g.generatedAt === "string"
+              ? g.generatedAt
+              : "new Date(g.generatedAt).toISOString()",
+        })),
+      };
     }),
 } satisfies TRPCRouterRecord;
