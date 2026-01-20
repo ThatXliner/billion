@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -118,6 +119,19 @@ export default function ArticleDetailScreen() {
   const tabContainerStyles = createTabContainerStyles(theme);
   const markdownStyles = getMarkdownStyles(theme);
 
+  const handleOpenOriginal = async () => {
+    if (content.url) {
+      try {
+        const canOpen = await Linking.canOpenURL(content.url);
+        if (canOpen) {
+          await Linking.openURL(content.url);
+        }
+      } catch (error) {
+        console.error("Error opening URL:", error);
+      }
+    }
+  };
+
   return (
     <>
       <SafeAreaView style={layout.container} edges={["top"]}>
@@ -190,8 +204,8 @@ export default function ArticleDetailScreen() {
         </ScrollView>
 
         {/* Floating action icons on right side */}
-        <View style={{...localStyles.floatingActions}} pointerEvents="box-none">
-          <TouchableOpacity style={buttons.floating}>
+        <View style={{...localStyles.floatingActions, backgroundColor:theme.primary, borderRadius:rd.xl, opacity:0.7 }} pointerEvents="box-none">
+          {/*<TouchableOpacity style={buttons.floating}>
             <Ionicons
               name="heart-outline"
               size={24}
@@ -205,18 +219,29 @@ export default function ArticleDetailScreen() {
               size={24}
               color={theme.foreground}
             />
-          </TouchableOpacity>
+          </TouchableOpacity>*/}
 
-          <TouchableOpacity style={buttons.floating}>
+          {/*<TouchableOpacity style={buttons.floating}>
             <Ionicons name="share-outline" size={24} color={theme.foreground} />
-          </TouchableOpacity>
+          </TouchableOpacity>*/}
+
+          {content.url && (
+            <TouchableOpacity
+              style={buttons.floating}
+              onPress={handleOpenOriginal}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="open-outline" size={24} color={theme.primaryForeground} />
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={buttons.floating}
             // style={[buttons.floatingLarge, localStyles.floatingCloseButton, { backgroundColor: theme.primary }]}
             onPress={() => router.back()}
             activeOpacity={0.8}
           >
-            <Ionicons name="close" size={24} color={theme.foreground} />
+            <Ionicons name="close" size={24} color={theme.primaryForeground} />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
