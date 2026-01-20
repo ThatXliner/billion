@@ -1,7 +1,20 @@
 import { sql } from "drizzle-orm";
-import { pgTable, unique } from "drizzle-orm/pg-core";
+import { customType, index, pgTable, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+
+// Custom bytea type for binary data storage
+const bytea = customType<{ data: Buffer; notNull: false; default: false }>({
+  dataType() {
+    return "bytea";
+  },
+  toDriver(value: Buffer): Buffer {
+    return value;
+  },
+  fromDriver(value: unknown): Buffer {
+    return value as Buffer;
+  },
+});
 
 export const Post = pgTable("post", (t) => ({
   id: t.uuid().notNull().primaryKey().defaultRandom(),
@@ -132,6 +145,51 @@ export const CourtCase = pgTable("court_case", (t) => ({
 }));
 
 export const CreateCourtCaseSchema = createInsertSchema(CourtCase).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Video table for AI-generated feed content
+export const Video = pgTable("video", (t) => ({
+  id: t.uuid().notNull().primaryKey().defaultRandom(),
+
+  // Polymorphic reference to original content (Bill, GovernmentContent, CourtCase)
+  contentType: t.varchar({ length: 20 }).notNull(), // "bill", "government_content", "court_case"
+  contentId: t.uuid().notNull(), // References id from source table
+
+  // AI-generated marketing copy
+  title: t.varchar({ length: 25 }).notNull(), // Max 25 chars
+  description: t.text().notNull(), // 50-word catchy headline
+
+  // Binary image storage (not URLs)
+  imageData: bytea("image_data"), // Raw JPEG bytes
+  imageMimeType: t.varchar("image_mime_type", { length: 50 }), // "image/jpeg"
+  imageWidth: t.integer("image_width"),
+  imageHeight: t.integer("image_height"),
+
+  // Metadata
+  author: t.varchar({ length: 100 }), // "govtrack.com", "whitehouse.gov", etc.
+  engagementMetrics: t.jsonb().$type<{
+    likes: number;
+    comments: number;
+    shares: number;
+  }>().default({ likes: 0, comments: 0, shares: 0 }),
+
+  // Cache invalidation
+  sourceContentHash: t.varchar({ length: 64 }).notNull(), // Match source content hash
+
+  createdAt: t.timestamp().defaultNow().notNull(),
+  updatedAt: t
+    .timestamp({ mode: "date", withTimezone: true })
+    .$onUpdateFn(() => sql`now()`),
+}), (table) => ({
+  uniqueContentReference: unique().on(table.contentType, table.contentId),
+  contentIdIndex: index("video_content_id_idx").on(table.contentId),
+  createdAtIndex: index("video_created_at_idx").on(table.createdAt),
+}));
+
+export const CreateVideoSchema = createInsertSchema(Video).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
