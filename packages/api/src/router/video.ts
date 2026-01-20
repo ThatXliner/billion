@@ -7,7 +7,7 @@ import { Video } from "@acme/db/schema";
 
 import { publicProcedure } from "../trpc";
 
-// Schema for video/feed post (from Video table)
+// Schema for video/feed post (from Video table) - Hybrid image support
 export const VideoPostSchema = z.object({
   id: z.string(),
   title: z.string().max(100),
@@ -18,12 +18,13 @@ export const VideoPostSchema = z.object({
   shares: z.number(),
   type: z.enum(["bill", "government_content", "court_case", "general"]),
   articlePreview: z.string(),
-  imageUri: z.string().optional(), // Data URI for image
+  // Hybrid image support - use whichever is available
+  imageUri: z.string().optional(), // Data URI from Video.imageData (AI-generated)
+  thumbnailUrl: z.string().optional(), // URL from source content (scraped)
   originalContentId: z.string(), // Reference to source content
 });
 
 export type VideoPost = z.infer<typeof VideoPostSchema>;
-
 export const videoRouter = {
   // Get videos with cursor-based pagination for infinite scroll
   getInfinite: publicProcedure
@@ -44,9 +45,9 @@ export const videoRouter = {
         .limit(limit)
         .offset(cursor);
 
-      // Transform to feed format with data URIs
+      // Transform to feed format with hybrid image support
       const feedPosts = videos.map((video) => {
-        // Convert binary image to data URI for expo-image
+        // Handle AI-generated binary images (convert to data URI)
         let imageUri: string | undefined;
         if (video.imageData && video.imageMimeType) {
           const base64 = video.imageData.toString("base64");
@@ -80,7 +81,8 @@ export const videoRouter = {
           shares: metrics.shares,
           type,
           articlePreview: video.description, // Marketing description as preview
-          imageUri, // Data URI for image
+          imageUri, // AI-generated data URI (if exists)
+          thumbnailUrl: video.thumbnailUrl ?? undefined, // URL-based thumbnail (if exists)
           originalContentId: video.contentId, // For "Read Full Article" navigation
         };
       });

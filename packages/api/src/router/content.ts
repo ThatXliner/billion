@@ -9,8 +9,8 @@ import { publicProcedure } from "../trpc";
 
 // Helper function to get thumbnail URL for any content
 export async function getThumbnailForContent(
-  id: string, 
-  type: "bill" | "case" | "general"
+  id: string,
+  type: "bill" | "court_case" | "government_content" | "general"
 ): Promise<string | null> {
   try {
     if (type === "bill") {
@@ -20,7 +20,7 @@ export async function getThumbnailForContent(
         .where(eq(Bill.id, id))
         .limit(1);
       return result[0]?.thumbnailUrl || null;
-    } else if (type === "case") {
+    } else if (type === "court_case") {
       const result = await db
         .select({ thumbnailUrl: CourtCase.thumbnailUrl })
         .from(CourtCase)
@@ -41,14 +41,15 @@ export async function getThumbnailForContent(
   }
 }
 
-// Schema for content card
+// Schema for content card with hybrid image support
 const ContentCardSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string(),
-  type: z.enum(["bill", "order", "case", "general"]),
+  type: z.enum(["bill", "government_content", "court_case", "general"]),
   isAIGenerated: z.boolean(),
   thumbnailUrl: z.string().optional(),
+  imageUri: z.string().optional(), // Add support for AI-generated data URIs
 });
 
 export type ContentCard = z.infer<typeof ContentCardSchema>;
@@ -95,7 +96,7 @@ export const contentRouter = {
         id: content.id,
         title: content.title,
         description: content.description || "",
-        type: "general" as const,
+        type: "government_content" as const,
         isAIGenerated: false,
         thumbnailUrl: content.thumbnailUrl || undefined,
       })),
@@ -104,7 +105,7 @@ export const contentRouter = {
         id: courtCase.id,
         title: courtCase.title,
         description: courtCase.description || "",
-        type: "case" as const,
+        type: "court_case" as const,
         isAIGenerated: false,
         thumbnailUrl: courtCase.thumbnailUrl || undefined,
       })),
@@ -117,7 +118,7 @@ export const contentRouter = {
   getByType: publicProcedure
     .input(
       z.object({
-        type: z.enum(["all", "bill", "order", "case", "general"]).optional(),
+        type: z.enum(["all", "bill", "government_content", "court_case", "general"]).optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -153,7 +154,7 @@ export const contentRouter = {
             id: content.id,
             title: content.title,
             description: content.description || "",
-            type: "general" as const,
+            type: "government_content" as const,
             isAIGenerated: false,
             thumbnailUrl: content.thumbnailUrl || undefined,
           })),
@@ -162,7 +163,7 @@ export const contentRouter = {
             id: courtCase.id,
             title: courtCase.title,
             description: courtCase.description || "",
-            type: "case" as const,
+            type: "court_case" as const,
             isAIGenerated: false,
             thumbnailUrl: courtCase.thumbnailUrl || undefined,
           })),
@@ -187,7 +188,7 @@ export const contentRouter = {
         }));
       }
 
-      if (input.type === "order" || input.type === "general") {
+      if (input.type === "government_content" || input.type === "general") {
         const governmentContent = await db
           .select()
           .from(GovernmentContent)
@@ -197,13 +198,13 @@ export const contentRouter = {
           id: content.id,
           title: content.title,
           description: content.description || "",
-          type: "general" as const,
+          type: "government_content" as const,
           isAIGenerated: false,
           thumbnailUrl: content.thumbnailUrl || undefined,
         }));
       }
 
-      if (input.type === "case") {
+      if (input.type === "court_case") {
         const courtCases = await db
           .select()
           .from(CourtCase)
@@ -213,7 +214,7 @@ export const contentRouter = {
           id: courtCase.id,
           title: courtCase.title,
           description: courtCase.description || "",
-          type: "case" as const,
+          type: "court_case" as const,
           isAIGenerated: false,
           thumbnailUrl: courtCase.thumbnailUrl || undefined,
         }));
@@ -262,7 +263,7 @@ export const contentRouter = {
           id: c.id,
           title: c.title,
           description: c.description || "",
-          type: "general" as const,
+          type: "government_content" as const,
           isAIGenerated: !!c.aiGeneratedArticle,
           thumbnailUrl: c.thumbnailUrl || undefined,
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
@@ -282,7 +283,7 @@ export const contentRouter = {
           id: c.id,
           title: c.title,
           description: c.description || "",
-          type: "case" as const,
+          type: "court_case" as const,
           isAIGenerated: !!c.aiGeneratedArticle,
           thumbnailUrl: c.thumbnailUrl || undefined,
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",

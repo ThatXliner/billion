@@ -150,7 +150,7 @@ export async function upsertBill(billData: BillData) {
 
   console.log(`Bill ${billData.billNumber} upserted`);
 
-  // Generate video content
+  // Generate video content with hybrid image support
   if (result && billData.fullText) {
     await generateVideoForContent(
       'bill',
@@ -159,6 +159,7 @@ export async function upsertBill(billData: BillData) {
       billData.fullText,
       newContentHash,
       billData.sourceWebsite,
+      result.thumbnailUrl, // Pass thumbnailUrl from inserted/updated bill
     );
   }
 
@@ -274,7 +275,7 @@ export async function upsertGovernmentContent(contentData: GovernmentContentData
 
   console.log(`Government content "${contentData.title}" upserted`);
 
-  // Generate video content
+  // Generate video content with hybrid image support
   if (result && contentData.fullText) {
     await generateVideoForContent(
       'government_content',
@@ -283,6 +284,7 @@ export async function upsertGovernmentContent(contentData: GovernmentContentData
       contentData.fullText,
       newContentHash,
       contentData.source ?? 'whitehouse.gov',
+      result.thumbnailUrl, // Pass thumbnailUrl from inserted/updated content
     );
   }
 
@@ -431,7 +433,7 @@ export async function upsertCourtCase(caseData: CourtCaseData) {
 
   console.log(`Court case ${caseData.caseNumber} upserted`);
 
-  // Generate video content
+  // Generate video content with hybrid image support
   if (result && caseData.fullText) {
     await generateVideoForContent(
       'court_case',
@@ -440,6 +442,7 @@ export async function upsertCourtCase(caseData: CourtCaseData) {
       caseData.fullText,
       newContentHash,
       caseData.court,
+      result.thumbnailUrl, // Pass thumbnailUrl from inserted/updated case
     );
   }
 

@@ -37,8 +37,10 @@ interface ContentCard {
   id: string;
   title: string;
   description: string;
-  type: "bill" | "order" | "case" | "general";
+  type: "bill" | "government_content" | "court_case" | "general";
   isAIGenerated: boolean;
+  thumbnailUrl?: string;
+  imageUri?: string; // Add support for AI-generated data URIs
 }
 
 const ContentCardComponent = ({
@@ -49,13 +51,28 @@ const ContentCardComponent = ({
   theme: Theme;
 }) => {
   const router = useRouter();
+
+  // Smart title display logic
+  const getDisplayTitle = (title: string) => {
+    if (title.length <= 60) {
+      return title;
+    }
+    // For long titles, truncate intelligently at sentence or phrase boundaries
+    const truncated = title.substring(0, 57);
+    const lastSpace = truncated.lastIndexOf(' ');
+    return lastSpace > 40 ? truncated.substring(0, lastSpace) + '...' : truncated + '...';
+  };
+
   const getTitleFontSize = (titleLength: number) => {
       if (titleLength < 40) return fontSize.xl;      // ~20px for short titles
       if (titleLength < 60) return fontSize.lg;      // ~18px for medium titles
       if (titleLength < 80) return fontSize.base;    // ~16px for longer titles
       return fontSize.sm;                            // ~14px for very long titles
     };
-  const titleFontSize = getTitleFontSize(item.title.length);
+
+  const displayTitle = getDisplayTitle(item.title);
+  const titleFontSize = getTitleFontSize(displayTitle.length);
+
   return (
     <TouchableOpacity
       style={[
@@ -79,28 +96,50 @@ const ContentCardComponent = ({
       >
         {/* Category label */}
         <Text style={[styles.categoryLabel, { color: theme.mutedForeground }]}>
-          Presidential Message
+          {item.type === "bill" ? "Bill" : item.type === "government_content" ? "Gov Content" : item.type === "court_case" ? "Case" : "General"}
         </Text>
 
-        {/* Title */}
+        {/* Title with hybrid image support */}
         <View style={{backgroundColor: theme.card, flex:1,flexDirection:'row', gap: sp[3],}}>
-           <Image
-                style={{ width: 50, height: 50 }}
-                  source="https://picsum.photos/seed/696/3000/2000"
-                  // placeholder={{ blurhash }}
-                  // contentFit="cover"
-                  transition={1000}
-          />
+          {item.imageUri ? (
+            <Image
+              style={{ width: 50, height: 50, borderRadius: 8 }}
+              source={{ uri: item.imageUri }}
+              contentFit="cover"
+              transition={300}
+            />
+          ) : item.thumbnailUrl ? (
+            <Image
+              style={{ width: 50, height: 50, borderRadius: 8 }}
+              source={{ uri: item.thumbnailUrl }}
+              contentFit="cover"
+              transition={300}
+            />
+          ) : (
+            <View style={{
+              width: 50,
+              height: 50,
+              borderRadius: 8,
+              backgroundColor: theme.muted,
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}>
+              <Text style={{ color: theme.mutedForeground, fontSize: fontSize.xl }}>
+                {item.type === 'bill' ? '📜' : item.type === 'court_case' ? '⚖️' : '🏛️'}
+              </Text>
+            </View>
+          )}
           <Text
                   style={[
                     typography.h3,
                     {
                       color: theme.foreground,
-                      fontSize: titleFontSize
+                      fontSize: titleFontSize,
+                      flex: 1
                     },
                   ]}
                 >
-                  {item.title}
+                  {displayTitle}
               </Text>
         </View>
 
@@ -232,15 +271,15 @@ export default function BrowseScreen() {
       active: selectedTab === "bill",
       onPress: () => setSelectedTab("bill"),
     },
-    case: {
+    court_case: {
       title: "Cases",
-      active: selectedTab === "case",
-      onPress: () => setSelectedTab("case"),
+      active: selectedTab === "court_case",
+      onPress: () => setSelectedTab("court_case"),
     },
-    order: {
-      title: "Orders",
-      active: selectedTab === "order",
-      onPress: () => setSelectedTab("order"),
+    government_content: {
+      title: "Gov Content",
+      active: selectedTab === "government_content",
+      onPress: () => setSelectedTab("government_content"),
     },
   };
 

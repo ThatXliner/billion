@@ -117,14 +117,38 @@ export default function FeedScreen() {
           {item.title}
         </Text>
 
-        {/* Image */}
-        {item.imageUri && (
+        {/* Hybrid Image Display - prioritize AI-generated imageUri */}
+        {item.imageUri ? (
           <Image
-            style={{ width: "100%", height: 200 }}
+            style={{ width: "100%", height: 200, borderRadius: rd[2] }}
             source={{ uri: item.imageUri }}
             contentFit="cover"
-            transition={1000}
+            transition={300}
           />
+        ) : item.thumbnailUrl ? (
+          <Image
+            style={{ width: "100%", height: 200, borderRadius: rd[2] }}
+            source={{ uri: item.thumbnailUrl }}
+            contentFit="cover"
+            transition={300}
+          />
+        ) : (
+          <View
+            style={{
+              width: "100%",
+              height: 200,
+              borderRadius: rd[2],
+              backgroundColor: theme.muted,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+            lightColor={theme.muted}
+            darkColor={theme.muted}
+          >
+            <Text style={{ fontSize: 48 }}>
+              {item.type === "bill" ? "📜" : item.type === "court_case" ? "⚖️" : "🏛️"}
+            </Text>
+          </View>
         )}
 
         {/* Article Preview */}
