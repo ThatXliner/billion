@@ -19,6 +19,7 @@ import {
   incrementAIArticlesGenerated,
   incrementImagesSearched,
 } from './metrics.js';
+import { generateVideoForContent } from './video-operations.js';
 
 /**
  * Insert or update a bill with version tracking and conditional generation
@@ -148,6 +149,19 @@ export async function upsertBill(billData: BillData) {
     .returning();
 
   console.log(`Bill ${billData.billNumber} upserted`);
+
+  // Generate video content
+  if (result && billData.fullText) {
+    await generateVideoForContent(
+      'bill',
+      result.id,
+      billData.title,
+      billData.fullText,
+      newContentHash,
+      billData.sourceWebsite,
+    );
+  }
+
   return result;
 }
 
@@ -259,6 +273,19 @@ export async function upsertGovernmentContent(contentData: GovernmentContentData
     .returning();
 
   console.log(`Government content "${contentData.title}" upserted`);
+
+  // Generate video content
+  if (result && contentData.fullText) {
+    await generateVideoForContent(
+      'government_content',
+      result.id,
+      contentData.title,
+      contentData.fullText,
+      newContentHash,
+      contentData.source ?? 'whitehouse.gov',
+    );
+  }
+
   return result;
 }
 
@@ -403,5 +430,18 @@ export async function upsertCourtCase(caseData: CourtCaseData) {
     .returning();
 
   console.log(`Court case ${caseData.caseNumber} upserted`);
+
+  // Generate video content
+  if (result && caseData.fullText) {
+    await generateVideoForContent(
+      'court_case',
+      result.id,
+      caseData.title,
+      caseData.fullText,
+      newContentHash,
+      caseData.court,
+    );
+  }
+
   return result;
 }
