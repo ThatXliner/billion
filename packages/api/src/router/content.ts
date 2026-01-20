@@ -252,6 +252,7 @@ export const contentRouter = {
           thumbnailUrl: b.thumbnailUrl || undefined,
           citations: (b.citations as { number: number; text: string; url: string; title?: string }[]) || [],
           articleContent: b.aiGeneratedArticle || b.fullText || "No content available",
+
           originalContent: b.fullText || "Full text not available",
         };
       }
@@ -273,8 +274,6 @@ export const contentRouter = {
           thumbnailUrl: c.thumbnailUrl || undefined,
           citations: (c.citations as { number: number; text: string; url: string; title?: string }[]) || [],
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
-          articleContent:
-            c.aiGeneratedArticle || c.fullText || "No content available",
           originalContent: c.fullText || "Full text not available",
         };
       }
@@ -294,15 +293,9 @@ export const contentRouter = {
           type: "case" as const,
           isAIGenerated: !!c.aiGeneratedArticle,
           thumbnailUrl: c.thumbnailUrl || undefined,
-<<<<<<< Updated upstream
+
           citations: (c.citations as { number: number; text: string; url: string; title?: string }[]) || [],
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
-||||||| Stash base
-          articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
-=======
-          articleContent:
-            c.aiGeneratedArticle || c.fullText || "No content available",
->>>>>>> Stashed changes
           originalContent: c.fullText || "Full text not available",
         };
       }
