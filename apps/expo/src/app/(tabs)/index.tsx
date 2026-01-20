@@ -5,27 +5,32 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  useColorScheme,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import Fuse from "fuse.js";
-
+import { Image } from 'expo-image';
 import type { VideoPost } from "@acme/api";
 import { Button } from "@acme/ui/button-native";
-import { Card, CardContent } from "@acme/ui/card-native";
-import {
-  colors,
-  darkTheme,
-  fontSize,
-  fontWeight,
-  lightTheme,
-  radius,
-  spacing,
-} from "@acme/ui/theme-tokens";
 
 import { Text, View } from "~/components/Themed";
+// import { WireframeWave } from "~/components/WireframeWave";
+import {
+  buttons,
+  cards,
+  colors,
+  createHeaderStyles,
+  createSearchStyles,
+  createTabContainerStyles,
+  fontSize,
+  fontWeight,
+  layout,
+  sp,
+  type Theme,
+  typography,
+  useTheme,
+} from "~/styles";
 import { trpc } from "~/utils/api";
 
 interface ContentCard {
@@ -41,71 +46,102 @@ const ContentCardComponent = ({
   theme,
 }: {
   item: ContentCard;
-  theme: typeof darkTheme;
+  theme: Theme;
 }) => {
   const router = useRouter();
-
+  const getTitleFontSize = (titleLength: number) => {
+      if (titleLength < 40) return fontSize.xl;      // ~20px for short titles
+      if (titleLength < 60) return fontSize.lg;      // ~18px for medium titles
+      if (titleLength < 80) return fontSize.base;    // ~16px for longer titles
+      return fontSize.sm;                            // ~14px for very long titles
+    };
+  const titleFontSize = getTitleFontSize(item.title.length);
   return (
-    <Card
-      variant="elevated"
-      style={styles.card}
-      pressable
+    <TouchableOpacity
+      style={[
+        cards.bordered,
+        styles.modernCard,
+        {
+          backgroundColor: theme.card,
+          borderColor: colors.cyan[600],
+          borderWidth: 0
+        },
+      ]}
       onPress={() => {
         router.push(`/article-detail?id=${item.id}`);
       }}
+      activeOpacity={0.9}
     >
-      <CardContent style={styles.cardContent}>
-        <View
-          style={styles.cardTextContainer}
-          lightColor="transparent"
-          darkColor="transparent"
-        >
+      <View
+        style={styles.modernCardContent}
+        lightColor="transparent"
+        darkColor="transparent"
+      >
+        {/* Category label */}
+        <Text style={[styles.categoryLabel, { color: theme.mutedForeground }]}>
+          Presidential Message
+        </Text>
+
+        {/* Title */}
+        <View style={{backgroundColor: theme.card, flex:1,flexDirection:'row', gap: sp[3],}}>
+           <Image
+                style={{ width: 50, height: 50 }}
+                  source="https://picsum.photos/seed/696/3000/2000"
+                  // placeholder={{ blurhash }}
+                  // contentFit="cover"
+                  transition={1000}
+          />
           <Text
-            style={{
-              marginBottom: spacing[2] * 16,
-              fontSize: fontSize.lg,
-              fontWeight: fontWeight.bold,
-              color: theme.foreground,
-            }}
-          >
-            {item.title}
-          </Text>
-          <Text
-            style={{
-              fontSize: fontSize.sm,
-              lineHeight: spacing[5] * 16,
-              color: theme.textSecondary,
-            }}
-          >
-            {item.description}
-          </Text>
+                  style={[
+                    typography.h3,
+                    {
+                      color: theme.foreground,
+                      fontSize: titleFontSize
+                    },
+                  ]}
+                >
+                  {item.title}
+              </Text>
         </View>
-        <View
-          style={styles.cardButtonContainer}
-          lightColor="transparent"
-          darkColor="transparent"
+
+
+        {/* Description */}
+        <Text
+          style={[
+            typography.bodySmall,
+            {
+              color: theme.textSecondary,
+            },
+          ]}
         >
-          <Button
+          {item.description}
+        </Text>
+
+        {/* Action buttons */}
+        {/*<View style={styles.buttonContainer}>*/}
+          {/*<Button
             variant="default"
             size="sm"
+            style={styles.modernCardButton}
             onPress={() => {
               router.push(`/article-detail?id=${item.id}`);
             }}
           >
             Watch Short
-          </Button>
+          </Button>*/}
           <Button
             variant="outline"
             size="sm"
+            style={styles.modernCardButton}
             onPress={() => {
               router.push(`/article-detail?id=${item.id}`);
             }}
           >
             Read More
           </Button>
-        </View>
-      </CardContent>
-    </Card>
+        {/*</View>*/}
+      </View>
+    </TouchableOpacity>
   );
 };
 
@@ -118,11 +154,11 @@ const TabButton = ({
   title: string;
   active: boolean;
   onPress: () => void;
-  theme: typeof darkTheme;
+  theme: Theme;
 }) => (
   <TouchableOpacity
     style={[
-      styles.tabButton,
+      buttons.tab,
       active
         ? { backgroundColor: theme.primary }
         : {
@@ -135,7 +171,7 @@ const TabButton = ({
   >
     <Text
       style={[
-        styles.tabButtonText,
+        buttons.tabText,
         {
           color: active ? theme.primaryForeground : theme.mutedForeground,
         },
@@ -148,8 +184,7 @@ const TabButton = ({
 
 export default function BrowseScreen() {
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === "dark" ? darkTheme : lightTheme;
+  const { theme } = useTheme();
   const [selectedTab, setSelectedTab] = useState<VideoPost["type"] | "all">(
     "all",
   );
@@ -209,74 +244,23 @@ export default function BrowseScreen() {
     },
   };
 
-  const dynamicStyles = {
-    header: {
-      backgroundColor: theme.background,
-      paddingHorizontal: spacing[5] * 16,
-      paddingBottom: spacing[5] * 16,
-      paddingTop: insets.top + 20,
-    },
-    headerText: {
-      fontSize: fontSize["2xl"],
-      fontWeight: fontWeight.bold,
-      color: theme.foreground,
-      marginBottom: spacing[4] * 16,
-    },
-    searchInput: {
-      backgroundColor: theme.input,
-      borderWidth: 1,
-      borderColor: theme.border,
-      borderRadius: radius.lg * 16,
-      paddingHorizontal: spacing[4] * 16,
-      paddingVertical: spacing[3] * 16,
-      fontSize: fontSize.base,
-      color: theme.foreground,
-    },
-    tabContainer: {
-      flexDirection: "row" as const,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-      backgroundColor: theme.background,
-      paddingHorizontal: spacing[5] * 16,
-      paddingVertical: spacing[3] * 16,
-      gap: spacing[2] * 16,
-    },
-    tabButtonActive: {
-      backgroundColor: theme.primary,
-    },
-    tabButtonInactive: {
-      backgroundColor: "transparent",
-      borderWidth: 1,
-      borderColor: theme.border,
-    },
-    tabButtonTextActive: {
-      color: theme.primaryForeground,
-    },
-    tabButtonTextInactive: {
-      color: theme.mutedForeground,
-    },
-    cardTitle: {
-      marginBottom: spacing[2] * 16,
-      fontSize: fontSize.lg,
-      fontWeight: fontWeight.bold,
-      color: theme.foreground,
-    },
-    cardDescription: {
-      fontSize: fontSize.sm,
-      lineHeight: spacing[5] * 16,
-      color: theme.textSecondary,
-    },
-  };
+  // Dynamic styles using helper functions
+  const headerStyles = createHeaderStyles(theme, insets.top);
+  const searchStyles = createSearchStyles(theme);
+  const tabContainerStyles = createTabContainerStyles(theme);
 
   return (
-    <View style={styles.container}>
-      <View style={dynamicStyles.header}>
-        <Text style={dynamicStyles.headerText}>Browse</Text>
+    <View style={layout.container}>
+      {/* Wireframe wave background decoration */}
+      {/*<WireframeWave />*/}
+
+      <View style={headerStyles.container}>
+        <Text style={headerStyles.title}>Browse</Text>
 
         {/* Search Input */}
         <TextInput
-          style={dynamicStyles.searchInput}
-          placeholder="Search bills, cases, and orders..."
+          style={searchStyles}
+          placeholder="Search bills, cases..."
           placeholderTextColor={theme.mutedForeground}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -285,7 +269,7 @@ export default function BrowseScreen() {
         />
       </View>
 
-      <View style={dynamicStyles.tabContainer}>
+      <View style={tabContainerStyles}>
         {Object.values(tabs).map((tab) => (
           <TabButton
             key={tab.title}
@@ -313,10 +297,10 @@ export default function BrowseScreen() {
           </View>
         ) : filteredContent.length === 0 ? (
           <View style={styles.centerContainer}>
-            <Text style={[styles.emptyText, { color: theme.foreground }]}>
+            <Text style={[typography.h4, { color: theme.foreground }]}>
               No results found
             </Text>
-            <Text style={[styles.emptySubtext, { color: theme.mutedForeground }]}>
+            <Text style={[typography.bodySmall, styles.emptySubtext, { color: theme.mutedForeground }]}>
               Try adjusting your search terms
             </Text>
           </View>
@@ -339,58 +323,47 @@ export default function BrowseScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  tabButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  tabButtonText: {
-    fontSize: 14,
-    fontWeight: fontWeight.medium,
-  },
   scrollView: {
     flex: 1,
-    padding: spacing[5] * 16,
+    padding: sp[5],
   },
   centerContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: spacing[10] * 16,
+    paddingVertical: sp[10],
   },
   errorText: {
     fontSize: fontSize.base,
   },
-  emptyText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-  },
   emptySubtext: {
-    marginTop: spacing[2] * 16,
-    fontSize: fontSize.sm,
+    marginTop: sp[2],
   },
   resultsText: {
     fontSize: fontSize.sm,
-    marginBottom: spacing[3] * 16,
+    marginBottom: sp[3],
     fontWeight: fontWeight.medium,
   },
-  card: {
-    marginBottom: spacing[4] * 16,
+  // Modern card styles
+  modernCard: {
+    marginBottom: sp[4],
   },
-  cardContent: {
+  modernCardContent: {
+    gap: sp[3],
+  },
+  categoryLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    marginBottom: sp[1],
+  },
+  buttonContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[3] * 16,
+    gap: sp[3],
+    marginTop: sp[2],
   },
-  cardTextContainer: {
-    flex: 1,
-  },
-  cardButtonContainer: {
-    width: "33.333%",
-    flexDirection: "column",
-    gap: spacing[3] * 16,
+  modernCardButton: {
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
 });

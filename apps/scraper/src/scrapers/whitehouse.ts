@@ -1,7 +1,9 @@
 import { CheerioCrawler } from "crawlee";
 import TurndownService from "turndown";
 
-import { generateAISummary, upsertPresidentialAction } from "../utils/db";
+import { generateAISummary } from "../utils/ai/text-generation.js";
+import { upsertPresidentialAction } from "../utils/db/operations.js";
+import { resetMetrics, printMetricsSummary } from "../utils/db/metrics.js";
 
 // Convert all-caps text to title case
 function toTitleCase(text: string): string {
@@ -56,6 +58,9 @@ function toTitleCase(text: string): string {
 
 export async function scrapeWhiteHouse() {
   console.log("Starting White House scraper...");
+
+  // Reset metrics for this scraper run
+  resetMetrics();
 
   const collectedLinks = new Set<string>();
   const maxArticles = 20;
@@ -208,4 +213,7 @@ export async function scrapeWhiteHouse() {
   }
 
   console.log("White House scraper completed");
+
+  // Print metrics summary
+  printMetricsSummary("White House");
 }

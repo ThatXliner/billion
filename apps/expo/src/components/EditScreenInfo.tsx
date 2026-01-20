@@ -1,12 +1,14 @@
 import { StyleSheet } from "react-native";
 
-import { colors } from "@acme/ui/theme-tokens";
+import { colors, sp, typography, useTheme } from "~/styles";
 
 import { ExternalLink } from "./ExternalLink";
 import { MonoText } from "./StyledText";
 import { Text, View } from "./Themed";
 
 export default function EditScreenInfo({ path }: { path: string }) {
+  const { theme } = useTheme();
+
   return (
     <View>
       <View style={styles.getStartedContainer}>
@@ -41,7 +43,7 @@ export default function EditScreenInfo({ path }: { path: string }) {
           style={styles.helpLink}
           href="https://docs.expo.io/get-started/create-a-new-app/#opening-the-app-on-your-phonetablet"
         >
-          <Text style={styles.helpLinkText} lightColor={colors.blue[500]}>
+          <Text style={styles.helpLinkText} lightColor={theme.primary}>
             Tap here if your app doesn't automatically update after making
             changes
           </Text>
@@ -57,11 +59,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 50,
   },
   homeScreenFilename: {
-    marginVertical: 7,
+    marginVertical: sp[2],
   },
   codeHighlightContainer: {
     borderRadius: 3,
-    paddingHorizontal: 4,
+    paddingHorizontal: sp[1],
   },
   getStartedText: {
     fontSize: 17,
@@ -69,12 +71,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   helpContainer: {
-    marginTop: 15,
-    marginHorizontal: 20,
+    marginTop: sp[4],
+    marginHorizontal: sp[5],
     alignItems: "center",
   },
   helpLink: {
-    paddingVertical: 15,
+    paddingVertical: sp[4],
   },
   helpLinkText: {
     textAlign: "center",

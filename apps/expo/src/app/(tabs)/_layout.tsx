@@ -1,11 +1,9 @@
 import type React from "react";
-import { useColorScheme } from "react-native";
 import { Tabs } from "expo-router";
 import { FontAwesome } from "@expo/vector-icons";
 import { QueryClientProvider } from "@tanstack/react-query";
 
-import { colors } from "@acme/ui/theme-tokens";
-
+import { colors, useTheme } from "~/styles";
 import { queryClient } from "~/utils/api";
 
 import "../../styles.css";
@@ -19,9 +17,8 @@ function TabBarIcon(props: {
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const tintColor =
-    colorScheme === "dark" ? colors.blue[400] : colors.blue[500];
+  const { isDark } = useTheme();
+  const tintColor = isDark ? colors.blue[400] : colors.blue[500];
 
   return (
     <QueryClientProvider client={queryClient}>

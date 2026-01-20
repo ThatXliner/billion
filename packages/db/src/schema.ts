@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable } from "drizzle-orm/pg-core";
+import { pgTable, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -36,6 +36,11 @@ export const Bill = pgTable("bill", (t) => ({
   summary: t.text(),
   fullText: t.text(),
   aiGeneratedArticle: t.text(), // AI-generated accessible article version
+  thumbnailUrl: t.text(), // URL of the thumbnail image
+  images: t
+    .jsonb()
+    .$type<{ url: string; alt: string; source: string; sourceUrl: string }[]>()
+    .default([]), // Array of relevant images for the article
   url: t.text().notNull(),
   sourceWebsite: t.varchar({ length: 50 }).notNull(), // "govtrack", "congress.gov"
   contentHash: t.varchar({ length: 64 }).notNull().default(""), // SHA-256 hash for version tracking
@@ -47,6 +52,8 @@ export const Bill = pgTable("bill", (t) => ({
   updatedAt: t
     .timestamp({ mode: "date", withTimezone: true })
     .$onUpdateFn(() => sql`now()`),
+}), (table) => ({
+  uniqueBillNumberSource: unique().on(table.billNumber, table.sourceWebsite),
 }));
 
 export const CreateBillSchema = createInsertSchema(Bill).omit({
@@ -64,6 +71,11 @@ export const GovernmentContent = pgTable("government_content", (t) => ({
   description: t.text(),
   fullText: t.text(),
   aiGeneratedArticle: t.text(), // AI-generated accessible article version
+  thumbnailUrl: t.text(), // URL of the thumbnail image
+  images: t
+    .jsonb()
+    .$type<{ url: string; alt: string; source: string; sourceUrl: string }[]>()
+    .default([]), // Array of relevant images for the article
   url: t.text().notNull().unique(), // Unique constraint for upsert by URL
   source: t.varchar({ length: 100 }).notNull().default("whitehouse.gov"), // Source website
   contentHash: t.varchar({ length: 64 }).notNull().default(""), // SHA-256 hash for version tracking
@@ -100,6 +112,11 @@ export const CourtCase = pgTable("court_case", (t) => ({
   status: t.varchar({ length: 100 }), // e.g., "Pending", "Decided"
   fullText: t.text(),
   aiGeneratedArticle: t.text(), // AI-generated accessible article version
+  thumbnailUrl: t.text(), // URL of the thumbnail image
+  images: t
+    .jsonb()
+    .$type<{ url: string; alt: string; source: string; sourceUrl: string }[]>()
+    .default([]), // Array of relevant images for the article
   url: t.text().notNull(),
   contentHash: t.varchar({ length: 64 }).notNull().default(""), // SHA-256 hash for version tracking
   versions: t
@@ -110,6 +127,8 @@ export const CourtCase = pgTable("court_case", (t) => ({
   updatedAt: t
     .timestamp({ mode: "date", withTimezone: true })
     .$onUpdateFn(() => sql`now()`),
+}), (table) => ({
+  uniqueCaseNumber: unique().on(table.caseNumber),
 }));
 
 export const CreateCourtCaseSchema = createInsertSchema(CourtCase).omit({

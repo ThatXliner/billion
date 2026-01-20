@@ -5,6 +5,7 @@ import { appRouter } from "./root";
 import { createTRPCContext } from "./trpc";
 
 export type { VideoPost } from "./router/video";
+export { getThumbnailForContent } from "./router/content";
 
 /**
  * Inference helpers for input types
