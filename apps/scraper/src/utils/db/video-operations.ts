@@ -40,6 +40,7 @@ async function checkExistingVideo(
  * @param fullText - Full text content for AI generation
  * @param contentHash - Hash of source content for cache invalidation
  * @param author - Author/source of the content
+ * @param thumbnailUrl - Optional thumbnail URL from source content (for hybrid support)
  */
 export async function generateVideoForContent(
   contentType: 'bill' | 'government_content' | 'court_case',
@@ -48,6 +49,7 @@ export async function generateVideoForContent(
   fullText: string,
   contentHash: string,
   author: string,
+  thumbnailUrl?: string | null,
 ): Promise<void> {
   const existing = await checkExistingVideo(contentType, contentId, contentHash);
 
@@ -78,7 +80,7 @@ export async function generateVideoForContent(
     shares: Math.floor(Math.random() * 1000) + 10,
   };
 
-  // Upsert video
+  // Upsert video with hybrid image support
   await db
     .insert(Video)
     .values({
@@ -90,6 +92,7 @@ export async function generateVideoForContent(
       imageMimeType,
       imageWidth: imageData ? 1024 : null,
       imageHeight: imageData ? 1024 : null,
+      thumbnailUrl: thumbnailUrl ?? undefined, // Add URL-based thumbnail support
       author,
       engagementMetrics,
       sourceContentHash: contentHash,
@@ -103,6 +106,7 @@ export async function generateVideoForContent(
         imageMimeType,
         imageWidth: imageData ? 1024 : null,
         imageHeight: imageData ? 1024 : null,
+        thumbnailUrl: thumbnailUrl ?? undefined, // Update thumbnail URL on conflict
         sourceContentHash: contentHash,
         updatedAt: new Date(),
       },

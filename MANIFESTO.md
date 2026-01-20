@@ -22,6 +22,71 @@ It aims to use artificial intelligence to generate summaries, analyses, and visu
 
 Currently, we have functional scrapers only for presidential actions and other [White House news](https://www.whitehouse.gov/news/) (I think?). Additionally, we have a sort of mock-feed which we planned to replace with fully AI-generated videos. But for now, it stands as a proof-of-concept with just article cards and poorly AI-generated articles (not engaging nor is it concisely presented).
 
+## Data We Currently Gather
+
+Our scraper collects and processes three types of political content:
+
+### 1. Bills (Congressional Legislation)
+- **Bill Number** - e.g., "H.R. 1234"
+- **Title** - Full bill title
+- **Description** - Brief description (AI-generated if not provided)
+- **Sponsor** - Who introduced the bill
+- **Status** - Current status (e.g., "Introduced", "Passed House")
+- **Introduced Date** - When the bill was introduced
+- **Congress** - Congressional session number (e.g., 118)
+- **Chamber** - "House" or "Senate"
+- **Summary** - Bill summary
+- **Full Text** - Complete bill text
+- **AI-Generated Article** - Accessible, user-friendly version of the bill
+- **Thumbnail URL** - Featured image from Google Image Search
+- **Images** - Array of relevant images with metadata
+- **URL** - Source link
+- **Source Website** - Origin (e.g., "govtrack", "congress.gov")
+
+### 2. Government Content (Executive Branch)
+- **Title** - Content title
+- **Type** - e.g., "Executive Order", "Memorandum", "Proclamation", "News Article", "Fact Sheet", "Briefing"
+- **Published Date** - When published
+- **Description** - Brief description
+- **Full Text** - Complete content
+- **AI-Generated Article** - Accessible, user-friendly version
+- **Thumbnail URL** - Featured image from Google Image Search
+- **Images** - Array of relevant images with metadata
+- **URL** - Source link (unique identifier)
+- **Source** - Origin website (default: "whitehouse.gov")
+
+### 3. Court Cases
+- **Case Number** - Official case identifier
+- **Title** - Case name
+- **Court** - e.g., "Supreme Court", "9th Circuit"
+- **Filed Date** - When case was filed
+- **Description** - Brief description (AI-generated if not provided)
+- **Status** - Current status (e.g., "Pending", "Decided")
+- **Full Text** - Complete case text/opinion
+- **AI-Generated Article** - Accessible, user-friendly version
+- **Thumbnail URL** - Featured image from Google Image Search
+- **Images** - Array of relevant images with metadata
+- **URL** - Source link
+
+### Content Enhancement
+All content types include:
+- **Content Hash** - SHA-256 hash for change detection
+- **Version History** - Tracks changes over time
+- **Created/Updated Timestamps** - Metadata tracking
+
+### AI-Generated Content
+For each piece of content with full text, we generate:
+1. **AI Summary/Description** - If not provided by source
+2. **AI Article** - Accessible, engaging long-form article
+3. **Image Search Keywords** - For finding relevant visuals
+4. **Thumbnail Image** - Via Google Custom Search API (with graceful fallback on quota exceeded)
+
+### Smart Processing
+- Content hashing detects changes to avoid redundant AI generation
+- Conditional regeneration: only creates new AI articles when content changes
+- Reuses existing thumbnails when content unchanged
+- Graceful degradation when Google Image Search quota exceeded
+
 ## The vision for now
 
 Given our Janurary 20th implementation deadline, I believe we should aim to get the app to this state:

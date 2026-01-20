@@ -3,9 +3,9 @@
  * Check for existing records before performing expensive operations
  */
 
-import { eq, and } from '@acme/db';
+import { eq, and, isNull } from '@acme/db';
 import { db } from '@acme/db/client';
-import { Bill, GovernmentContent, CourtCase } from '@acme/db/schema';
+import { Bill, GovernmentContent, CourtCase, Video } from '@acme/db/schema';
 import type { ExistingRecordCheck } from '../types.js';
 
 /**
@@ -112,5 +112,70 @@ export async function checkExistingCourtCase(
   } catch (error) {
     console.error('Error checking existing court case:', error);
     return null;
+  }
+}
+
+/**
+ * Find articles that don't have videos yet
+ * @param contentType - Type of content to query
+ * @param limit - Maximum number of records to return (default: 1000)
+ * @returns Array of articles without videos
+ */
+export async function findArticlesWithoutVideos(
+  contentType: 'bill' | 'government_content' | 'court_case',
+  limit: number = 1000
+) {
+  try {
+    if (contentType === 'bill') {
+      const billsWithoutVideos = await db
+        .select({
+          id: Bill.id,
+          title: Bill.title,
+          fullText: Bill.fullText,
+          contentHash: Bill.contentHash,
+          sourceWebsite: Bill.sourceWebsite,
+          thumbnailUrl: Bill.thumbnailUrl,
+        })
+        .from(Bill)
+        .leftJoin(Video, and(eq(Video.contentType, 'bill'), eq(Video.contentId, Bill.id)))
+        .where(isNull(Video.id))
+        .limit(limit);
+
+      return billsWithoutVideos;
+    } else if (contentType === 'government_content') {
+      const contentWithoutVideos = await db
+        .select({
+          id: GovernmentContent.id,
+          title: GovernmentContent.title,
+          fullText: GovernmentContent.fullText,
+          contentHash: GovernmentContent.contentHash,
+          source: GovernmentContent.source,
+          thumbnailUrl: GovernmentContent.thumbnailUrl,
+        })
+        .from(GovernmentContent)
+        .leftJoin(Video, and(eq(Video.contentType, 'government_content'), eq(Video.contentId, GovernmentContent.id)))
+        .where(isNull(Video.id))
+        .limit(limit);
+
+      return contentWithoutVideos;
+    } else {
+      const casesWithoutVideos = await db
+        .select({
+          id: CourtCase.id,
+          title: CourtCase.title,
+          fullText: CourtCase.fullText,
+          contentHash: CourtCase.contentHash,
+          thumbnailUrl: CourtCase.thumbnailUrl,
+        })
+        .from(CourtCase)
+        .leftJoin(Video, and(eq(Video.contentType, 'court_case'), eq(Video.contentId, CourtCase.id)))
+        .where(isNull(Video.id))
+        .limit(limit);
+
+      return casesWithoutVideos.map(c => ({ ...c, source: 'court' }));
+    }
+  } catch (error) {
+    console.error(`Error finding ${contentType} articles without videos:`, error);
+    return [];
   }
 }

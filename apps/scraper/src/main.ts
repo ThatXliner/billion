@@ -28,22 +28,40 @@ async function main() {
       // Run all scrapers
       console.log('Running all scrapers...\n');
 
-      await scrapeGovTrack();
+      await scrapeGovTrack({
+        maxBills: 100,
+        maxRequests: 500,
+        congress: 119
+      });
       console.log('\n---\n');
 
       await scrapeWhiteHouse();
       console.log('\n---\n');
 
-      await scrapeCongress();
+      await scrapeCongress({
+        maxBills: 100,
+        maxRequests: 500,
+        congress: 119,
+        chamber: 'House'
+      });
       console.log('\n---\n');
 
       console.log('All scrapers completed successfully!');
     } else if (scraperArg === 'govtrack') {
-      await scrapeGovTrack();
+      await scrapeGovTrack({
+        maxBills: 100,
+        maxRequests: 500,
+        congress: 119
+      });
     } else if (scraperArg === 'whitehouse') {
       await scrapeWhiteHouse();
     } else if (scraperArg === 'congress') {
-      await scrapeCongress();
+      await scrapeCongress({
+        maxBills: 100,
+        maxRequests: 500,
+        congress: 119,
+        chamber: 'House'
+      });
     } else {
       console.error('Invalid scraper name. Available options: govtrack, whitehouse, congress, all');
       process.exit(1);
