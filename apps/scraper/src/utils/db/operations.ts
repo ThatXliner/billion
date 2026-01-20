@@ -97,15 +97,20 @@ export async function upsertBill(billData: BillData) {
   // Conditionally search for thumbnail
   let thumbnailUrl: string | null | undefined = undefined;
   if (shouldGenerateImage) {
-    console.log(`Searching for thumbnail for bill: ${billData.title}`);
-    const searchQuery = await generateImageSearchKeywords(
-      billData.title,
-      billData.fullText || '',
-      'bill'
-    );
-    console.log(`Image search query: ${searchQuery}`);
-    thumbnailUrl = await getThumbnailImage(searchQuery);
-    incrementImagesSearched();
+    try {
+      console.log(`Searching for thumbnail for bill: ${billData.title}`);
+      const searchQuery = await generateImageSearchKeywords(
+        billData.title,
+        billData.fullText || '',
+        'bill'
+      );
+      console.log(`Image search query: ${searchQuery}`);
+      thumbnailUrl = await getThumbnailImage(searchQuery);
+      incrementImagesSearched();
+    } catch (error) {
+      console.warn(`Failed to fetch thumbnail for bill ${billData.billNumber}:`, error);
+      thumbnailUrl = null; // Continue without image
+    }
   } else if (existing?.hasThumbnail) {
     console.log(`Using existing thumbnail for bill: ${billData.billNumber}`);
   }
@@ -208,15 +213,20 @@ export async function upsertGovernmentContent(contentData: GovernmentContentData
   // Conditionally search for thumbnail
   let thumbnailUrl: string | null | undefined = undefined;
   if (shouldGenerateImage) {
-    console.log(`Searching for thumbnail for ${contentData.type}: ${contentData.title}`);
-    const searchQuery = await generateImageSearchKeywords(
-      contentData.title,
-      contentData.fullText || '',
-      contentData.type
-    );
-    console.log(`Image search query: ${searchQuery}`);
-    thumbnailUrl = await getThumbnailImage(searchQuery);
-    incrementImagesSearched();
+    try {
+      console.log(`Searching for thumbnail for ${contentData.type}: ${contentData.title}`);
+      const searchQuery = await generateImageSearchKeywords(
+        contentData.title,
+        contentData.fullText || '',
+        contentData.type
+      );
+      console.log(`Image search query: ${searchQuery}`);
+      thumbnailUrl = await getThumbnailImage(searchQuery);
+      incrementImagesSearched();
+    } catch (error) {
+      console.warn(`Failed to fetch thumbnail for government content "${contentData.title}":`, error);
+      thumbnailUrl = null; // Continue without image
+    }
   } else if (existing?.hasThumbnail) {
     console.log(`Using existing thumbnail for government content: ${contentData.title}`);
   }
@@ -345,15 +355,20 @@ export async function upsertCourtCase(caseData: CourtCaseData) {
   // Conditionally search for thumbnail
   let thumbnailUrl: string | null | undefined = undefined;
   if (shouldGenerateImage) {
-    console.log(`Searching for thumbnail for court case: ${caseData.title}`);
-    const searchQuery = await generateImageSearchKeywords(
-      caseData.title,
-      caseData.fullText || '',
-      'court case'
-    );
-    console.log(`Image search query: ${searchQuery}`);
-    thumbnailUrl = await getThumbnailImage(searchQuery);
-    incrementImagesSearched();
+    try {
+      console.log(`Searching for thumbnail for court case: ${caseData.title}`);
+      const searchQuery = await generateImageSearchKeywords(
+        caseData.title,
+        caseData.fullText || '',
+        'court case'
+      );
+      console.log(`Image search query: ${searchQuery}`);
+      thumbnailUrl = await getThumbnailImage(searchQuery);
+      incrementImagesSearched();
+    } catch (error) {
+      console.warn(`Failed to fetch thumbnail for court case ${caseData.caseNumber}:`, error);
+      thumbnailUrl = null; // Continue without image
+    }
   } else if (existing?.hasThumbnail) {
     console.log(`Using existing thumbnail for court case: ${caseData.caseNumber}`);
   }

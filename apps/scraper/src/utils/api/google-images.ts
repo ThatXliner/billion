@@ -36,11 +36,19 @@ export async function searchImages(
     const response = await fetch(url.toString());
 
     if (!response.ok) {
-      console.error(
-        `Google Custom Search API error: ${response.status} ${response.statusText}`,
-      );
       const errorData = await response.json().catch(() => ({}));
-      console.error('Error details:', errorData);
+
+      // Check for quota exceeded error (403)
+      if (response.status === 403 || response.status === 429) {
+        console.warn(
+          `⚠️  Google Image Search quota exceeded or rate limited (${response.status}). Skipping image search.`
+        );
+      } else {
+        console.error(
+          `Google Custom Search API error: ${response.status} ${response.statusText}`,
+        );
+        console.error('Error details:', errorData);
+      }
       return [];
     }
 
