@@ -109,7 +109,7 @@ export default function FeedScreen() {
           lightColor="transparent"
           darkColor="transparent"
         >
-          <Text style={badges.text}>{item.type.toUpperCase()}</Text>
+          <Text style={badges.text}>{item.type=="bill"?"Bill":item.type=="government_content"?"Gov Content":item.type=="court_case"?"Court Case":"General"}</Text>
         </View>
 
         {/* Title */}
