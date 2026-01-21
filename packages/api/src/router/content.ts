@@ -67,17 +67,33 @@ export const contentRouter = {
   // Get all content from database
   getAll: publicProcedure.query(async () => {
     const bills = await db
-      .select()
+      .select({
+        id: Bill.id,
+        title: Bill.title,
+        description: Bill.description,
+        summary: Bill.summary,
+        thumbnailUrl: Bill.thumbnailUrl,
+      })
       .from(Bill)
       .orderBy(desc(Bill.createdAt))
       .limit(20);
     const governmentContent = await db
-      .select()
+      .select({
+        id: GovernmentContent.id,
+        title: GovernmentContent.title,
+        description: GovernmentContent.description,
+        thumbnailUrl: GovernmentContent.thumbnailUrl,
+      })
       .from(GovernmentContent)
       .orderBy(desc(GovernmentContent.createdAt))
       .limit(20);
     const courtCases = await db
-      .select()
+      .select({
+        id: CourtCase.id,
+        title: CourtCase.title,
+        description: CourtCase.description,
+        thumbnailUrl: CourtCase.thumbnailUrl,
+      })
       .from(CourtCase)
       .orderBy(desc(CourtCase.createdAt))
       .limit(20);
@@ -125,49 +141,71 @@ export const contentRouter = {
     .query(async ({ input }) => {
       if (!input.type || input.type === "all") {
         const bills = await db
-          .select()
+          .select({
+            id: Bill.id,
+            title: Bill.title,
+            description: Bill.description,
+            summary: Bill.summary,
+            thumbnailUrl: Bill.thumbnailUrl,
+          })
           .from(Bill)
           .orderBy(desc(Bill.createdAt))
           .limit(20);
         const governmentContent = await db
-          .select()
+          .select({
+            id: GovernmentContent.id,
+            title: GovernmentContent.title,
+            description: GovernmentContent.description,
+            thumbnailUrl: GovernmentContent.thumbnailUrl,
+          })
           .from(GovernmentContent)
           .orderBy(desc(GovernmentContent.createdAt))
           .limit(20);
         const courtCases = await db
-          .select()
+          .select({
+            id: CourtCase.id,
+            title: CourtCase.title,
+            description: CourtCase.description,
+            thumbnailUrl: CourtCase.thumbnailUrl,
+          })
           .from(CourtCase)
           .orderBy(desc(CourtCase.createdAt))
           .limit(20);
 
         const allContent: ContentCard[] = [
           // Bills from database
-          ...bills.map((bill) => ({
-            id: bill.id,
-            title: bill.title,
-            description: bill.description || bill.summary || "",
-            type: "bill" as const,
-            isAIGenerated: false,
-            thumbnailUrl: bill.thumbnailUrl || undefined,
-          })),
+          ...bills
+            .filter((bill) => bill.id && bill.title)
+            .map((bill) => ({
+              id: bill.id,
+              title: bill.title,
+              description: bill.description || bill.summary || "",
+              type: "bill" as const,
+              isAIGenerated: false,
+              thumbnailUrl: bill.thumbnailUrl || undefined,
+            })),
           // Government content from database
-          ...governmentContent.map((content) => ({
-            id: content.id,
-            title: content.title,
-            description: content.description || "",
-            type: "government_content" as const,
-            isAIGenerated: false,
-            thumbnailUrl: content.thumbnailUrl || undefined,
-          })),
+          ...governmentContent
+            .filter((content) => content.id && content.title)
+            .map((content) => ({
+              id: content.id,
+              title: content.title,
+              description: content.description || "",
+              type: "government_content" as const,
+              isAIGenerated: false,
+              thumbnailUrl: content.thumbnailUrl || undefined,
+            })),
           // Court cases from database
-          ...courtCases.map((courtCase) => ({
-            id: courtCase.id,
-            title: courtCase.title,
-            description: courtCase.description || "",
-            type: "court_case" as const,
-            isAIGenerated: false,
-            thumbnailUrl: courtCase.thumbnailUrl || undefined,
-          })),
+          ...courtCases
+            .filter((courtCase) => courtCase.id && courtCase.title)
+            .map((courtCase) => ({
+              id: courtCase.id,
+              title: courtCase.title,
+              description: courtCase.description || "",
+              type: "court_case" as const,
+              isAIGenerated: false,
+              thumbnailUrl: courtCase.thumbnailUrl || undefined,
+            })),
         ];
 
         return allContent;
@@ -175,7 +213,13 @@ export const contentRouter = {
 
       if (input.type === "bill") {
         const bills = await db
-          .select()
+          .select({
+            id: Bill.id,
+            title: Bill.title,
+            description: Bill.description,
+            summary: Bill.summary,
+            thumbnailUrl: Bill.thumbnailUrl,
+          })
           .from(Bill)
           .orderBy(desc(Bill.createdAt))
           .limit(50);
@@ -191,7 +235,12 @@ export const contentRouter = {
 
       if (input.type === "government_content" || input.type === "general") {
         const governmentContent = await db
-          .select()
+          .select({
+            id: GovernmentContent.id,
+            title: GovernmentContent.title,
+            description: GovernmentContent.description,
+            thumbnailUrl: GovernmentContent.thumbnailUrl,
+          })
           .from(GovernmentContent)
           .orderBy(desc(GovernmentContent.createdAt))
           .limit(50);
@@ -207,7 +256,12 @@ export const contentRouter = {
 
       if (input.type === "court_case") {
         const courtCases = await db
-          .select()
+          .select({
+            id: CourtCase.id,
+            title: CourtCase.title,
+            description: CourtCase.description,
+            thumbnailUrl: CourtCase.thumbnailUrl,
+          })
           .from(CourtCase)
           .orderBy(desc(CourtCase.createdAt))
           .limit(50);

@@ -1,7 +1,7 @@
 import type { TRPCRouterRecord } from "@trpc/server";
 import { z } from "zod/v4";
 
-import { desc } from "@acme/db";
+import { desc, sql } from "@acme/db";
 import { db } from "@acme/db/client";
 import { Video } from "@acme/db/schema";
 
@@ -32,16 +32,21 @@ export const videoRouter = {
       z.object({
         limit: z.number().min(1).max(50).default(10),
         cursor: z.number().optional(),
+        seed: z.string().optional(), // Random seed for ordering
       }),
     )
     .query(async ({ input }) => {
-      const { limit, cursor = 0 } = input;
+      const { limit, cursor = 0, seed } = input;
 
-      // Query Video table instead of source tables
+      // Query Video table with hash-based ordering if seed provided, else chronological
       const videos = await db
         .select()
         .from(Video)
-        .orderBy(desc(Video.createdAt))
+        .orderBy(
+          seed
+            ? sql`md5(${Video.id}::text || ${seed})`
+            : desc(Video.createdAt),
+        )
         .limit(limit)
         .offset(cursor);
 

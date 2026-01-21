@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -39,6 +39,13 @@ export default function FeedScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const [likedVideos, setLikedVideos] = useState<Set<string>>(new Set());
+  const [feedSeed, setFeedSeed] = useState<string | null>(null);
+
+  // Generate new random seed each session
+  useEffect(() => {
+    const newSeed = Math.random().toString(36).substring(2, 15);
+    setFeedSeed(newSeed);
+  }, []);
 
   // Use infinite query for video feed
   const {
@@ -51,9 +58,11 @@ export default function FeedScreen() {
   } = useInfiniteQuery({
     ...trpc.video.getInfinite.infiniteQueryOptions({
       limit: 10,
+      seed: feedSeed ?? undefined, // Pass seed to API
     }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
+    enabled: feedSeed !== null, // Wait for seed initialization
   });
 
   // Flatten all pages into a single array of videos
