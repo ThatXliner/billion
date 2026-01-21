@@ -17,7 +17,7 @@ function TabBarIcon(props: {
 }
 
 export default function TabLayout() {
-  const { isDark } = useTheme();
+  const { isDark, theme } = useTheme();
   const tintColor = isDark ? colors.blue[400] : colors.blue[500];
 
   return (
@@ -25,6 +25,10 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: tintColor,
+          tabBarStyle: {
+            backgroundColor: theme.background,
+            borderTopColor: theme.border,
+          },
           // Disable the static render of the header on web
           // to prevent a hydration error in React Navigation v6.
           headerShown: false,
