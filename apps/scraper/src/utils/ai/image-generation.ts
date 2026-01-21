@@ -59,6 +59,13 @@ export async function generateImage(
       height: 1024,
     };
   } catch (error) {
+    // Check if error is due to content policy violation
+    if (error instanceof Error && error.message.includes('content_policy_violation')) {
+      console.warn(`Image generation blocked by content filter for prompt: ${prompt.substring(0, 100)}...`);
+      return null;
+    }
+
+    // Generic error handling
     console.error('Image generation failed:', error);
     return null;
   }

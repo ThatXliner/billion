@@ -81,37 +81,46 @@ export async function generateVideoForContent(
   };
 
   // Upsert video with hybrid image support
-  await db
-    .insert(Video)
-    .values({
-      contentType,
-      contentId,
-      title: marketingCopy.title,
-      description: marketingCopy.description,
-      imageData,
-      imageMimeType,
-      imageWidth: imageData ? 1024 : null,
-      imageHeight: imageData ? 1024 : null,
-      thumbnailUrl: thumbnailUrl ?? undefined, // Add URL-based thumbnail support
-      author,
-      engagementMetrics,
-      sourceContentHash: contentHash,
-    })
-    .onConflictDoUpdate({
-      target: [Video.contentType, Video.contentId],
-      set: {
+  try {
+    await db
+      .insert(Video)
+      .values({
+        contentType,
+        contentId,
         title: marketingCopy.title,
         description: marketingCopy.description,
         imageData,
         imageMimeType,
         imageWidth: imageData ? 1024 : null,
         imageHeight: imageData ? 1024 : null,
-        thumbnailUrl: thumbnailUrl ?? undefined, // Update thumbnail URL on conflict
+        thumbnailUrl: thumbnailUrl ?? undefined, // Add URL-based thumbnail support
+        author,
+        engagementMetrics,
         sourceContentHash: contentHash,
-        updatedAt: new Date(),
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: [Video.contentType, Video.contentId],
+        set: {
+          title: marketingCopy.title,
+          description: marketingCopy.description,
+          imageData,
+          imageMimeType,
+          imageWidth: imageData ? 1024 : null,
+          imageHeight: imageData ? 1024 : null,
+          thumbnailUrl: thumbnailUrl ?? undefined, // Update thumbnail URL on conflict
+          sourceContentHash: contentHash,
+          updatedAt: new Date(),
+        },
+      });
 
-  incrementVideosGenerated();
-  console.log(`Video generated for ${contentType}:${contentId}`);
+    incrementVideosGenerated();
+    console.log(`Video generated for ${contentType}:${contentId}`);
+  } catch (error) {
+    // Sanitize error to avoid logging raw image data
+    const sanitizedError = error instanceof Error
+      ? `${error.name}: ${error.message.replace(/image_data[^,]*,/g, 'image_data=<REDACTED>,')}`
+      : 'Unknown database error';
+    console.error(`Failed to insert video for ${contentType}:${contentId}:`, sanitizedError);
+    throw error;
+  }
 }
