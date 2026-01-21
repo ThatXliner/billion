@@ -101,8 +101,11 @@ export const colors = {
     600: "#ea580c",
   },
   red: {
+    300: "#fca5a5",
+    400: "#f87171",
     500: "#ef4444",
     600: "#dc2626",
+    700: "#b91c1c",
   },
 
   // Base colors

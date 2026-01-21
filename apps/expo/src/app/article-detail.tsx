@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@acme/ui/button-native";
 
+import { AIDisclaimerBanner } from "~/components/AIDisclaimerBanner";
 import { Text, View } from "~/components/Themed";
 // import { WireframeWave } from "~/components/WireframeWave";
 import {
@@ -183,6 +184,11 @@ export default function ArticleDetailScreen() {
           >
             {content.description}
           </Text>
+
+          {/* AI Disclaimer Banner - shown only on Article tab */}
+          {selectedTab === "article" && (
+            <AIDisclaimerBanner style={{ marginBottom: sp[4] }} />
+          )}
 
           {/* Show "View Original" button in Original tab */}
           {selectedTab === "original" && content.url && (
