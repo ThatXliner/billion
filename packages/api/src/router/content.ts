@@ -58,6 +58,7 @@ export type ContentCard = z.infer<typeof ContentCardSchema>;
 const ContentDetailSchema = ContentCardSchema.extend({
   articleContent: z.string(),
   originalContent: z.string(),
+  url: z.string().optional(), // URL to original source
 });
 
 export type ContentDetail = z.infer<typeof ContentDetailSchema>;
@@ -248,6 +249,7 @@ export const contentRouter = {
           thumbnailUrl: b.thumbnailUrl || undefined,
           articleContent: b.aiGeneratedArticle || b.fullText || "No content available",
           originalContent: b.fullText || "Full text not available",
+          url: b.url,
         };
       }
 
@@ -268,6 +270,7 @@ export const contentRouter = {
           thumbnailUrl: c.thumbnailUrl || undefined,
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
           originalContent: c.fullText || "Full text not available",
+          url: c.url,
         };
       }
 
@@ -288,6 +291,7 @@ export const contentRouter = {
           thumbnailUrl: c.thumbnailUrl || undefined,
           articleContent: c.aiGeneratedArticle || c.fullText || "No content available",
           originalContent: c.fullText || "Full text not available",
+          url: c.url,
         };
       }
 
