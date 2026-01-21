@@ -120,14 +120,14 @@ export default function FeedScreen() {
         {/* Hybrid Image Display - prioritize AI-generated imageUri */}
         {item.imageUri ? (
           <Image
-            style={{ width: "100%", height: 200, borderRadius: rd[2] }}
+            style={{ width: "100%", height: 200, borderRadius: rd.xl }}
             source={{ uri: item.imageUri }}
             contentFit="cover"
             transition={300}
           />
         ) : item.thumbnailUrl ? (
           <Image
-            style={{ width: "100%", height: 200, borderRadius: rd[2] }}
+            style={{ width: "100%", height: 200, borderRadius: rd.xl }}
             source={{ uri: item.thumbnailUrl }}
             contentFit="cover"
             transition={300}
@@ -137,7 +137,7 @@ export default function FeedScreen() {
             style={{
               width: "100%",
               height: 200,
-              borderRadius: rd[2],
+              borderRadius: rd.xl,
               backgroundColor: theme.muted,
               justifyContent: "center",
               alignItems: "center",
@@ -152,7 +152,7 @@ export default function FeedScreen() {
         )}
 
         {/* Article Preview */}
-        <Text style={[styles.articlePreview, { color: theme.mutedForeground }]}>
+        <Text style={[styles.articlePreview, { color: theme.mutedForeground, marginTop:20 }]}>
           {item.articlePreview}
         </Text>
 
