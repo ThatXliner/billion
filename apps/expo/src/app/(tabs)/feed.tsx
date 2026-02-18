@@ -307,11 +307,10 @@ const styles = StyleSheet.create({
     marginBottom: sp[4],
   },
   articlePreview: {
-    fontFamily: "InriaSerif_400Regular",
+    fontFamily: "AlbertSans_400Regular",
     fontSize: fontSize.base,
     marginBottom: sp[4],
     lineHeight: fontSize.base * 1.6,
-    fontStyle: "italic",
   },
   author: {
     fontFamily: "AlbertSans_600SemiBold",

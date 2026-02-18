@@ -143,11 +143,19 @@ export default function ArticleDetailScreen() {
         <View
           style={[
             tabContainerStyles,
-            {
-              borderBottomColor: theme.border,
-            },
+            { borderBottomColor: theme.border, alignItems: "center" },
           ]}
         >
+          {/* Close button — left of tabs, 44×44 touch target, no background */}
+          <TouchableOpacity
+            style={localStyles.closeButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close" size={22} color={colors.white} />
+          </TouchableOpacity>
+
           <TabButton
             title="Article"
             active={selectedTab === "article"}
@@ -230,14 +238,6 @@ export default function ArticleDetailScreen() {
           </View>
         </ScrollView>
 
-        {/* Close button — top-left, no background per brand spec */}
-        <TouchableOpacity
-          style={localStyles.floatingActions}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="close" size={24} color={colors.white} />
-        </TouchableOpacity>
       </SafeAreaView>
     </>
   );
@@ -289,14 +289,12 @@ const localStyles = StyleSheet.create({
     marginTop: sp[4],
     minHeight: 48,
   },
-  // Close button — top-left, 44×44 touch target, no background (brand spec)
-  floatingActions: {
-    position: "absolute",
-    top: sp[4],
-    left: sp[5],
+  // Close button — inline left of tabs, 44×44 touch target, no background
+  closeButton: {
     width: 44,
     height: 44,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: sp[1],
   },
 });
