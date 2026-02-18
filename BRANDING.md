@@ -70,7 +70,7 @@ The long-term vision: become the definitive platform for civic knowledge and pol
 
 | Role | Hex | Usage |
 |------|-----|-------|
-| **Deep Navy** | `#16182A` | Primary background, app chrome, headers, base surface |
+| **Deep Navy** | `#0E1530` | Primary background, app chrome, headers, base surface |
 | **Slate** | `#272D3C` | Secondary surfaces, cards, elevated containers |
 | **White** | `#FFFFFF` | Primary text on dark, key UI elements, button fills |
 | **Black** | `#000000` | Text on light surfaces, high-contrast elements |
@@ -79,7 +79,7 @@ The long-term vision: become the definitive platform for civic knowledge and pol
 
 The app uses surface layering rather than color variation to create depth:
 
-1. **Base** — Deep Navy (`#16182A`): the default canvas everywhere
+1. **Base** — Deep Navy (`#0E1530`): the default canvas everywhere
 2. **Elevated** — Slate (`#272D3C`): cards, containers, modals floating above base
 3. **Highest** — Slightly lighter than Slate or with subtle border separation: popovers, dropdowns, nested elements
 
@@ -87,7 +87,7 @@ The app uses surface layering rather than color variation to create depth:
 
 A subtle dark gradient used for hero moments, onboarding screens, and key decision points:
 
-`linear-gradient(180deg, #16182A 0%, #272D3C 100%)`
+`linear-gradient(180deg, #0E1530 0%, #272D3C 100%)`
 
 This is for full-bleed surfaces only — never apply it to small components.
 
@@ -242,7 +242,7 @@ Use italic IBM Plex Serif for emphasis within headlines — as seen in the sign-
 - **Content structure:** Content type badge (top), headline in Inria Serif, preview text in Albert Sans, metadata (source, date) in secondary color
 
 #### Elevated Card (Modal / Overlay)
-- **Background:** Deep Navy (`#16182A`) to Slate gradient, or solid Slate
+- **Background:** Deep Navy (`#0E1530`) to Slate gradient, or solid Slate
 - **Corner radius:** 16–20px
 - **Shadow:** `0 8px 24px rgba(0, 0, 0, 0.4)`
 - **Usage:** Sign-up flows, article detail overlays, settings panels
@@ -275,7 +275,7 @@ Use italic IBM Plex Serif for emphasis within headlines — as seen in the sign-
 
 ### App Icon
 - **Shape:** Rounded square (iOS superellipse / Android adaptive icon)
-- **Background:** Deep Navy (`#16182A`)
+- **Background:** Deep Navy (`#0E1530`)
 - **Mark:** White "B" monogram centered — the monogram incorporates column/pillar motifs, a visual nod to civic architecture
 - **Variants:** Dark background (primary), light background (marketing use)
 
@@ -424,7 +424,7 @@ Shadows should be deep and soft — reinforcing the layered dark aesthetic. No c
 
 ```
 /* Colors — Primary */
---color-deep-navy:      #16182A
+--color-deep-navy:      #0E1530
 --color-slate:          #272D3C
 --color-white:          #FFFFFF
 --color-black:          #000000
@@ -442,7 +442,7 @@ Shadows should be deep and soft — reinforcing the layered dark aesthetic. No c
 --color-text-secondary: #8A8FA0
 
 /* Colors — Surface */
---color-gradient:       linear-gradient(180deg, #16182A 0%, #272D3C 100%)
+--color-gradient:       linear-gradient(180deg, #0E1530 0%, #272D3C 100%)
 --color-border-subtle:  rgba(255, 255, 255, 0.06)
 --color-border-focus:   rgba(255, 255, 255, 0.3)
 
