@@ -1,6 +1,6 @@
 # Billion
 
-Welcome to the codebase. See below for development set-up instructions. See [MANIFESTO](./MANIFESTO.md) for what Billion even is.
+Welcome to the codebase. See below for development set-up instructions. See [Manifesto](./BRANDING.md) for what Billion even is.
 
 ## Quick Start
 
