@@ -1,9 +1,14 @@
 /**
  * Consolidated Styles for the Expo Native App
- * "Deep State Modern" - Futuristic Civic Tech Aesthetic
+ * Billion Brand System — Dark-first civic tech aesthetic
  *
  * This is the SINGLE SOURCE OF TRUTH for all styling in the app.
  * Import everything you need from here: `import { ... } from "~/styles"`
+ *
+ * Font families (must be loaded via expo-font):
+ *   Headlines:   "IBMPlexSerif-Bold", "IBMPlexSerif-BoldItalic"
+ *   Subheadings: "InriaSerif-Bold", "InriaSerif-Regular"
+ *   Body / UI:   "AlbertSans-Regular", "AlbertSans-Medium", "AlbertSans-SemiBold", "AlbertSans-Bold"
  */
 
 import { StyleSheet, useColorScheme } from "react-native";
@@ -30,6 +35,34 @@ export {
   radius,
   shadows,
 } from "@acme/ui/theme-tokens";
+
+// ============================================================================
+// BRAND FONT FAMILIES
+// ============================================================================
+
+/** Use for all screen titles, hero statements, article headlines */
+export const fontDisplay = {
+  regular: "IBMPlexSerif-Regular",
+  bold: "IBMPlexSerif-Bold",
+  italic: "IBMPlexSerif-Italic",
+  boldItalic: "IBMPlexSerif-BoldItalic",
+};
+
+/** Use for section headers, card titles, pull quotes */
+export const fontEditorial = {
+  regular: "InriaSerif-Regular",
+  bold: "InriaSerif-Bold",
+  italic: "InriaSerif-Italic",
+  boldItalic: "InriaSerif-BoldItalic",
+};
+
+/** Use for body text, captions, button labels, metadata, form inputs */
+export const fontBody = {
+  regular: "AlbertSans-Regular",
+  medium: "AlbertSans-Medium",
+  semibold: "AlbertSans-SemiBold",
+  bold: "AlbertSans-Bold",
+};
 
 // ============================================================================
 // THEME HOOK - Use this to get the current theme based on color scheme
@@ -118,52 +151,57 @@ export const layout = StyleSheet.create({
 // ============================================================================
 
 export const typography = StyleSheet.create({
-  // Headings
+  // Headings — IBM Plex Serif (display face, authoritative)
   h1: {
     fontSize: fontSize["3xl"],
-    fontWeight: fontWeight.bold,
+    fontFamily: "IBMPlexSerif-Bold",
     lineHeight: fontSize["3xl"] * 1.2,
   },
   h2: {
     fontSize: fontSize["2xl"],
-    fontWeight: fontWeight.bold,
+    fontFamily: "IBMPlexSerif-Bold",
     lineHeight: fontSize["2xl"] * 1.2,
   },
   h3: {
     fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    lineHeight: fontSize.xl * 1.2,
+    fontFamily: "InriaSerif-Bold",
+    lineHeight: fontSize.xl * 1.3,
   },
   h4: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    lineHeight: fontSize.lg * 1.2,
+    fontFamily: "InriaSerif-Bold",
+    lineHeight: fontSize.lg * 1.3,
   },
 
-  // Body text
+  // Body text — Albert Sans (clean, legible)
   body: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.normal,
-    lineHeight: fontSize.base * 1.5,
+    fontSize: fontSize.lg, // 18px per brand spec
+    fontFamily: "AlbertSans-Regular",
+    lineHeight: fontSize.lg * 1.5,
   },
   bodySmall: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.normal,
-    lineHeight: fontSize.sm * 1.5,
+    fontSize: fontSize.base, // 16px — UI / small labels
+    fontFamily: "AlbertSans-Medium",
+    lineHeight: fontSize.base * 1.4,
   },
   caption: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.normal,
+    fontSize: fontSize.sm, // 14px — timestamps, badges, metadata
+    fontFamily: "AlbertSans-Medium",
+    lineHeight: fontSize.sm * 1.4,
+  },
+  micro: {
+    fontSize: fontSize.xs, // 12px — fine print
+    fontFamily: "AlbertSans-Medium",
     lineHeight: fontSize.xs * 1.4,
   },
 
-  // Text styles
-  bold: { fontWeight: fontWeight.bold },
-  semibold: { fontWeight: fontWeight.semibold },
-  medium: { fontWeight: fontWeight.medium },
-  italic: { fontStyle: "italic" },
-  uppercase: { textTransform: "uppercase", letterSpacing: 0.5 },
-  center: { textAlign: "center" },
+  // Text style modifiers
+  bold: { fontFamily: "AlbertSans-Bold" },
+  semibold: { fontFamily: "AlbertSans-SemiBold" },
+  medium: { fontFamily: "AlbertSans-Medium" },
+  italic: { fontStyle: "italic" as const },
+  uppercase: { textTransform: "uppercase" as const, letterSpacing: 0.5 },
+  center: { textAlign: "center" as const },
 });
 
 // ============================================================================
@@ -452,10 +490,10 @@ export function getMarkdownStyles(theme: Theme) {
 // ============================================================================
 
 export const typeBadgeColors = {
-  bill: colors.purple[600],
-  order: colors.indigo[600],
-  case: colors.cyan[600],
-  general: colors.gray[500],
+  bill: colors.bill,           // Civic Blue #4A7CFF
+  order: colors.executive,     // Deep Indigo #6366F1
+  case: colors.case,           // Teal #0891B2
+  general: colors.general,     // Muted #8A8FA0
 } as const;
 
 export function getTypeBadgeColor(type: string, fallback?: string): string {

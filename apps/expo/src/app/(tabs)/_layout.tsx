@@ -18,7 +18,7 @@ function TabBarIcon(props: {
 
 export default function TabLayout() {
   const { isDark, theme } = useTheme();
-  const tintColor = isDark ? colors.blue[400] : colors.blue[500];
+  const tintColor = isDark ? colors.bill : colors.bill; // Civic Blue #4A7CFF
 
   return (
     <QueryClientProvider client={queryClient}>
