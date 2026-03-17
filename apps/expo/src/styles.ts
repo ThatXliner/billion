@@ -64,6 +64,14 @@ export const fontBody = {
   bold: "AlbertSans-Bold",
 };
 
+/** @deprecated Use fontDisplay, fontEditorial, fontBody instead */
+export const fonts = {
+  bodySemibold: fontBody.semibold,
+  editorialRegular: fontEditorial.regular,
+  body: fontBody.regular,
+  bodyMedium: fontBody.medium,
+};
+
 // ============================================================================
 // THEME HOOK - Use this to get the current theme based on color scheme
 // ============================================================================

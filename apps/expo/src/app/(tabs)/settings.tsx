@@ -46,6 +46,7 @@ interface SettingsItem {
   type: "toggle" | "navigation" | "action";
   icon?: React.ComponentProps<typeof Ionicons>["name"];
   value?: boolean;
+  disabled?: boolean;
   onPress?: () => void;
   onToggle?: (value: boolean) => void;
 }
@@ -150,6 +151,7 @@ export default function SettingsScreen() {
           subtitle: "Manage blocked users and topics",
           type: "navigation",
           icon: "ban-outline",
+          disabled: true,
           onPress: () => router.push("/settings/blocked-content"),
         },
         {
@@ -158,6 +160,7 @@ export default function SettingsScreen() {
           subtitle: "View your saved articles and videos",
           type: "navigation",
           icon: "bookmark-outline",
+          disabled: true,
           onPress: () => router.push("/settings/saved-articles"),
         },
       ],
@@ -171,6 +174,7 @@ export default function SettingsScreen() {
           subtitle: "Update your profile information",
           type: "navigation",
           icon: "person-outline",
+          disabled: true,
           onPress: () => router.push("/settings/edit-profile"),
         },
         {
@@ -277,11 +281,13 @@ export default function SettingsScreen() {
         );
 
       case "navigation":
+        if (item.disabled) return null;
         return (
           <TouchableOpacity
             key={item.id}
             style={[settings.item, { borderBottomColor: theme.border }]}
             onPress={item.onPress}
+            activeOpacity={0.7}
           >
             {item.icon && (
               <Ionicons

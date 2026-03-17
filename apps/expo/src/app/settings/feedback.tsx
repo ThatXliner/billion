@@ -12,7 +12,7 @@
 import { useState } from "react";
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { Text, View } from "~/components/Themed";
@@ -27,8 +27,11 @@ const CATEGORIES = [
 
 export default function FeedbackScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ category?: string }>();
   const { theme } = useTheme();
-  const [category, setCategory] = useState("bug");
+  const [category, setCategory] = useState(
+    typeof params.category === "string" ? params.category : params.category?.[0] || "bug"
+  );
   const [text, setText] = useState("");
   const [submitted, setSubmitted] = useState(false);
 

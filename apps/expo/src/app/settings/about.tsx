@@ -1,18 +1,17 @@
 /**
  * About screen — settings sub-page
  *
- * MOCK DATA / TODO:
- * - TODO: Replace hardcoded "1.0.0 (42)" with real version from expo-constants (Constants.expoConfig.version)
- * - TODO: Replace hardcoded "iOS" with Platform.OS
- * - TODO: Replace hardcoded "release" with build channel from expo-updates (Updates.channel)
- * - TODO: Legal URLs (billion.app/privacy etc.) are placeholder — update with real URLs before launch
- * - TODO: "Open Source Licenses" should use a real OSS license screen (e.g. react-native-oss-licenses)
+ * TODO:
+ * - Legal URLs (billion.app/privacy etc.) are placeholder — update with real URLs before launch
+ * - "Open Source Licenses" should use a real OSS license screen (e.g. react-native-oss-licenses)
  */
 
-import { ScrollView, StyleSheet, TouchableOpacity, Linking } from "react-native";
+import { ScrollView, StyleSheet, TouchableOpacity, Linking, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
+import * as Updates from "expo-updates";
 
 import { Text, View } from "~/components/Themed";
 import { colors, fonts, sp, rd, useTheme } from "~/styles";
@@ -24,18 +23,24 @@ const LINKS = [
   { id: "oss", label: "Open Source Licenses", url: "https://billion.app/licenses", icon: "code-slash-outline" as const },
 ];
 
-// TODO: Replace with expo-constants
-const VERSION_ROWS = [
-  { label: "Version", value: "1.0.0 (42)", icon: "layers-outline" as const },
-  // TODO: Replace with Updates.channel from expo-updates
-  { label: "Build", value: "release", icon: "construct-outline" as const },
-  // TODO: Replace with Platform.OS
-  { label: "Platform", value: "iOS", icon: "phone-portrait-outline" as const },
-];
 
 export default function AboutScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+
+  // Compute version info
+  const version = Constants.expoConfig?.version ?? "1.0.0";
+  const buildNumber = Platform.OS === "ios"
+    ? Constants.expoConfig?.ios?.buildNumber
+    : Constants.expoConfig?.android?.versionCode;
+  const versionText = buildNumber ? `${version} (${buildNumber})` : version;
+  const buildChannel = Updates.channel ?? "release";
+
+  const VERSION_ROWS = [
+    { label: "Version", value: versionText, icon: "layers-outline" as const },
+    { label: "Build", value: buildChannel, icon: "construct-outline" as const },
+    { label: "Platform", value: Platform.OS, icon: "phone-portrait-outline" as const },
+  ];
 
   return (
     <SafeAreaView
