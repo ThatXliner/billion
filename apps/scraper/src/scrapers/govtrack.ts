@@ -65,8 +65,19 @@ export async function scrapeGovTrack(config: GovTrackScraperConfig = {}) {
       // Handle bill text pages
       else if (request.url.includes("/text")) {
         try {
-          // Extract full text from the specific element
+          // Remove script/style/nav nodes before extracting text
+          $("#main_text_content script, #main_text_content style, #main_text_content nav").remove();
           let fullText = $("#main_text_content").text().trim();
+
+          // Reject garbage text: Windows file paths, "Examples:" prefix, or "IB " prefix
+          if (
+            /[A-Z]:\\/.test(fullText) ||
+            fullText.startsWith("Examples:") ||
+            fullText.startsWith("IB ")
+          ) {
+            log.warning(`Rejecting garbage full_text for ${request.url}`);
+            fullText = "";
+          }
 
           // Truncate to 1,000 words
           if (fullText) {

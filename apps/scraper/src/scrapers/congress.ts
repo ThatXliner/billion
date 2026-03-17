@@ -155,11 +155,28 @@ export async function scrapeCongress(config: CongressScraperConfig = {}) {
             summary = summary.slice(0, 1000); // Reasonable limit for summary
           }
 
-          // Try to get full text
-          let fullText = $('.bill-text, [class*="text"]').first().text().trim() || undefined;
+          // Try to get full text using specific selectors to avoid grabbing garbage
+          let fullText: string | undefined;
+          const specificSelectors = [".bill-text-content", "#bill-summary", ".legis-body"];
+          for (const sel of specificSelectors) {
+            const el = $(sel).first();
+            if (el.length > 0) {
+              fullText = el.text().trim() || undefined;
+              break;
+            }
+          }
+          if (!fullText) {
+            // Fallback: collect only <p> elements inside .bill-text
+            const paragraphs: string[] = [];
+            $(".bill-text p").each((_, el) => {
+              const txt = $(el).text().trim();
+              if (txt) paragraphs.push(txt);
+            });
+            fullText = paragraphs.length > 0 ? paragraphs.join("\n\n") : undefined;
+          }
           if (fullText) {
             // Clean up JavaScript and metadata
-            fullText = fullText.split('$(document)')[0]!.trim();
+            fullText = fullText.split('$(document)')[0]!.trim() || undefined;
           }
 
           const billData = {
