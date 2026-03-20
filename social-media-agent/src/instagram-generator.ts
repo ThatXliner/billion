@@ -131,7 +131,7 @@ async function captureFeed(agent: SocialMediaAgent, count: number): Promise<Save
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i]!;
-    const screenshot = await agent.takeScreenshot(`[data-testid="feed-card"] >> nth=${i}`, `feed-item-${i + 1}`);
+    const screenshot = await agent.takeViewportScreenshot(`feed-item-${i + 1}`);
     const caption = await agent.generateSocialPost(item, screenshot.path);
     saved.push(
       await savePost(
@@ -166,7 +166,7 @@ async function captureArticle(agent: SocialMediaAgent, articleId?: string): Prom
   const resolvedArticleId = await resolveArticleId(agent, articleId);
   await agent.navigateTo('article-detail', resolvedArticleId);
   const article = await agent.extractArticleDetail();
-  const screenshot = await agent.takeFullPageScreenshot('article-detail');
+  const screenshot = await agent.takeViewportScreenshot('article-detail');
 
   const contentItem: ContentItem = {
     id: resolvedArticleId,

@@ -2,6 +2,7 @@
 import { Command } from 'commander';
 import { SocialMediaAgent } from './agent';
 import { generateInstagramPosts } from './instagram-generator';
+import { findLatestInstagramPostJson, postInstagramFolders, testInstagramPosting, verifyInstagramLogin } from './instagram-poster';
 import * as path from 'path';
 import 'dotenv/config';
 
@@ -18,6 +19,7 @@ program
   .option('--category <type>', 'Category to capture: browse, feed, article, all', 'all')
   .option('--count <number>', 'Number of browse/feed items to capture', '3')
   .option('--article-id <id>', 'Article ID for article category')
+  .option('--post', 'Post the generated folders to Instagram')
   .option('--headless', 'Run browser in headless mode', true)
   .option('--no-headless', 'Show browser window')
   .action(async (options) => {
@@ -42,6 +44,14 @@ program
         console.log(`   JSON: ${result.jsonPath}`);
         console.log(`   Image: ${result.imagePath}`);
       });
+
+      if (options.post) {
+        await postInstagramFolders({
+          postJsonPaths: results.map((result) => result.jsonPath),
+          headless: options.headless,
+        });
+        console.log('\nPosted generated folders to Instagram.');
+      }
     } catch (error) {
       console.error('Error generating Instagram posts:', error);
       process.exit(1);
@@ -216,6 +226,32 @@ program
       process.exit(1);
     } finally {
       await agent.close();
+    }
+  });
+
+program
+  .command('instagram-test')
+  .description('Test Instagram login or post using an existing instagram-posts folder')
+  .option('--json <path>', 'Path to a post.json file. Defaults to the newest folder in instagram-posts/')
+  .option('--login-only', 'Only test Instagram login')
+  .option('--pause-ms <number>', 'Pause before closing the browser after the test flow', '0')
+  .option('--headless', 'Run browser in headless mode', true)
+  .option('--no-headless', 'Show browser window')
+  .action(async (options) => {
+    try {
+      if (options.loginOnly) {
+        await verifyInstagramLogin({ headless: options.headless });
+      } else {
+        const jsonPath = options.json || findLatestInstagramPostJson();
+        await testInstagramPosting({
+          headless: options.headless,
+          postJsonPath: jsonPath,
+          pauseMs: parseInt(options.pauseMs, 10) || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Error testing Instagram flow:', error);
+      process.exit(1);
     }
   });
 

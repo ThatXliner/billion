@@ -25,8 +25,9 @@ if [[ ! -x "$SCRIPT_DIR/node_modules/.bin/ts-node" ]]; then
   exit 1
 fi
 
-"$SCRIPT_DIR/node_modules/.bin/ts-node" "$SCRIPT_DIR/src/cli.ts" instagram --category "$category" --no-headless
+"$SCRIPT_DIR/node_modules/.bin/ts-node" "$SCRIPT_DIR/src/cli.ts" instagram --category "$category" --post --no-headless
 
 echo
 echo "Saved posts under: $SCRIPT_DIR/instagram-posts"
+echo "Instagram posting used the folders generated in this run."
 read "done?Press Enter to close..."

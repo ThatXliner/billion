@@ -4,6 +4,11 @@ import { ScreenshotUtils } from './screenshot-utils';
 import * as path from 'path';
 import * as fs from 'fs';
 
+const CAPTURE_VIEWPORT = {
+  width: 800,
+  height: 1000,
+} as const;
+
 export interface AgentOptions {
   headless?: boolean;
   screenshotsDir?: string;
@@ -65,23 +70,23 @@ export class SocialMediaAgent {
       fs.mkdirSync(this.screenshotsDir, { recursive: true });
     }
 
-    // Launch browser with mobile viewport
+    // Launch browser with a 4:5 portrait viewport for Instagram-ready captures.
     this.browser = await chromium.launch({
       headless: this.options.headless,
       args: ['--disable-dev-shm-usage'],
     });
 
     const context = await this.browser.newContext({
-      viewport: { width: 390, height: 844 },
+      viewport: CAPTURE_VIEWPORT,
       deviceScaleFactor: 1,
-      isMobile: true,
-      hasTouch: true,
+      isMobile: false,
+      hasTouch: false,
       colorScheme: 'dark',
       baseURL: this.options.baseURL,
     });
 
     this.page = await context.newPage();
-    console.log('Agent initialized with mobile viewport (390x844, dark mode)');
+    console.log(`Agent initialized with 4:5 viewport (${CAPTURE_VIEWPORT.width}x${CAPTURE_VIEWPORT.height}, dark mode)`);
   }
 
   async navigateTo(screen: 'browse' | 'feed' | 'article-detail', articleId?: string): Promise<void> {
@@ -486,23 +491,17 @@ export class SocialMediaAgent {
     return result;
   }
 
-  async generateSocialPost(content: ContentItem, screenshotPath?: string): Promise<string> {
+  async generateSocialPost(content: ContentItem, _screenshotPath?: string): Promise<string> {
     if (!this.geminiClient) {
       console.warn('Gemini API key not provided. Returning basic caption.');
       return this.generateBasicCaption(content);
     }
 
     try {
-      let imageAnalysis = '';
-      if (screenshotPath) {
-        imageAnalysis = await this.geminiClient.analyzeImage(screenshotPath);
-      }
-
       const caption = await this.geminiClient.generateCaption({
         title: content.title,
         description: content.description || '',
         contentType: content.type,
-        imageAnalysis,
       });
 
       return caption;
@@ -514,15 +513,15 @@ export class SocialMediaAgent {
 
   private generateBasicCaption(content: ContentItem): string {
     const hashtags = this.getHashtagsForType(content.type);
-    return `${content.title}\n\n${content.description || ''}\n\n${hashtags.join(' ')}`;
+    return `${content.title}\n${content.description || 'Here is the plain-English version of what happened and why it matters.'}\n${hashtags.join(' ')}`;
   }
 
   private getHashtagsForType(type: string): string[] {
     const hashtagMap: Record<string, string[]> = {
-      bill: ['#Legislation', '#Government', '#Politics', '#Bill'],
-      court_case: ['#CourtCase', '#Justice', '#Legal', '#Law'],
-      government_content: ['#Government', '#Policy', '#Order', '#ExecutiveAction'],
-      general: ['#News', '#CurrentEvents', '#Politics'],
+      bill: ['#Congress', '#Policy', '#WhatItMeans', '#Billion'],
+      court_case: ['#Courts', '#Policy', '#WhatItMeans', '#Billion'],
+      government_content: ['#Orders', '#Government', '#WhatItMeans', '#Billion'],
+      general: ['#News', '#Policy', '#WhatItMeans', '#Billion'],
     };
 
     return hashtagMap[type] || ['#News', '#BillionApp'];
