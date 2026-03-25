@@ -1,0 +1,1 @@
+run `run-instagram-posts.command`
