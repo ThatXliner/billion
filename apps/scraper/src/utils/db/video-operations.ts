@@ -5,6 +5,7 @@
 
 import { db } from '@acme/db/client';
 import { Video } from '@acme/db/schema';
+import { uploadImage } from '@acme/db/storage';
 import { and, eq } from '@acme/db';
 import { generateMarketingCopy } from '../ai/marketing-generation.js';
 import { generateImage, convertToJpeg } from '../ai/image-generation.js';
@@ -68,12 +69,11 @@ export async function generateVideoForContent(
   // Generate marketing copy
   const marketingCopy = await generateMarketingCopy(title, fullText, contentType);
 
-  // Generate and convert image
-  let imageData: Buffer | null = null;
-  let imageMimeType = 'image/jpeg';
+  // Generate and convert image (upload happens after DB write to avoid orphans)
+  let jpegData: Buffer | null = null;
   const generatedImage = await generateImage(marketingCopy.imagePrompt);
   if (generatedImage) {
-    imageData = await convertToJpeg(generatedImage.data);
+    jpegData = await convertToJpeg(generatedImage.data);
   }
 
   // Random engagement metrics (same as current video.ts)
@@ -83,7 +83,7 @@ export async function generateVideoForContent(
     shares: Math.floor(Math.random() * 1000) + 10,
   };
 
-  // Upsert video with hybrid image support
+  // Upsert video first (without image URL)
   try {
     await db
       .insert(Video)
@@ -92,11 +92,7 @@ export async function generateVideoForContent(
         contentId,
         title: marketingCopy.title,
         description: marketingCopy.description,
-        imageData,
-        imageMimeType,
-        imageWidth: imageData ? 1024 : null,
-        imageHeight: imageData ? 1024 : null,
-        thumbnailUrl: thumbnailUrl ?? undefined, // Add URL-based thumbnail support
+        thumbnailUrl: thumbnailUrl ?? undefined,
         author,
         engagementMetrics,
         sourceContentHash: contentHash,
@@ -106,18 +102,11 @@ export async function generateVideoForContent(
         set: {
           title: marketingCopy.title,
           description: marketingCopy.description,
-          imageData,
-          imageMimeType,
-          imageWidth: imageData ? 1024 : null,
-          imageHeight: imageData ? 1024 : null,
-          thumbnailUrl: thumbnailUrl ?? undefined, // Update thumbnail URL on conflict
+          thumbnailUrl: thumbnailUrl ?? undefined,
           sourceContentHash: contentHash,
           updatedAt: new Date(),
         },
       });
-
-    incrementVideosGenerated();
-    logger.success(`Video generated for ${contentType}:${contentId}`);
   } catch (error) {
     // Sanitize error to avoid logging raw image data
     const sanitizedError = error instanceof Error
@@ -126,4 +115,38 @@ export async function generateVideoForContent(
     logger.error(`Failed to insert video for ${contentType}:${contentId}: ${sanitizedError}`);
     throw error;
   }
+
+  // Upload image after successful DB write, then update the row
+  if (jpegData) {
+    const storagePath = `videos/${contentType}/${contentId}.jpg`;
+    let imageUrl: string | undefined;
+    try {
+      imageUrl = await uploadImage(storagePath, jpegData);
+    } catch (error) {
+      logger.warn(`Image upload failed for ${contentType}:${contentId}, video saved without image`);
+    }
+    if (imageUrl) {
+      try {
+        await db
+          .update(Video)
+          .set({
+            imageUrl,
+            imageData: null,
+            imageMimeType: null,
+            imageWidth: null,
+            imageHeight: null,
+          })
+          .where(and(eq(Video.contentType, contentType), eq(Video.contentId, contentId)));
+        logger.debug(`Uploaded image to ${storagePath}`);
+      } catch (error) {
+        // Don't delete the uploaded file — it lives at a deterministic path that
+        // may already be referenced by a previous imageUrl, and will be
+        // overwritten on the next successful run.
+        logger.warn(`DB update for imageUrl failed for ${contentType}:${contentId}, image uploaded but URL not saved`);
+      }
+    }
+  }
+
+  incrementVideosGenerated();
+  logger.success(`Video generated for ${contentType}:${contentId}`);
 }
