@@ -9,6 +9,7 @@ import {
   orderTextVersionsNewestFirst,
   parseBillIdentifier,
   parseBillUrl,
+  retryReasonForRecentOutcome,
   SORT_UPDATE_ASC,
   SORT_UPDATE_DESC,
 } from "./congress.js";
@@ -173,5 +174,26 @@ test("only a deferred outcome needs re-queueing", () => {
   assert.equal(
     advancesCursor({ status: "deferred", reason: "run budget reached" }),
     false,
+  );
+});
+
+test("the recent refresh durably retries unfinished enrichment", () => {
+  assert.equal(
+    retryReasonForRecentOutcome({
+      status: "deferred",
+      reason: "run budget reached",
+    }),
+    "run budget reached",
+  );
+  assert.equal(
+    retryReasonForRecentOutcome({ status: "written", id: "hr-4795" }),
+    undefined,
+  );
+  assert.equal(
+    retryReasonForRecentOutcome({
+      status: "skipped",
+      reason: "no summary source published",
+    }),
+    undefined,
   );
 });

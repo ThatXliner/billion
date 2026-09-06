@@ -10,6 +10,7 @@ import { Image } from "expo-image";
 
 import type { FeaturedBillItem } from "~/utils/featured-bills";
 import { Text } from "~/components/Themed";
+import { useRelativeActivity } from "~/hooks/useRelativeActivity";
 import { colors, fontBody, fontDisplay, hair, planes } from "~/styles";
 import { toCardItem } from "~/utils/content";
 import { contentImageSource } from "~/utils/editorial-visuals";
@@ -32,6 +33,8 @@ function FeaturedBillCard({
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const card = toCardItem(item, { showJurisdiction: true });
+  const relativeActivity = useRelativeActivity(card.activityAt);
+  const status = [card.status, relativeActivity].filter(Boolean).join(" · ");
   const imageSource = contentImageSource(item.imageUri ?? item.thumbnailUrl);
 
   return (
@@ -80,7 +83,7 @@ function FeaturedBillCard({
           {item.featureTakeaway ?? item.description}
         </Text>
         <Text style={s.status} numberOfLines={2}>
-          {card.status}
+          {status}
         </Text>
       </View>
     </TouchableOpacity>

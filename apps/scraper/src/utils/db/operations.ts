@@ -177,6 +177,27 @@ function getUpdateTable(input: ContentData) {
   }
 }
 
+/** Every source-owned bill field that must move when Congress.gov changes. */
+export function billSourceUpdateFields(data: BillData) {
+  return {
+    title: data.title,
+    description: data.description
+      ? clampBillDescription(data.description)
+      : data.description,
+    sponsor: data.sponsor,
+    status: data.status,
+    introducedDate: data.introducedDate,
+    lastActionAt: data.lastActionAt,
+    congress: data.congress,
+    chamber: data.chamber,
+    summary: data.summary,
+    fullText: data.fullText,
+    actions: data.actions,
+    url: data.url,
+    sourceUpdatedAt: data.sourceUpdatedAt,
+  };
+}
+
 export async function upsertContent(
   input: ContentData,
   options?: { newItemLimiter?: NewItemLimiter },
@@ -404,23 +425,12 @@ export async function upsertContent(
       .onConflictDoUpdate({
         target: [Bill.billNumber, Bill.sourceWebsite],
         set: {
-          title: d.title,
-          description,
-          sponsor: d.sponsor,
-          status: d.status,
-          introducedDate: d.introducedDate,
+          ...billSourceUpdateFields(d),
           // Must be listed here, not just in the insert: this is the sort key
           // for every "recent" listing, so a bill that gains an action and is
           // re-scraped has to move. Omitting it would freeze each bill at
           // whatever its last action was the first time we ever stored it.
-          lastActionAt: d.lastActionAt,
-          congress: d.congress,
-          chamber: d.chamber,
-          summary: d.summary,
-          fullText: d.fullText,
-          url: d.url,
           contentHash: newContentHash,
-          sourceUpdatedAt: d.sourceUpdatedAt,
           updatedAt: new Date(),
         },
       })

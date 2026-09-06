@@ -42,18 +42,6 @@ function stateBillTag(
   return showJurisdiction ? match[2] : `${match[1]} ${match[2]}`;
 }
 
-function relativeActivity(value: Date | undefined): string | undefined {
-  if (!value) return undefined;
-  const date = value instanceof Date ? value : new Date(value);
-  const elapsedDays = Math.floor(
-    Math.max(0, Date.now() - date.getTime()) / 86_400_000,
-  );
-  if (elapsedDays === 0) return "today";
-  if (elapsedDays === 1) return "1 day ago";
-  if (elapsedDays < 30) return `${elapsedDays} days ago`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
 /** Map API content onto a card, preserving legislative status and context. */
 export function toCardItem(
   item: ContentItem,
@@ -64,10 +52,6 @@ export function toCardItem(
     : undefined;
   const isBill = item.type === "bill";
   const isStateBill = isBill && !!stateName;
-  const activity = relativeActivity(item.activityAt);
-  const legislativeStatus = [item.billStatus, activity]
-    .filter(Boolean)
-    .join(" · ");
   return {
     id: item.id,
     type: resolveType(item.type),
@@ -77,8 +61,9 @@ export function toCardItem(
     title: item.title,
     gist: item.description,
     status: isBill
-      ? legislativeStatus || STATUS_LABEL.bill
+      ? (item.billStatus ?? STATUS_LABEL.bill)
       : STATUS_LABEL[item.type],
+    activityAt: isBill ? item.activityAt : undefined,
     meta: isStateBill
       ? [item.chamber && `${stateName} ${item.chamber}`, item.sponsor]
           .filter(Boolean)

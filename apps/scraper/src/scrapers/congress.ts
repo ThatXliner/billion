@@ -84,6 +84,12 @@ interface ApiTextVersion {
   formats: Array<{ type: string; url: string }>;
 }
 
+export function retryReasonForRecentOutcome(
+  outcome: UpsertOutcome,
+): string | undefined {
+  return outcome.status === "deferred" ? outcome.reason : undefined;
+}
+
 function getApiKey(): string {
   const key = process.env.CONGRESS_API_KEY;
   if (!key) {
@@ -546,9 +552,9 @@ async function scrapeTargeted(identifiers: string[], congress: number) {
  * re-reads the same head of the feed every day. Advancing a cursor from here
  * would be actively harmful: a descending window's newest item is not a
  * high-water mark for anything, and writing it would strand every older bill
- * from a subsequent ascending walk. Because nothing is skipped-and-forgotten,
- * a failed bill needs no retry bookkeeping — tomorrow's run sees it again as
- * long as it is still in the window.
+ * from a subsequent ascending walk. Failed and deferred bills go into the
+ * durable retry queue because they can fall out of this bounded window before
+ * tomorrow's run.
  *
  * The tradeoff to know about: this covers the *head* of the update feed, not
  * all of it. Between 2026-07-21 and 2026-07-28, 1,742 House bills were updated
@@ -583,47 +589,79 @@ async function scrapeRecent(
   const bills = fetched.slice(0, count);
   logger.info(`Fetched ${bills.length} recently updated bill(s)`);
 
-  if (bills.length === 0) {
+  const scraperKey = `congress:${congress}`;
+  const retryBudget = Math.max(10, Math.floor(count / 4));
+  const retries = await dueRetries(scraperKey, retryBudget);
+  const freshKeys = new Set(
+    bills.map((item) => `${item.type.toLowerCase()}/${item.number}`),
+  );
+  const retryTargets = retries.filter(({ itemKey }) => !freshKeys.has(itemKey));
+
+  if (bills.length === 0 && retryTargets.length === 0) {
     logger.success("No bills returned");
     return;
   }
 
-  setExpectedTotal(bills.length);
+  setExpectedTotal(bills.length + retryTargets.length);
 
   const limit = getItemLimit();
   const newItemLimiter = createNewItemLimiter();
-  let failures = 0;
+
+  const runBill = async (
+    billType: string,
+    billNumber: string,
+    fallbackChamber: "House" | "Senate",
+  ) => {
+    const itemKey = `${billType}/${billNumber}`;
+    try {
+      const { outcome } = await processBill(
+        congress,
+        billType,
+        billNumber,
+        fallbackChamber,
+        newItemLimiter,
+      );
+      const retryReason = retryReasonForRecentOutcome(outcome);
+      if (retryReason) await recordRetry(scraperKey, itemKey, retryReason);
+      else await clearRetry(scraperKey, itemKey);
+    } catch (error) {
+      if (error instanceof BillTextTooLargeError) {
+        logger.warn(`Skipping ${itemKey}: ${error.message}`);
+        await clearRetry(scraperKey, itemKey);
+        return;
+      }
+      logger.error(`Error processing bill ${itemKey}`, error);
+      await recordRetry(
+        scraperKey,
+        itemKey,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  };
 
   await Promise.all(
     bills.map((item) =>
+      limit(() => runBill(item.type.toLowerCase(), item.number, chamber)),
+    ),
+  );
+
+  await Promise.all(
+    retryTargets.map(({ itemKey }) =>
       limit(async () => {
-        try {
-          await processBill(
-            congress,
-            item.type.toLowerCase(),
-            item.number,
-            chamber,
-            newItemLimiter,
-          );
-        } catch (error) {
-          if (error instanceof BillTextTooLargeError) {
-            logger.warn(`Skipping ${item.type}${item.number}: ${error.message}`);
-            return;
-          }
-          failures += 1;
-          logger.error(
-            `Error processing bill ${item.type}${item.number}`,
-            error,
-          );
+        const [billType, billNumber] = itemKey.split("/");
+        if (!billType || !billNumber) {
+          logger.error(`Malformed retry key "${itemKey}" — dropping it`);
+          await clearRetry(scraperKey, itemKey);
+          return;
         }
+        await runBill(billType, billNumber, chamberForBillType(billType));
       }),
     ),
   );
 
-  if (failures > 0) {
-    logger.warn(
-      `${failures} bill(s) failed; they are re-offered by tomorrow's run while they remain in the window`,
-    );
+  const retryDepth = await retryQueueDepth(scraperKey);
+  if (retryDepth > 0) {
+    logger.info(`Retry queue: ${retryDepth} outstanding`);
   }
   logger.success("Completed");
 }

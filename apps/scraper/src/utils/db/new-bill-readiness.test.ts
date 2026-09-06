@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { newBillReadiness } from "./operations.js";
+import { billSourceUpdateFields, newBillReadiness } from "./operations.js";
 
 /**
  * These assertions describe what a reader would see if the rule were loosened.
@@ -53,4 +53,25 @@ test("unusable source text blocks the bill", () => {
     assert.equal(result.ready, false, `fullText ${JSON.stringify(fullText)}`);
     assert.match(result.reason!, /text/);
   }
+});
+
+test("an existing bill refresh replaces its complete action timeline", () => {
+  const actions = [
+    {
+      date: "2026-09-03",
+      text: "On passage Passed by the Yeas and Nays: 237 - 169.",
+      type: "Floor",
+      actionCode: "H37100",
+    },
+  ];
+  const fields = billSourceUpdateFields({
+    billNumber: "H.R. 4795",
+    title: "Protect Economic and Academic Freedom Act of 2026",
+    status: "Passed House",
+    actions,
+    url: "https://www.congress.gov/bill/119th-congress/house-bill/4795",
+    sourceWebsite: "congress.gov",
+  });
+
+  assert.equal(fields.actions, actions);
 });

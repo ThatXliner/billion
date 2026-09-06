@@ -7,6 +7,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Image } from "expo-image";
 
 import type { ContentTypeKey } from "~/styles";
+import { useRelativeActivity } from "~/hooks/useRelativeActivity";
 import { colors, contentType, fontBody, hair, planes } from "~/styles";
 import { contentImageSource } from "~/utils/editorial-visuals";
 import { Icon } from "./Icon";
@@ -19,6 +20,7 @@ export interface ContentCardItem {
   title: string;
   gist?: string;
   status?: string;
+  activityAt?: Date;
   updated?: string;
   meta?: string;
   jurisdictionCode?: string;
@@ -42,6 +44,8 @@ export function ContentCard({
   const imageUri = item.imageUri ?? item.thumbnailUrl;
   const imageSource = contentImageSource(imageUri);
   const [imageFailed, setImageFailed] = useState(false);
+  const relativeActivity = useRelativeActivity(item.activityAt);
+  const status = [item.status, relativeActivity].filter(Boolean).join(" · ");
   return (
     <TouchableOpacity
       style={s.card}
@@ -120,7 +124,7 @@ export function ContentCard({
         </View>
       </View>
       <View style={s.bottom}>
-        {item.status ? (
+        {status ? (
           <Text
             style={[
               s.status,
@@ -131,7 +135,7 @@ export function ContentCard({
             ]}
             numberOfLines={2}
           >
-            {item.status}
+            {status}
           </Text>
         ) : (
           <View />
