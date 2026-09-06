@@ -47,6 +47,15 @@ imports should be followed by `pnpm --filter @acme/scraper content-images --drai
 Without `--drain`, the CLI processes one batch. Image generation runs serially
 with ingestion and may wait behind higher-priority scheduled jobs.
 
+The image job requires `DEEPSEEK_API_KEY` because every new candidate is sent to
+`deepseek-v4-flash-vision-exp` after FLUX generation and before Storage upload.
+The reviewer inspects the wide article-header and square browse-card crops. It
+allows one feedback-guided regeneration, then records an exhausted rejection in
+`content_image_review` so `--drain` and recurring jobs skip it. Existing
+`content_image` rows remain in place and are not retroactively reviewed. Apply
+the committed database migration before deploying the image job; the source
+thumbnail fallback remains available when no new generated image is published.
+
 | id                             | schedule          | notes                                                                            |
 | ------------------------------ | ----------------- | -------------------------------------------------------------------------------- |
 | `congress-daily`               | daily 03:15 local | Refreshes federal bills and applies the 90-day editorial retention policy        |

@@ -8,16 +8,25 @@ import { db } from "@acme/db/client";
 import {
   Bill,
   ContentImage,
+  ContentImageReview as ContentImageReviewRow,
   CourtCase,
   GovernmentContent,
 } from "@acme/db/schema";
 
+import type { ContentImageReview } from "./utils/ai/content-image-review.js";
+import {
+  CONTENT_IMAGE_REVIEW_VERSION,
+  generateReviewedContentImage,
+  missingSourceDescriptionReview,
+  reviewContentImage,
+} from "./utils/ai/content-image-review.js";
 import {
   CONTENT_IMAGE_STYLE_VERSION,
   planRenderedContentImagePrompt,
   versionContentImageHash,
 } from "./utils/ai/content-image-visual.js";
 import { generateLocalPhoto } from "./utils/ai/image-generation.js";
+import { getDeepSeekVisionApiKey } from "./utils/ai/provider.js";
 import { runImageBatches } from "./utils/image-batches.js";
 import { createLogger } from "./utils/log.js";
 import { uploadContentImage } from "./utils/storage/content-images.js";
@@ -49,10 +58,31 @@ async function billCandidates(limit: number): Promise<Candidate[]> {
         eq(ContentImage.contentId, Bill.id),
       ),
     )
+    .leftJoin(
+      ContentImageReviewRow,
+      and(
+        eq(ContentImageReviewRow.contentType, "bill"),
+        eq(ContentImageReviewRow.contentId, Bill.id),
+      ),
+    )
     .where(
-      or(
-        isNull(ContentImage.id),
-        sql`${ContentImage.contentHash} <> md5(${`${CONTENT_IMAGE_STYLE_VERSION}:`} || ${Bill.contentHash})`,
+      and(
+        or(
+          isNull(ContentImage.id),
+          sql`${ContentImage.contentHash} <> md5(${`${CONTENT_IMAGE_STYLE_VERSION}:`} || ${Bill.contentHash})`,
+        ),
+        sql`(
+          ${ContentImageReviewRow.id} is null
+          or ${ContentImageReviewRow.status} <> 'rejected'
+          or ${ContentImageReviewRow.contentHash} <> ${Bill.contentHash}
+          or ${ContentImageReviewRow.styleVersion} <> ${CONTENT_IMAGE_STYLE_VERSION}
+          or (
+            ${ContentImageReviewRow.attempts} = 0
+            and
+            ${ContentImageReviewRow.rejectionReasons} @> '["insufficient-source-description"]'::jsonb
+            and btrim(coalesce(${Bill.description}, ${Bill.summary}, '')) <> ''
+          )
+        )`,
       ),
     )
     .orderBy(
@@ -81,10 +111,31 @@ async function governmentCandidates(limit: number): Promise<Candidate[]> {
         eq(ContentImage.contentId, GovernmentContent.id),
       ),
     )
+    .leftJoin(
+      ContentImageReviewRow,
+      and(
+        eq(ContentImageReviewRow.contentType, "government_content"),
+        eq(ContentImageReviewRow.contentId, GovernmentContent.id),
+      ),
+    )
     .where(
-      or(
-        isNull(ContentImage.id),
-        sql`${ContentImage.contentHash} <> md5(${`${CONTENT_IMAGE_STYLE_VERSION}:`} || ${GovernmentContent.contentHash})`,
+      and(
+        or(
+          isNull(ContentImage.id),
+          sql`${ContentImage.contentHash} <> md5(${`${CONTENT_IMAGE_STYLE_VERSION}:`} || ${GovernmentContent.contentHash})`,
+        ),
+        sql`(
+          ${ContentImageReviewRow.id} is null
+          or ${ContentImageReviewRow.status} <> 'rejected'
+          or ${ContentImageReviewRow.contentHash} <> ${GovernmentContent.contentHash}
+          or ${ContentImageReviewRow.styleVersion} <> ${CONTENT_IMAGE_STYLE_VERSION}
+          or (
+            ${ContentImageReviewRow.attempts} = 0
+            and
+            ${ContentImageReviewRow.rejectionReasons} @> '["insufficient-source-description"]'::jsonb
+            and btrim(coalesce(${GovernmentContent.description}, '')) <> ''
+          )
+        )`,
       ),
     )
     .orderBy(desc(GovernmentContent.publishedDate))
@@ -108,10 +159,31 @@ async function courtCandidates(limit: number): Promise<Candidate[]> {
         eq(ContentImage.contentId, CourtCase.id),
       ),
     )
+    .leftJoin(
+      ContentImageReviewRow,
+      and(
+        eq(ContentImageReviewRow.contentType, "court_case"),
+        eq(ContentImageReviewRow.contentId, CourtCase.id),
+      ),
+    )
     .where(
-      or(
-        isNull(ContentImage.id),
-        sql`${ContentImage.contentHash} <> md5(${`${CONTENT_IMAGE_STYLE_VERSION}:`} || ${CourtCase.contentHash})`,
+      and(
+        or(
+          isNull(ContentImage.id),
+          sql`${ContentImage.contentHash} <> md5(${`${CONTENT_IMAGE_STYLE_VERSION}:`} || ${CourtCase.contentHash})`,
+        ),
+        sql`(
+          ${ContentImageReviewRow.id} is null
+          or ${ContentImageReviewRow.status} <> 'rejected'
+          or ${ContentImageReviewRow.contentHash} <> ${CourtCase.contentHash}
+          or ${ContentImageReviewRow.styleVersion} <> ${CONTENT_IMAGE_STYLE_VERSION}
+          or (
+            ${ContentImageReviewRow.attempts} = 0
+            and
+            ${ContentImageReviewRow.rejectionReasons} @> '["insufficient-source-description"]'::jsonb
+            and btrim(coalesce(${CourtCase.description}, '')) <> ''
+          )
+        )`,
       ),
     )
     .orderBy(desc(CourtCase.filedDate), desc(CourtCase.createdAt))
@@ -119,11 +191,78 @@ async function courtCandidates(limit: number): Promise<Candidate[]> {
   return rows.map((row) => ({ ...row, type: "court_case" }));
 }
 
-async function generate(item: Candidate): Promise<void> {
-  const prompt = await planRenderedContentImagePrompt(item);
-  const generated = await generateLocalPhoto(prompt, 1024, 768);
-  if (!generated) throw new Error("Local FLUX returned no image");
-  const data = await sharp(generated.data)
+function reviewValues(
+  item: Candidate,
+  review: ContentImageReview,
+  status: "accepted" | "rejected",
+  attempts: number,
+  now = new Date(),
+) {
+  return {
+    contentType: item.type,
+    contentId: item.id,
+    contentHash: item.contentHash,
+    styleVersion: CONTENT_IMAGE_STYLE_VERSION,
+    status,
+    description: review.description,
+    rejectionReasons: review.rejectionReasons,
+    feedback: review.feedback ?? null,
+    modelVersion: CONTENT_IMAGE_REVIEW_VERSION,
+    attempts,
+    updatedAt: now,
+  };
+}
+
+async function persistRejectedReview(
+  item: Candidate,
+  review: ContentImageReview,
+  attempts: number,
+): Promise<void> {
+  const values = reviewValues(item, review, "rejected", attempts);
+  await db
+    .insert(ContentImageReviewRow)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [
+        ContentImageReviewRow.contentType,
+        ContentImageReviewRow.contentId,
+      ],
+      set: values,
+    });
+}
+
+async function generate(item: Candidate): Promise<"accepted" | "rejected"> {
+  const description = item.description.trim();
+  const missingDescriptionReview = missingSourceDescriptionReview(item);
+  if (missingDescriptionReview) {
+    await persistRejectedReview(item, missingDescriptionReview, 0);
+    return "rejected";
+  }
+
+  const result = await generateReviewedContentImage({
+    source: { title: item.title, description },
+    generate: async (feedback) => {
+      const prompt = await planRenderedContentImagePrompt(
+        item,
+        undefined,
+        3,
+        feedback,
+      );
+      const image = await generateLocalPhoto(prompt, 1024, 768);
+      return image ? { image, prompt } : null;
+    },
+    review: reviewContentImage,
+  });
+
+  if (result.status === "error") {
+    throw result.error;
+  }
+  if (result.status === "rejected") {
+    await persistRejectedReview(item, result.review, result.reviewAttempts);
+    return "rejected";
+  }
+
+  const data = await sharp(result.generated.image.data)
     .jpeg({ quality: 84, mozjpeg: true })
     .toBuffer();
   const stored = await uploadContentImage({
@@ -131,24 +270,43 @@ async function generate(item: Candidate): Promise<void> {
     contentId: item.id,
     data,
   });
-  const values = {
+  const imageValues = {
     contentType: item.type,
     contentId: item.id,
     contentHash: versionContentImageHash(item.contentHash),
     storagePath: stored.path,
     imageHash: stored.hash,
-    prompt,
+    prompt: result.generated.prompt,
     width: 1024,
     height: 768,
     updatedAt: new Date(),
   };
-  await db
-    .insert(ContentImage)
-    .values(values)
-    .onConflictDoUpdate({
-      target: [ContentImage.contentType, ContentImage.contentId],
-      set: values,
-    });
+  const reviewValuesToWrite = reviewValues(
+    item,
+    result.review,
+    "accepted",
+    result.reviewAttempts,
+  );
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(ContentImage)
+      .values(imageValues)
+      .onConflictDoUpdate({
+        target: [ContentImage.contentType, ContentImage.contentId],
+        set: imageValues,
+      });
+    await tx
+      .insert(ContentImageReviewRow)
+      .values(reviewValuesToWrite)
+      .onConflictDoUpdate({
+        target: [
+          ContentImageReviewRow.contentType,
+          ContentImageReviewRow.contentId,
+        ],
+        set: reviewValuesToWrite,
+      });
+  });
+  return "accepted";
 }
 
 const argv = await yargs(hideBin(process.argv))
@@ -198,18 +356,32 @@ await runImageBatches(async () => {
     process.exit(0);
   }
 
+  // Validate the direct vision key before FLUX spends time generating an image.
+  // The default text model cannot inspect image content, so this is a hard gate.
+  getDeepSeekVisionApiKey();
+
   let completed = 0;
+  let accepted = 0;
+  let rejected = 0;
   let failed = 0;
   const limit = pLimit(argv.concurrency);
   await Promise.all(
     candidates.map((item) =>
       limit(async () => {
         try {
-          await generate(item);
+          const outcome = await generate(item);
           completed += 1;
-          logger.success(
-            `${completed}/${candidates.length} ${item.type}:${item.id}`,
-          );
+          if (outcome === "rejected") {
+            rejected += 1;
+            logger.warn(
+              `${completed}/${candidates.length} ${item.type}:${item.id} rejected by image review`,
+            );
+          } else {
+            accepted += 1;
+            logger.success(
+              `${completed}/${candidates.length} ${item.type}:${item.id}`,
+            );
+          }
         } catch (error) {
           failed += 1;
           logger.warn(`Failed ${item.type}:${item.id}`, error);
@@ -217,7 +389,9 @@ await runImageBatches(async () => {
       }),
     ),
   );
-  logger.info(`Done: generated=${completed} failed=${failed}`);
+  logger.info(
+    `Done: accepted=${accepted} rejected=${rejected} failed=${failed}`,
+  );
   if (failed > 0) process.exitCode = 1;
   return { completed, failed };
 }, argv.drain);

@@ -72,6 +72,16 @@ const scraperCostDefinitions = [
     "Estimated Gemini 2.5 Flash vision output price.",
     "2.50",
   ],
+  [
+    "DEEPSEEK_VISION_INPUT_PRICE",
+    "Estimated DeepSeek V4 Flash Vision Exp input price.",
+    "0.22",
+  ],
+  [
+    "DEEPSEEK_VISION_OUTPUT_PRICE",
+    "Estimated DeepSeek V4 Flash Vision Exp output price.",
+    "0.66",
+  ],
   ["FLUX_IMAGE_PRICE", "Estimated price per generated BFL image.", "0.015"],
   [
     "GOOGLE_SEARCH_PRICE",
@@ -363,7 +373,7 @@ export const envRegistry = [
   define({
     key: "DEEPSEEK_API_KEY",
     description:
-      "Deprecated direct DeepSeek key; use OPENROUTER_API_KEY for AI text generation.",
+      "Direct DeepSeek key used by the generated-image vision review; also the legacy text-generation fallback when OpenRouter and the local model are unavailable.",
     group: "AI",
     secret: true,
     setupUrl: "https://platform.deepseek.com/api_keys",

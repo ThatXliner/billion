@@ -1105,6 +1105,42 @@ export const ContentImage = pgTable(
 );
 
 /**
+ * Durable moderation state for generated header artwork. A review row is only
+ * written for the new review pipeline; older ContentImage rows intentionally
+ * remain unreviewed until their content is regenerated.
+ */
+export const ContentImageReview = pgTable(
+  "content_image_review",
+  (t) => ({
+    id: t.uuid().notNull().primaryKey().defaultRandom(),
+    contentType: t.varchar("content_type", { length: 20 }).notNull(),
+    contentId: t.uuid("content_id").notNull(),
+    contentHash: t.varchar("content_hash", { length: 64 }).notNull(),
+    styleVersion: t.varchar("style_version", { length: 100 }).notNull(),
+    status: t.varchar({ length: 20 }).notNull(),
+    description: t.text(),
+    rejectionReasons: t
+      .jsonb("rejection_reasons")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    feedback: t.text(),
+    modelVersion: t.varchar("model_version", { length: 100 }).notNull(),
+    attempts: t.integer().notNull().default(0),
+    createdAt: t.timestamp().defaultNow().notNull(),
+    updatedAt: t
+      .timestamp({ mode: "date", withTimezone: true })
+      .$onUpdateFn(() => sql`now()`),
+  }),
+  (table) => ({
+    uniqueContentImageReview: unique().on(table.contentType, table.contentId),
+    contentIdIndex: index("content_image_review_content_id_idx").on(
+      table.contentId,
+    ),
+  }),
+);
+
+/**
  * Structured article briefs — one row per content item, cached the same way as
  * ContentLens (regenerated when `contentHash` moves). Kept out of the content
  * tables so a brief can be regenerated, versioned, or dropped without touching

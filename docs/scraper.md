@@ -235,7 +235,7 @@ by the scrape path and the retroactive scripts.
 
 ## AI pipeline
 
-Provider config lives in `apps/scraper/src/utils/ai/provider.ts`: text uses an OpenAI-compatible local endpoint (`LOCAL_LLM_BASE_URL`, such as Ollama) first, then **OpenRouter**, with direct DeepSeek retained only as a deprecated last resort. Two workloads stay API-first regardless: bill briefs (`getStructuredLlm()`), because local servers advertise structured output but cannot compile the brief's JSON grammar, and the dual lens (`getSearchModel()`), which needs a provider-native web-search tool. PDF vision fallback uses **Gemini `gemini-2.5-flash`**. Images use the local FLUX server (`LOCAL_FLUX_BASE_URL`) first, then hosted **Black Forest Labs FLUX.2 Klein 9B**. Provider usage and hosted-image costs are tracked per run.
+Provider config lives in `apps/scraper/src/utils/ai/provider.ts`: text uses an OpenAI-compatible local endpoint (`LOCAL_LLM_BASE_URL`, such as Ollama) first, then **OpenRouter**, with direct DeepSeek retained as a text fallback. Two workloads stay API-first regardless: bill briefs (`getStructuredLlm()`), because local servers advertise structured output but cannot compile the brief's JSON grammar, and the dual lens (`getSearchModel()`), which needs a provider-native web-search tool. PDF vision fallback uses **Gemini `gemini-2.5-flash`**. Images use the local FLUX server (`LOCAL_FLUX_BASE_URL`) first, then hosted **Black Forest Labs FLUX.2 Klein 9B**. Provider usage and hosted-image costs are tracked per run.
 
 Each new/changed item runs through:
 
@@ -249,6 +249,32 @@ Each new/changed item runs through:
 5. **Imagery** uses source/search thumbnails and separately generated header art. `content-images.ts` writes header art to object storage and records metadata in `content_image`. Per-change brief artwork uses a separate path. See [the data layer](data-layer.md#source-records-and-derived-content).
 
 The retired video feed no longer generates marketing cards or stores a `video` row.
+
+### Header-art suitability review
+
+`content-images.ts` generates a candidate with FLUX and sends centered crops to
+DeepSeek `deepseek-v4-flash-vision-exp` before it uploads anything. The review
+sees the wide 2:1 crop used by the article header and the square crop used by
+browse cards. It compares both crops with the source description and checks that
+the subject remains recognizable, the framing stays neutral and professional,
+and the pixels contain no invented consequences, caricature, readable text,
+logos, watermarks, or generation defects.
+
+The review response is validated against a fixed decision and reason schema. A
+rejection gives the visual planner one chance to regenerate with corrective
+feedback. A second rejection is recorded in `content_image_review` with its
+reasons and no new `content_image` row is written; any existing row is left
+untouched. `--drain` counts that terminal rejection as completed and excludes
+the same source hash and style version on later runs, so a recurring job cannot
+spend forever on one unsuitable image.
+Network errors, malformed responses, and storage failures remain failed work;
+they publish no new image and let the supervisor retry with its normal backoff.
+
+Rows already in `content_image` predate this gate and are not retroactively
+reviewed. The existing style version remains in place so enabling the review
+does not trigger an archive-wide regeneration. If a generated image is absent,
+the API still uses the source thumbnail when one exists, then the normal
+content-type placeholder.
 
 New bills that need an AI description generate it before the initial insert. A
 provider outage therefore leaves the source item eligible for the next scrape
@@ -283,8 +309,9 @@ loud instead of mid-run. The contract has four tiers:
   `CONGRESS_API_KEY` for congress).
 - **`requiredAny`** — at least one of a group must be set. The text-AI group is
   `[OPENROUTER_API_KEY, LOCAL_LLM_BASE_URL, DEEPSEEK_API_KEY]`: the local
-  endpoint is preferred, OpenRouter is the fallback, and DeepSeek is the
-  deprecated last resort. The civic scrapers omit this group entirely (no AI).
+  endpoint is preferred, OpenRouter is the fallback, and DeepSeek is the direct
+  text fallback. The `content-images` job also requires `DEEPSEEK_API_KEY` for
+  its image review gate. The civic scrapers omit this group entirely (no AI).
 - **`recommended`** — warn but proceed (e.g. `COURTLISTENER_API_KEY` for scotus).
 - **`optional`** — image/stock/model overrides and the per-scraper item caps.
 

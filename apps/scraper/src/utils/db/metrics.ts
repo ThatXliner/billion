@@ -126,6 +126,17 @@ export function printMetricsSummary(scraperName: string): void {
         `${totalTokens.toLocaleString()} (${formatUsd(costs.visionCost)})`,
       );
     }
+    if (
+      costs.deepseekVisionInputTokens > 0 ||
+      costs.deepseekVisionOutputTokens > 0
+    ) {
+      const totalTokens =
+        costs.deepseekVisionInputTokens + costs.deepseekVisionOutputTokens;
+      printKeyValue(
+        "DeepSeek V4 Flash Vision tokens",
+        `${totalTokens.toLocaleString()} (${formatUsd(costs.deepseekVisionCost)})`,
+      );
+    }
     if (costs.fluxImages > 0) {
       printKeyValue(
         "FLUX.2 Klein 9B images",

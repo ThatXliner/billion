@@ -20,10 +20,12 @@ test("the planner sees the source copy but tells the model to translate it into 
 
   assert.match(prompt, /Digital Asset Market Clarity Act/);
   assert.match(prompt, /crypto trading/);
-  assert.match(prompt, /Translate the policy into a scene, not a poster/);
+  assert.match(
+    prompt,
+    /Translate the policy into one literal, documentary-like scene/,
+  );
   assert.match(prompt, /at least three concrete, recognizable objects/);
-  assert.match(prompt, /fantasy must support the topic rather than replace it/);
-  assert.match(prompt, /crystal caverns, foggy labyrinths, glowing portals/);
+  assert.match(prompt, /Do not invent policy consequences/);
 });
 
 test("the FLUX prompt contains only the visual plan, never the bill title or summary", () => {
@@ -35,7 +37,8 @@ test("the FLUX prompt contains only the visual plan, never the bill title or sum
   assert.doesNotMatch(prompt, /Digital Asset Market Clarity Act/);
   assert.doesNotMatch(prompt, /This bill creates clear rules/);
   assert.match(prompt, /^NO WORDS OR TYPOGRAPHY/);
-  assert.match(prompt, /imaginative editorial illustration/);
+  assert.match(prompt, /professional editorial illustration/);
+  assert.match(prompt, /restrained, literal composition/);
   assert.match(prompt, /every other surface that would normally carry writing/);
   assert.match(prompt, /blank and unmarked/);
   assert.match(prompt, /No letters, words, numerals/);
@@ -66,6 +69,16 @@ test("invalid visual plans are retried before the image job fails", async () => 
 
   assert.equal(attempts, 3);
   assert.match(prompt, /brass market scale/);
+});
+
+test("revision feedback is passed to the next visual planning attempt", async () => {
+  const prompt = contentVisualPlanningPrompt(
+    source,
+    "remove the dramatic villain",
+  );
+
+  assert.match(prompt, /REVISION GUIDANCE/);
+  assert.match(prompt, /remove the dramatic villain/);
 });
 
 test("the style version makes old documentary rows stale", () => {

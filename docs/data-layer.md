@@ -12,6 +12,7 @@ The database separates records fetched from government sources from the explanat
 | `content_brief`                   | Structured bill explanations, validated by `@acme/validators`                                              |
 | `content_lens`                    | Competing perspectives with citations and generation metadata                                              |
 | `content_image`                   | Generated header-art storage paths, hashes, prompts, and dimensions                                        |
+| `content_image_review`            | Validated DeepSeek suitability decisions, reasons, and terminal rejection state for generated header art   |
 | `brief_change_image`              | Artwork for individual changes in a brief, including explicit decisions to omit an image                   |
 | `bill_interest`, `featured_bill`  | Editorial assessments and featured-bill selection                                                          |
 | `scraper_cursor`, `scraper_retry` | Source discovery progress and work that needs another attempt                                              |

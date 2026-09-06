@@ -17,6 +17,7 @@ let localProvider: ReturnType<typeof createOpenAICompatible> | null = null;
 
 const DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-v4-flash";
 const DEFAULT_LOCAL_MODEL = "billion-scraper:latest";
+export const DEEPSEEK_VISION_MODEL = "deepseek-v4-flash-vision-exp";
 
 function getOpenRouterApiKey(): string | null {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
@@ -176,9 +177,8 @@ export function getStructuredLlm(): LanguageModel {
 
   const openrouterKey = getOpenRouterApiKey();
   if (openrouterKey) {
-    structuredLlm = getOpenRouterProvider(openrouterKey).chat(
-      getOpenRouterModel(),
-    );
+    structuredLlm =
+      getOpenRouterProvider(openrouterKey).chat(getOpenRouterModel());
     return structuredLlm;
   }
 
@@ -220,6 +220,21 @@ function getDeepSeekApiKey(): string {
   const apiKey = process.env.DEEPSEEK_API_KEY?.trim();
   if (!apiKey) {
     throw new Error("DEEPSEEK_API_KEY is required for scraper AI generation");
+  }
+  return apiKey;
+}
+
+/**
+ * The image review path deliberately uses the direct DeepSeek API. The
+ * OpenAI-compatible text providers above are not guaranteed to preserve image
+ * content parts, while this model's native endpoint accepts them explicitly.
+ */
+export function getDeepSeekVisionApiKey(): string {
+  const apiKey = process.env.DEEPSEEK_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error(
+      `DEEPSEEK_API_KEY is required for ${DEEPSEEK_VISION_MODEL} image review`,
+    );
   }
   return apiKey;
 }
