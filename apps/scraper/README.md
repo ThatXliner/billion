@@ -61,6 +61,7 @@ Use the focused command for the missing asset. Check its help and preview mode f
 | ---------------------------- | ----------------------------------------------------------------- |
 | `reprocess-content`          | Inspect or repair incomplete content; read-only until `--apply`   |
 | `backfill-bill-descriptions` | Fill missing bill descriptions; writes require `--apply`          |
+| `repair-bill-descriptions`   | Repair misleading bill summaries through a reviewed manifest      |
 | `retroactive-briefs`         | Generate missing or stale structured briefs; supports `--dry-run` |
 | `retroactive-lenses`         | Generate missing or stale perspectives; supports `--dry-run`      |
 | `content-images`             | Generate header artwork                                           |
@@ -72,5 +73,18 @@ For example:
 ```bash
 pnpm --filter @acme/scraper retroactive-lenses --type bill --limit 1 --dry-run
 ```
+
+For a bounded bill-description repair, inspect first, then generate a manifest
+for review and apply only that manifest. The command reads stored bill sources;
+it does not call congress.gov or regenerate briefs, lenses, or images.
+
+```bash
+pnpm --filter @acme/scraper repair-bill-descriptions --source congress.gov --limit 100
+pnpm --filter @acme/scraper repair-bill-descriptions --source congress.gov --limit 100 --generate --output /tmp/bill-description-repairs.json
+pnpm --filter @acme/scraper repair-bill-descriptions --apply --manifest /tmp/bill-description-repairs.json --yes
+```
+
+Use repeatable `--id` for a targeted repair. Inventory is read-only; generation
+requires an explicit output path, and production apply requires `--yes`.
 
 [Maintenance and reprocessing](../../docs/scraper.md#maintenance-backfill--reprocessing-scripts) explains write gates, source recovery, and retention behavior. The source hash and each asset's cache determine whether a rerun needs generation. `SCRAPER_FORCE_AI_REGEN=1` bypasses reuse, so use it only for an intentional regeneration.

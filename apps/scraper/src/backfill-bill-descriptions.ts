@@ -41,6 +41,15 @@ interface Candidate {
   url: string;
   summary: string | null;
   fullText: string | null;
+  status: string | null;
+  actions:
+    | {
+        date: string;
+        text: string;
+        type?: string;
+        actionCode?: string;
+      }[]
+    | null;
 }
 type Outcome = "congress-summary" | "ai-summary" | "skipped" | "failed";
 
@@ -60,6 +69,8 @@ async function loadCandidates(limit?: number): Promise<Candidate[]> {
       url: Bill.url,
       summary: Bill.summary,
       fullText: Bill.fullText,
+      status: Bill.status,
+      actions: Bill.actions,
     })
     .from(Bill)
     .where(
@@ -98,7 +109,11 @@ async function resolve(candidate: Candidate): Promise<{
   const summary = candidate.summary ?? fetchedSummary;
   if (summary) {
     return {
-      description: await generateAISummary(candidate.title, summary),
+      description: await generateAISummary(candidate.title, summary, {
+        billNumber: candidate.billNumber,
+        status: candidate.status,
+        actions: candidate.actions,
+      }),
       summary: fetchedSummary,
       outcome: "congress-summary",
     };
@@ -121,7 +136,11 @@ async function resolve(candidate: Candidate): Promise<{
     };
   }
 
-  const description = await generateAISummary(candidate.title, fullText);
+  const description = await generateAISummary(candidate.title, fullText, {
+    billNumber: candidate.billNumber,
+    status: candidate.status,
+    actions: candidate.actions,
+  });
   return {
     description,
     fullText: fetchedFullText,

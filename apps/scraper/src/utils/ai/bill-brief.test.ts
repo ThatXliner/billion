@@ -449,12 +449,20 @@ void test("plain-language lint allows an essential term defined up front", () =>
   assert.deepEqual(findUnexplainedJargon(definedBrief), []);
 });
 
-void test("legal status comes from the scraped status string", () => {
+void test("legal status comes from the scraped lifecycle record", () => {
   assert.equal(deriveLegalStatus("Became Public Law No: 118-42"), "enacted");
   assert.equal(deriveLegalStatus("Signed by President"), "enacted");
   assert.equal(deriveLegalStatus("Introduced"), "proposed");
   assert.equal(deriveLegalStatus("Passed House"), "proposed");
   assert.equal(deriveLegalStatus(null), "proposed");
+  assert.equal(
+    deriveLegalStatus(
+      "Passed/agreed to in Senate",
+      [{ text: "Passed/agreed to in Senate", actionCode: "17000" }],
+      "S.J.Res. 21",
+    ),
+    "proposed",
+  );
 });
 
 /* ---------- transport shapes that must not cost a brief ---------- */

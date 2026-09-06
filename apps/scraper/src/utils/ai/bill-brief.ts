@@ -28,6 +28,7 @@ import { z } from "zod";
 import type {
   BillBrief,
   BillBriefRecord,
+  BillLifecycleAction,
   BriefLegalStatus,
 } from "@acme/validators";
 import {
@@ -45,6 +46,7 @@ import {
   BriefQuoteSchema,
   BriefReadingSchema,
   BriefTermSchema,
+  deriveBillLifecycle,
 } from "@acme/validators";
 
 import type { DualLensSource } from "./text-generation.js";
@@ -912,11 +914,14 @@ export function findMissingEmphasis(brief: BillBrief): string[] {
  */
 export function deriveLegalStatus(
   status: string | null | undefined,
+  actions?: readonly BillLifecycleAction[] | null,
+  billNumber?: string | null,
 ): BriefLegalStatus {
-  const s = (status ?? "").toLowerCase();
-  return /became law|public law|signed by president|enacted|became public law/.test(
-    s,
-  )
+  return deriveBillLifecycle({
+    billNumber,
+    actions,
+    latestAction: status,
+  }).isEnacted
     ? "enacted"
     : "proposed";
 }
@@ -926,6 +931,9 @@ function buildBriefPrompt(args: {
   billNumber: string;
   url: string;
   legalStatus: BriefLegalStatus;
+  lifecycleLabel: string;
+  hasCompletedVote: boolean;
+  isResolution: boolean;
   sourceText: string;
   officialSummary?: string | null;
   priorArticle?: string | null;
@@ -940,6 +948,9 @@ function buildBriefPrompt(args: {
     billNumber,
     url,
     legalStatus,
+    lifecycleLabel,
+    hasCompletedVote,
+    isResolution,
     sourceText,
     officialSummary,
     priorArticle,
@@ -952,8 +963,13 @@ function buildBriefPrompt(args: {
 
   const tense =
     legalStatus === "enacted"
-      ? `This bill is already law. Describe its provisions in the present tense ("requires", "authorizes").`
+      ? `This bill is enacted law. Describe provisions in the present tense ("requires", "authorizes") only when the source supports that they are operative. Do not say the law is currently in force or applies now unless the source gives an effective date or implementation detail.`
       : `This bill is a proposal that has NOT become law. Every effect must be conditional ("would require", "would authorize"). Never write that it "will" do something.`;
+  const lifecycle = `The official action record currently labels this measure "${lifecycleLabel}". ${
+    hasCompletedVote
+      ? "You may report that recorded chamber action as a completed fact, but policy effects remain conditional unless the measure is enacted."
+      : "No completed chamber vote is recorded. Do not say Congress, the House, or the Senate voted to approve, block, or adopt the measure."
+  }${isResolution ? " This is a resolution; adoption is not the same as becoming law." : ""}`;
 
   const retryNote = loadedPhrases?.length
     ? `\n\nYour previous attempt used loaded political phrasing in your own voice: ${loadedPhrases
@@ -981,6 +997,8 @@ function buildBriefPrompt(args: {
 
 ${tense}
 
+${lifecycle}
+
 Your job is to explain the policy, not to promote or attack it. Treat the title, acronym, findings, purpose clauses, and sponsor statements as claims about intent — not proof of results. Base every factual statement on the supplied source text.
 
 Before filling in the fields, silently identify:
@@ -992,6 +1010,7 @@ Before filling in the fields, silently identify:
 Rules that decide whether this brief ships:
 
 - **Mechanism over marketing.** Removing or waiving rules, reviews, reporting, or oversight is deregulation or reduced oversight. Say that. Do not hide it behind "cuts red tape", "modernizes", "streamlines", or "speeds up". Equally, do not attach a hostile label the text does not support.
+- **Keep funding scope precise.** If the source makes federal funding conditional on conduct, describe the funding eligibility consequence and the covered recipients. Do not turn that condition into a blanket ban on the underlying activity or on all institutions unless the source says so.
 - **Quotes are verbatim.** Every "quote" field must be an exact, unedited span copied character-for-character from the source text below. Do not paraphrase, splice, trim mid-word, or fix grammar. Quotes that do not appear in the source are removed automatically, so a paraphrase in quotation marks just loses you a citation.
 - **No invented figures.** A number, date, or dollar amount goes in "facts" only if the source states it. Fewer facts is correct; a plausible-looking invented figure is not.
 - **No manufactured symmetry.** If the text supports one consequence more strongly than another, say so. Use "mixed" or "unclear" for an affected group rather than balancing the list for its own sake.
@@ -1061,11 +1080,17 @@ export async function generateBillBrief(args: {
   fullText: string;
   officialSummary?: string | null;
   status?: string | null;
+  actions?: readonly BillLifecycleAction[] | null;
   priorArticle?: string | null;
 }): Promise<Omit<BillBriefRecord, "generatedAt" | "modelVersion"> | null> {
   if (rateLimitHit) throw new AIRateLimitError();
 
-  const legalStatus = deriveLegalStatus(args.status);
+  const lifecycle = deriveBillLifecycle({
+    billNumber: args.billNumber,
+    actions: args.actions,
+    latestAction: args.status,
+  });
+  const legalStatus = lifecycle.isEnacted ? "enacted" : "proposed";
   const readingResearch = await researchBillContext(
     args.title,
     args.billNumber,
@@ -1088,6 +1113,9 @@ export async function generateBillBrief(args: {
           billNumber: args.billNumber,
           url: args.url,
           legalStatus,
+          lifecycleLabel: lifecycle.label,
+          hasCompletedVote: lifecycle.hasCompletedVote,
+          isResolution: lifecycle.isResolution,
           sourceText: args.fullText,
           officialSummary: args.officialSummary,
           priorArticle: args.priorArticle,

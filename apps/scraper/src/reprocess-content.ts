@@ -56,6 +56,14 @@ interface ContentItem {
   billNumber: string | null;
   officialSummary: string | null;
   status: string | null;
+  actions:
+    | {
+        date: string;
+        text: string;
+        type?: string;
+        actionCode?: string;
+      }[]
+    | null;
 }
 
 interface ProcessResult {
@@ -92,6 +100,7 @@ async function loadContentItems(
         billNumber: Bill.billNumber,
         officialSummary: Bill.summary,
         status: Bill.status,
+        actions: Bill.actions,
       })
       .from(Bill)
       .leftJoin(
@@ -137,6 +146,7 @@ async function loadContentItems(
       billNumber: null,
       officialSummary: null,
       status: null,
+      actions: null,
     }));
   }
 
@@ -163,6 +173,7 @@ async function loadContentItems(
     billNumber: null,
     officialSummary: null,
     status: null,
+    actions: null,
   }));
 }
 
@@ -323,6 +334,7 @@ async function processItem(
         fullText,
         officialSummary: item.officialSummary,
         status: item.status,
+        actions: item.actions,
         priorArticle: effectiveArticle,
       });
       if (!briefPresent) errors.push("brief generation returned nothing");

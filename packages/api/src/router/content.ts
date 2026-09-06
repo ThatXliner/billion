@@ -2,6 +2,7 @@ import type { TRPCRouterRecord } from "@trpc/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 
+import type { BillLifecycleAction } from "@acme/validators";
 import { and, desc, eq, inArray, sql, unionAll } from "@acme/db";
 import { clampBillDescription } from "@acme/db/bill-description";
 import { db } from "@acme/db/client";
@@ -18,11 +19,12 @@ import {
   GovernmentContent,
   SavedArticle,
 } from "@acme/db/schema";
-import { parseBillBriefRecord, sanitizeBillStatus } from "@acme/validators";
+import { parseBillBriefRecord } from "@acme/validators";
 
 import type { ContentJurisdiction } from "../lib/content-jurisdiction";
 import { toBillTimelineActions } from "../lib/bill-actions";
 import { parseBillSponsor, sponsorRole } from "../lib/bill-sponsor";
+import { projectBillStatus } from "../lib/bill-status";
 import {
   billJurisdiction,
   displaySessionLabel,
@@ -276,6 +278,7 @@ interface BillCardSource {
   billNumber: string;
   sourceWebsite: string;
   status?: string | null;
+  actions?: readonly BillLifecycleAction[] | null;
   lastActionAt?: Date | null;
   introducedDate?: Date | null;
   createdAt?: Date | null;
@@ -292,6 +295,7 @@ const BILL_CARD_COLUMNS = {
   billNumber: Bill.billNumber,
   sourceWebsite: Bill.sourceWebsite,
   status: Bill.status,
+  actions: Bill.actions,
   lastActionAt: Bill.lastActionAt,
   introducedDate: Bill.introducedDate,
   createdAt: Bill.createdAt,
@@ -299,7 +303,9 @@ const BILL_CARD_COLUMNS = {
   sponsor: Bill.sponsor,
 };
 
-function toBillCard(bill: BillCardSource): ContentCard & { type: "bill" } {
+export function toBillCard(
+  bill: BillCardSource,
+): ContentCard & { type: "bill" } {
   const jurisdiction = billJurisdiction(bill.sourceWebsite, bill.billNumber);
   const identity = parseStateBillNumber(bill.billNumber);
   return {
@@ -312,9 +318,7 @@ function toBillCard(bill: BillCardSource): ContentCard & { type: "bill" } {
     billNumber: bill.billNumber,
     jurisdiction,
     jurisdictionCode: jurisdictionCode(jurisdiction),
-    billStatus: bill.status
-      ? sanitizeBillStatus(bill.status) || undefined
-      : undefined,
+    billStatus: projectBillStatus(bill),
     activityAt:
       bill.lastActionAt ?? bill.introducedDate ?? bill.createdAt ?? undefined,
     chamber: bill.chamber ?? undefined,
@@ -529,6 +533,7 @@ export const contentRouter = {
               billNumber: sql<string | null>`${Bill.billNumber}`,
               sourceWebsite: sql<string | null>`${Bill.sourceWebsite}`,
               status: sql<string | null>`${Bill.status}`,
+              actions: sql<BillLifecycleAction[] | null>`${Bill.actions}`,
               lastActionAt: sql<Date | null>`${Bill.lastActionAt}`,
               introducedDate: sql<Date | null>`${Bill.introducedDate}`,
               chamber: sql<string | null>`${Bill.chamber}`,
@@ -547,6 +552,7 @@ export const contentRouter = {
               billNumber: sql<string | null>`null`,
               sourceWebsite: sql<string | null>`null`,
               status: sql<string | null>`null`,
+              actions: sql<BillLifecycleAction[] | null>`null`,
               lastActionAt: sql<Date | null>`null`,
               introducedDate: sql<Date | null>`null`,
               chamber: sql<string | null>`null`,
@@ -565,6 +571,7 @@ export const contentRouter = {
               billNumber: sql<string | null>`null`,
               sourceWebsite: sql<string | null>`null`,
               status: sql<string | null>`null`,
+              actions: sql<BillLifecycleAction[] | null>`null`,
               lastActionAt: sql<Date | null>`null`,
               introducedDate: sql<Date | null>`null`,
               chamber: sql<string | null>`null`,
@@ -785,6 +792,7 @@ export const contentRouter = {
             billNumber: sql<string | null>`${Bill.billNumber}`,
             sourceWebsite: sql<string | null>`${Bill.sourceWebsite}`,
             status: sql<string | null>`${Bill.status}`,
+            actions: sql<BillLifecycleAction[] | null>`${Bill.actions}`,
             lastActionAt: sql<Date | null>`${Bill.lastActionAt}`,
             introducedDate: sql<Date | null>`${Bill.introducedDate}`,
             chamber: sql<string | null>`${Bill.chamber}`,
@@ -806,6 +814,7 @@ export const contentRouter = {
             billNumber: sql<string | null>`null`,
             sourceWebsite: sql<string | null>`null`,
             status: sql<string | null>`null`,
+            actions: sql<BillLifecycleAction[] | null>`null`,
             lastActionAt: sql<Date | null>`null`,
             introducedDate: sql<Date | null>`null`,
             chamber: sql<string | null>`null`,
@@ -826,6 +835,7 @@ export const contentRouter = {
             billNumber: sql<string | null>`null`,
             sourceWebsite: sql<string | null>`null`,
             status: sql<string | null>`null`,
+            actions: sql<BillLifecycleAction[] | null>`null`,
             lastActionAt: sql<Date | null>`null`,
             introducedDate: sql<Date | null>`null`,
             chamber: sql<string | null>`null`,
@@ -923,7 +933,7 @@ export const contentRouter = {
             originalContent: b.fullText ?? "Full text not available",
             url: b.url,
             actions: toBillTimelineActions(b.actions ?? []),
-            status: b.status ?? undefined,
+            status: projectBillStatus(b),
             lensData,
             brief,
           },
@@ -1027,6 +1037,7 @@ export const contentRouter = {
             summary: Bill.summary,
             billNumber: Bill.billNumber,
             status: Bill.status,
+            actions: Bill.actions,
             thumbnailUrl: Bill.thumbnailUrl,
             introducedDate: Bill.introducedDate,
           })
@@ -1063,7 +1074,7 @@ export const contentRouter = {
           title: item.title,
           description: billDescription(item.description, item.summary),
           billNumber: item.billNumber,
-          status: item.status ?? undefined,
+          status: projectBillStatus(item),
           thumbnailUrl: item.thumbnailUrl,
           imageUri: item.imageUri,
           introducedDate: item.introducedDate?.toISOString(),
@@ -1091,6 +1102,7 @@ export const contentRouter = {
             billNumber: Bill.billNumber,
             sourceWebsite: Bill.sourceWebsite,
             status: Bill.status,
+            actions: Bill.actions,
             lastActionAt: Bill.lastActionAt,
             introducedDate: Bill.introducedDate,
             chamber: Bill.chamber,
@@ -1189,6 +1201,7 @@ export const contentRouter = {
                   billNumber: Bill.billNumber,
                   sourceWebsite: Bill.sourceWebsite,
                   status: Bill.status,
+                  actions: Bill.actions,
                   lastActionAt: Bill.lastActionAt,
                   introducedDate: Bill.introducedDate,
                   chamber: Bill.chamber,

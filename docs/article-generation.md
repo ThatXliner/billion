@@ -61,9 +61,12 @@ Editorial guarantees are encoded in the schema rather than trusted to a prompt:
   score a group instead of inventing a counterweight to balance the list.
 - **`unknowns` is non-empty.** There is no valid brief that claims to have
   settled everything.
-- **Legal status is derived, not generated.** `deriveLegalStatus()` reads the
-  scraped bill status, so whether the UI says a measure _would_ or _does_ change
-  things comes from a string match rather than an inference.
+- **Legal status is derived, not generated.** `deriveBillLifecycle()` combines
+  the latest source action with the full action record. It distinguishes a
+  chamber passage, a resolution adopted by a chamber, and enactment, so a
+  proposal's effects stay conditional until the source records that it became
+  law. A funding eligibility condition is described with its covered recipients
+  and scope; it is not expanded into a blanket ban on the underlying activity.
 
 ### Where the debate lives
 
@@ -129,9 +132,13 @@ voice.
 
 `content_brief`, one row per content item, keyed on `(contentType, contentId)`
 and cached against the source's `contentHash` — the same contract as
-`content_lens`. Unchanged content never re-pays for an LLM call. Briefs live
-outside the content tables so they can be regenerated, versioned, or dropped
-without touching scraped rows.
+`content_lens`. Bill generation receives the bill number, latest status, and
+action record, so the lifecycle label and legal tense are grounded in source
+events rather than a model guess. Unchanged content never re-pays for a valid
+brief; an existing generated card summary is still checked against the current
+lifecycle so a failed or rate-limited refresh cannot preserve a misleading
+present-tense description forever. Briefs live outside the content tables so
+they can be regenerated, versioned, or dropped without touching scraped rows.
 
 `BILL_BRIEF_VERSION` gates generation and cache reuse. The scraper reuses only
 records that match the current schema, so older rows are regenerated when it

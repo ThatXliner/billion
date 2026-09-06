@@ -370,11 +370,27 @@ async function fetchActions(
   { date: string; text: string; type?: string; actionCode?: string }[]
 > {
   try {
-    const data = await congressFetch<{ actions: ApiAction[] }>(
-      `/bill/${congress}/${billType.toLowerCase()}/${billNumber}/actions`,
-    );
-    if (!data.actions?.length) return [];
-    return data.actions.map((a) => ({
+    const path =
+      "/bill/" +
+      congress +
+      "/" +
+      billType.toLowerCase() +
+      "/" +
+      billNumber +
+      "/actions";
+    const pageSize = 250;
+    const maxPages = 20;
+    const actions: ApiAction[] = [];
+    for (let page = 0; page < maxPages; page++) {
+      const data = await congressFetch<{ actions?: ApiAction[] }>(path, {
+        limit: pageSize,
+        offset: page * pageSize,
+      });
+      const pageActions = data.actions ?? [];
+      actions.push(...pageActions);
+      if (pageActions.length < pageSize) break;
+    }
+    return actions.map((a) => ({
       date: a.actionDate,
       text: a.text,
       type: a.type,

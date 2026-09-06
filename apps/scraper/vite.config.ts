@@ -38,6 +38,9 @@ export default defineConfig({
         "backfill-bill-descriptions": fileURLToPath(
           new URL("./src/backfill-bill-descriptions.ts", import.meta.url),
         ),
+        "repair-bill-descriptions": fileURLToPath(
+          new URL("./src/repair-bill-descriptions-entry.ts", import.meta.url),
+        ),
         "change-images": fileURLToPath(
           new URL("./src/change-images.ts", import.meta.url),
         ),

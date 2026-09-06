@@ -28,6 +28,7 @@ import {
   generateAISummary,
   generateDualLens,
   isUsableDualLens,
+  needsBillSummaryRegeneration,
 } from "../ai/text-generation.js";
 import { getThumbnailImage } from "../api/google-images.js";
 import { clampBillDescription } from "../bill-description.js";
@@ -236,6 +237,15 @@ export async function upsertContent(
     (sourceDescription && sourceDescription.trim()) ||
     (persistedDescription && persistedDescription.trim()),
   );
+  const invalidStoredBillSummary =
+    input.type === "bill" &&
+    !sourceDescription &&
+    hasSummarySource &&
+    needsBillSummaryRegeneration(persistedDescription, {
+      billNumber: input.data.billNumber,
+      status: input.data.status,
+      actions: input.data.actions,
+    });
   let shouldGenerateSummary = false;
   let shouldGenerateArticle = false;
   let shouldGenerateImage = false;
@@ -261,7 +271,9 @@ export async function upsertContent(
   } else if (existing.contentHash !== newContentHash) {
     shouldGenerateSummary = forceAIRegeneration
       ? !sourceDescription && hasSummarySource
-      : !hasPersistedSummary && !sourceDescription && hasSummarySource;
+      : input.type === "bill"
+        ? !sourceDescription && hasSummarySource
+        : !hasPersistedSummary && !sourceDescription && hasSummarySource;
     shouldGenerateArticle =
       generatesArticle &&
       (forceAIRegeneration
@@ -272,9 +284,14 @@ export async function upsertContent(
     progressKind = "changed";
     logger.info(`Content changed for ${label}`);
   } else {
-    shouldGenerateSummary = forceAIRegeneration
-      ? !sourceDescription && hasSummarySource
-      : !hasPersistedSummary && !sourceDescription && hasSummarySource;
+    shouldGenerateSummary =
+      input.type === "bill"
+        ? !sourceDescription &&
+          hasSummarySource &&
+          (forceAIRegeneration || invalidStoredBillSummary)
+        : forceAIRegeneration
+          ? !sourceDescription && hasSummarySource
+          : !hasPersistedSummary && !sourceDescription && hasSummarySource;
     shouldGenerateArticle =
       generatesArticle &&
       (forceAIRegeneration
@@ -361,7 +378,11 @@ export async function upsertContent(
     }
     const summarySource = input.data.summary || input.data.fullText || "";
     logger.start(`Generating required AI summary for ${label}`);
-    preGeneratedDescription = await generateAISummary(title, summarySource);
+    preGeneratedDescription = await generateAISummary(title, summarySource, {
+      billNumber: input.data.billNumber,
+      status: input.data.status,
+      actions: input.data.actions,
+    });
     if (!preGeneratedDescription.trim()) {
       throw new Error(`AI returned an empty required summary for ${label}`);
     }
@@ -539,17 +560,29 @@ export async function upsertContent(
     const [description, aiGeneratedArticle, thumbnailUrl] = await Promise.all([
       // Summary generation
       (async (): Promise<string | undefined> => {
-        if (effectiveDescription) {
-          return effectiveDescription;
+        if (preGeneratedDescription) {
+          return preGeneratedDescription;
+        } else if (sourceDescription) {
+          return sourceDescription;
         } else if (shouldGenerateSummary) {
           const summarySource =
             input.type === "bill"
               ? input.data.summary || input.data.fullText || ""
               : fullText!;
           logger.start(`Generating AI summary for ${label}`);
-          return generateAISummary(title, summarySource);
+          return generateAISummary(
+            title,
+            summarySource,
+            input.type === "bill"
+              ? {
+                  billNumber: input.data.billNumber,
+                  status: input.data.status,
+                  actions: input.data.actions,
+                }
+              : undefined,
+          );
         }
-        return undefined;
+        return persistedDescription ?? undefined;
       })(),
 
       // Article generation
@@ -676,6 +709,7 @@ export async function upsertContent(
         fullText: fullText!,
         officialSummary: input.data.summary,
         status: input.data.status,
+        actions: input.data.actions,
         priorArticle: aiGeneratedArticle,
         claimBudget,
       });
@@ -914,6 +948,7 @@ async function assembleNewBill(args: {
     fullText: data.fullText,
     officialSummary: data.summary,
     status: data.status,
+    actions: data.actions,
   });
   if (!brief) {
     return { status: "incomplete", reason: "brief generation failed" };
@@ -999,6 +1034,7 @@ export async function buildBillBriefRecord(args: {
   fullText: string;
   officialSummary?: string | null;
   status?: string | null;
+  actions?: BillData["actions"] | null;
   priorArticle?: string | null;
 }): Promise<BuiltBillBrief | null> {
   const generated = await generateBillBrief({
@@ -1008,6 +1044,7 @@ export async function buildBillBriefRecord(args: {
     fullText: args.fullText,
     officialSummary: args.officialSummary,
     status: args.status,
+    actions: args.actions,
     priorArticle: args.priorArticle,
   });
   if (!generated) {
@@ -1065,6 +1102,7 @@ export async function upsertBillBrief(args: {
   fullText: string;
   officialSummary?: string | null;
   status?: string | null;
+  actions?: BillData["actions"] | null;
   priorArticle?: string | null;
   claimBudget?: () => boolean;
 }): Promise<boolean> {

@@ -14,6 +14,12 @@ import {
 } from "ai";
 import { z } from "zod";
 
+import type {
+  BillLifecycleAction,
+  DerivedBillLifecycle,
+} from "@acme/validators";
+import { deriveBillLifecycle } from "@acme/validators";
+
 import { clampBillDescription } from "../bill-description.js";
 import { trackLLMUsage } from "../costs.js";
 import { createLogger } from "../log.js";
@@ -48,8 +54,120 @@ function isRateLimitError(error: unknown): boolean {
   );
 }
 
+export interface BillSummaryContext {
+  billNumber?: string | null;
+  status?: string | null;
+  actions?: readonly BillLifecycleAction[] | null;
+}
+
+export function buildAISummaryPrompt(
+  title: string,
+  content: string,
+  context?: BillSummaryContext,
+): string {
+  const lifecycle = context
+    ? deriveBillLifecycle({
+        billNumber: context.billNumber,
+        actions: context.actions,
+        latestAction: context.status,
+      })
+    : undefined;
+  const lines = [
+    "You are an expert at simplifying complex government and legal jargon for a general audience.",
+    "Generate a very short, punchy summary (max 100 characters) for this content.",
+    "",
+    context
+      ? "Goal: Tell a regular person what this measure would do or what official action occurred, in one quick sentence."
+      : 'Goal: Tell a regular person "what happened" or "what changed" in one quick sentence.',
+    "Style: Use active voice, plain English (8th-grade level), and NO jargon. Focus on the direct impact.",
+    "Keep the mechanism and scope precise: a condition on receiving federal funds limits funding eligibility for the covered recipients; it does not by itself ban the underlying activity or all institutions.",
+  ];
+  if (lifecycle) {
+    const adoptedResolution = lifecycle.status.startsWith("adopted_");
+    lines.push("", "Official legislative status: " + lifecycle.label + ".");
+    lines.push(
+      adoptedResolution
+        ? "This resolution's recorded adoption may be described as a completed event, but it is not a law."
+        : lifecycle.hasCompletedVote
+          ? "The card already shows the recorded chamber milestone. Focus this sentence on what the proposal would do; do not turn one chamber vote into a claim that Congress voted on the policy."
+          : "No completed chamber vote is recorded. Do not say Congress, the House, or the Senate voted to approve, block, or adopt this measure.",
+    );
+    lines.push(
+      lifecycle.isEnacted
+        ? "This measure is enacted, so present-tense effects are allowed. Do not claim it is currently in force or applies now unless the source gives an effective date or implementation detail."
+        : "This measure is not enacted. Every policy effect must use explicit conditional language such as 'would' or 'would have'; 'could' or 'aims to' may add nuance but cannot replace that framing. Never say it 'will' or that it already bans, blocks, requires, or changes something.",
+    );
+  }
+  lines.push(
+    "",
+    "Title: " + title,
+    "",
+    "Content: " + content.substring(0, 2000),
+    "",
+    "Summary (max 100 characters):",
+  );
+  return lines.join("\n");
+}
+
+export function invalidBillSummaryReason(
+  summary: string,
+  lifecycle: DerivedBillLifecycle,
+): string | undefined {
+  const text = summary.replace(/\s+/g, " ").trim();
+  if (lifecycle.isEnacted) {
+    if (/\bwould\b/i.test(text)) {
+      return "uses conditional language for a measure that is already enacted";
+    }
+    return undefined;
+  }
+  if (/\b(?:will|is going to)\b/i.test(text)) {
+    return "uses future certainty for a measure that is not enacted";
+  }
+  if (
+    /\b(?:this|the)\s+(?:bill|measure|resolution|law)\s+(?:bans?|blocks?|prohibits?|requires?|stops?|limits?|creates?|establishes?|allows?|gives?|funds?|authorizes?)\b/i.test(
+      text,
+    )
+  ) {
+    return "states a proposal's policy effect as present fact";
+  }
+  if (/\b(?:now|currently|already)\b/i.test(text)) {
+    return "uses present-time language for a measure that is not enacted";
+  }
+  if (
+    !lifecycle.status.startsWith("adopted_") &&
+    /\b(?:congress|the house|the senate)\s+(?:voted|votes|passed|approved|adopted|blocked|rejected)\b/i.test(
+      text,
+    )
+  ) {
+    return "claims a completed congressional vote that the action record does not contain";
+  }
+  if (!lifecycle.status.startsWith("adopted_") && !/\bwould\b/i.test(text)) {
+    return "does not use explicit conditional language for a measure that is not enacted";
+  }
+  return undefined;
+}
+
+/** Whether an existing generated description should be regenerated for the
+ * current source lifecycle. Source-owned descriptions are handled by the
+ * caller and should not use this check. */
+export function needsBillSummaryRegeneration(
+  summary: string | null | undefined,
+  context: BillSummaryContext,
+): boolean {
+  if (!summary?.trim()) return true;
+  const lifecycle = deriveBillLifecycle({
+    billNumber: context.billNumber,
+    actions: context.actions,
+    latestAction: context.status,
+  });
+  return invalidBillSummaryReason(summary, lifecycle) !== undefined;
+}
+
 /**
- * Generate a concise AI summary (max 100 characters)
+ * Generate a concise AI summary (max 100 characters). Bill summaries carry
+ * the structured action record into the prompt and are checked once after
+ * generation. A bad tense is retried with the exact reason; it is never
+ * repaired with a blind string replacement.
  * @param title - Content title
  * @param content - Content to summarize
  * @returns Concise summary string
@@ -57,28 +175,43 @@ function isRateLimitError(error: unknown): boolean {
 export async function generateAISummary(
   title: string,
   content: string,
+  context?: BillSummaryContext,
 ): Promise<string> {
   if (rateLimitHit) {
     throw new AIRateLimitError();
   }
   try {
-    const { text, usage } = await generateText({
-      model: getTextLlm(),
-      prompt: `You are an expert at simplifying complex government and legal jargon for a general audience.
-Generate a very short, punchy summary (max 100 characters) for this content.
+    const lifecycle = context
+      ? deriveBillLifecycle({
+          billNumber: context.billNumber,
+          actions: context.actions,
+          latestAction: context.status,
+        })
+      : undefined;
+    const basePrompt = buildAISummaryPrompt(title, content, context);
+    let lastReason: string | undefined;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const prompt = lastReason
+        ? basePrompt +
+          "\n\nPrevious output was rejected because it " +
+          lastReason +
+          ". Rewrite it using the lifecycle rules above."
+        : basePrompt;
+      const { text, usage } = await generateText({
+        model: getTextLlm(),
+        prompt,
+      });
+      trackLLMUsage(usage.inputTokens, usage.outputTokens);
 
-Goal: Tell a regular person "what happened" or "what changed" in one quick sentence.
-Style: Use active voice, plain English (8th-grade level), and NO jargon. Focus on the direct impact.
-
-Title: ${title}
-
-Content: ${content.substring(0, 2000)}
-
-Summary (max 100 characters):`,
-    });
-    trackLLMUsage(usage.inputTokens, usage.outputTokens);
-
-    return clampBillDescription(text);
+      const summary = clampBillDescription(text);
+      if (!lifecycle) return summary;
+      lastReason = invalidBillSummaryReason(summary, lifecycle);
+      if (!lastReason) return summary;
+    }
+    throw new Error(
+      "AI summary failed lifecycle validation: " +
+        (lastReason ?? "unknown reason"),
+    );
   } catch (error) {
     if (isRateLimitError(error)) {
       rateLimitHit = true;

@@ -335,6 +335,7 @@ also includes the manual retention command. All are `pnpm`-scripted in
 | `retroactive-briefs`         | `retroactive-briefs.ts`         | Missing/stale bill `content_brief` rows     | `--dry-run` to preview                                           |
 | `retroactive-lenses`         | `retroactive-lenses.ts`         | Missing/stale `content_lens` rows           | `--dry-run` to preview                                           |
 | `backfill-bill-descriptions` | `backfill-bill-descriptions.ts` | Bills with no source/AI description         | `--apply` (+ `--yes` on prod)                                    |
+| `repair-bill-descriptions`   | `repair-bill-descriptions.ts`   | Misleading or missing bill summaries        | Inventory first; manifest apply (+ `--yes` on prod)              |
 | `content-images`             | `content-images.ts`             | Missing or stale Storage-backed header art  | Inspect command limits and provider configuration before running |
 | `bill-interest`              | `bill-interest.ts`              | Missing/stale editorial ranking assessments | `--dry-run` to preview                                           |
 | `prune-bills`                | `prune-bills.ts`                | Bills outside the editorial retention set   | **Read-only by default**; needs `--apply` (+ `--yes` on prod)    |
@@ -353,6 +354,33 @@ hash. Popularity never comes from the model; retention counts real saves. A
 changed content hash invalidates the old assessment until the scheduled scorer
 replaces it. Retention protects missing and stale assessments, so scoring must
 succeed before an older bill can become eligible for deletion.
+
+`repair-bill-descriptions` is the focused repair path for the short summary
+shown on bill cards. It is bounded and read-only by default:
+
+- Inventory accepts either repeatable `--id` values or a positive `--limit` up
+  to 1,000. `--source` can restrict selection to `congress.gov` or
+  `openstates.org`.
+- A normal inventory selects missing, overlong, or lifecycle-invalid summaries
+  for non-enacted measures. Correct summaries and enacted bills are skipped;
+  explicit IDs force those checks to be revisited. Rows without a stored
+  official summary or full text are skipped rather than fetched upstream.
+- Use `--generate --output <manifest>` to create candidates from the stored
+  title, official summary/full text, status, and action record. The manifest
+  records the old description, content hash, source and action fingerprints,
+  and the generated candidate for review. Generation changes no database row.
+- Apply with `--apply --manifest <manifest> --yes`. Each row is re-read and
+  rejected if its source evidence, lifecycle actions, status, or description
+  changed after generation. A successful apply updates only `bill.description`;
+  content hashes, source fields, briefs, lenses, and images remain untouched.
+
+Example:
+
+```bash
+pnpm --filter @acme/scraper repair-bill-descriptions --source congress.gov --limit 100
+pnpm --filter @acme/scraper repair-bill-descriptions --source congress.gov --limit 100 --generate --output /tmp/bill-description-repairs.json
+pnpm --filter @acme/scraper repair-bill-descriptions --apply --manifest /tmp/bill-description-repairs.json --yes
+```
 
 `reprocess-content` is the most general and the model the others follow:
 

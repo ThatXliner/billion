@@ -30,6 +30,14 @@ interface BriefCandidate {
   fullText: string;
   summary: string | null;
   status: string | null;
+  actions:
+    | {
+        date: string;
+        text: string;
+        type?: string;
+        actionCode?: string;
+      }[]
+    | null;
   aiGeneratedArticle: string | null;
 }
 
@@ -44,6 +52,7 @@ async function findBills(limit: number): Promise<BriefCandidate[]> {
       fullText: Bill.fullText,
       summary: Bill.summary,
       status: Bill.status,
+      actions: Bill.actions,
       aiGeneratedArticle: Bill.aiGeneratedArticle,
     })
     .from(Bill)
@@ -135,6 +144,7 @@ await Promise.all(
           fullText: candidate.fullText,
           officialSummary: candidate.summary,
           status: candidate.status,
+          actions: candidate.actions,
           priorArticle: candidate.aiGeneratedArticle,
         });
         if (generated) processed++;
