@@ -283,38 +283,26 @@ const typed = await trpc.content.getByType.query({ type: "court_case" });
 
 **DB tables populated by scrapers:**
 
-| Table               | Populated by                 | Content                                            |
-| ------------------- | ---------------------------- | -------------------------------------------------- |
-| `Bill`              | `congress.ts` scraper        | Federal bills, actions, sponsor, status, full text |
-| `GovernmentContent` | `federalregister.ts` scraper | EOs, proclamations, presidential memos             |
-| `CourtCase`         | `scotus.ts` scraper          | SCOTUS opinions via CourtListener                  |
+| Table               | Populated by                        | Content                                            |
+| ------------------- | ----------------------------------- | -------------------------------------------------- |
+| `Bill`              | `congress.ts` scraper               | Federal bills, actions, sponsor, status, full text |
+| `GovernmentContent` | `federalregister.ts` scraper        | EOs, proclamations, presidential memos             |
+| `CourtCase`         | `scotus.ts`, currently unregistered | Stored CourtListener opinions                      |
 
 ---
 
 ## Scrapers (background jobs)
 
-These run as CLI jobs (`bun run scrape -- --scrapers <name>`) in `apps/scraper` and are **not importable as functions at request time**. They populate `CivicApiCache` rows or DB tables that the live API reads.
+Background ingestion runs in `apps/scraper`, separately from request handling. Use the [scraper CLI guide](../apps/scraper/README.md#active-sources) for active names, destinations, and bounded commands, and [the supervisor](../apps/supervisor/README.md) for schedules.
 
-| Scraper           | Populates                                     | Cadence                     |
-| ----------------- | --------------------------------------------- | --------------------------- |
-| `congress`        | `Bill` table                                  | Periodic                    |
-| `federalregister` | `GovernmentContent` table                     | Periodic                    |
-| `scotus`          | `CourtCase` table                             | Periodic                    |
-| `vote411`         | `CivicApiCache` (VOTE411 voter guides)        | Pre-election                |
-| `sccCvig`         | `CivicApiCache` (SCC county voter guide)      | Pre-election                |
-| `caSosStatements` | `CivicApiCache` (CA SOS candidate statements) | Pre-election                |
-| `caLaoFiscal`     | `CivicApiCache` (LAO fiscal analyses)         | Pre-election (~90 days out) |
-
-**How the cache-warmer pattern works:** a scraper pre-fetches expensive HTML pages and stores structured JSON in `CivicApiCache`. When a user triggers `getVoterInfo`, the measure-source adapters read the cache row (sub-millisecond DB read) instead of doing a live HTML fetch inside the request. Cache TTL is 30 days for LAO; 24 hours for voter info responses.
-
----
+Candidate-statement scrapers populate `CivicApiCache` so enrichment can reuse extracted source material. An adapter under `scrapers/disabled/` does not run merely because a request-time cache reader exists. Check both registration and the consuming API adapter when diagnosing missing data.
 
 ## Adding a new data source
 
 1. Write a source adapter (`packages/api/src/lib/measure-sources/<name>.ts`) returning `MeasureSourceData | null`.
 2. Assign it a `SourceTier` from `measure-sources/types.ts`.
 3. Register it in the `Promise.all` in `crossValidateMeasure` (`measure-crossvalidate.ts`).
-4. If the source requires pre-warming, write a scraper in `apps/scraper/src/scrapers/<name>.ts` and register it in `apps/scraper/src/main.ts`.
+4. If the source requires pre-warming, write a scraper in `apps/scraper/src/scrapers/<name>.ts` and declare its environment contract in an adjacent `*.config.ts` and register it in `apps/scraper/src/scrapers.ts`.
 5. Update `docs/civic-data-sources.md` and `docs/measure-enrichment.md`.
 
-See `measure-sources/ca-lao-fiscal.ts` + `scrapers/ca-lao-fiscal.ts` as the canonical example of a cache-warmer-backed source.
+For an active cache-backed integration, follow `apps/scraper/src/scrapers/ca-sos-statements.ts` and `packages/api/src/lib/candidate-sources/ca-sos-cache.ts`.

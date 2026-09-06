@@ -1,207 +1,76 @@
-# @acme/scraper
+# Scraper CLI
 
-Pulls in government content like bills, court cases, and White House content and saves it to the database. For new or changed content, it automatically generates an AI article and finds a thumbnail image.
+The scraper collects government records and prepares the explanations the app reads. It writes directly to the selected database and can invoke paid providers. For the internal data flow, read [Scraper pipeline](../../docs/scraper.md). For production scheduling and deployment, read [Supervisor](../supervisor/README.md).
 
-## Active data sources
+Commands below run from the repository root.
 
-These sources are registered and run by `all`:
-
-| CLI name            | Source and data fetched                                                                    | Stored/used as                                                                                        |
-| ------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `federalregister`   | Federal Register API presidential documents, then each document's body HTML                | `government_content`; AI article/summary and feed-image enrichment                                    |
-| `congress`          | Congress.gov API bill list, detail, CRS summaries, formatted text, and legislative actions | `bill`; powers federal bill content and AI/feed enrichment                                            |
-| `legistar`          | San José Legistar meetings, matters, attachments, histories, and structured votes          | Normalized `local_*` decision, occurrence, document, vote, and ingestion-run tables                   |
-| `scotus`            | CourtListener opinion clusters, dockets, and sub-opinion text for the Supreme Court        | `court_case`; powers court content and AI/feed enrichment                                             |
-| `scc-cvig`          | Hand-configured Santa Clara County voter-guide PDFs                                        | Candidate statements in `CivicApiCache`; the API matches statements to candidates                     |
-| `ca-sos-statements` | California SOS statewide-office candidate-statement pages                                  | Candidate statements in `CivicApiCache`; the API reads the cache and can fall back to the live source |
-
-`vote411`, `ca-lao-fiscal`, and `ca-vig-archive` remain under
-`src/scrapers/disabled/` and do not run. Their caches had no application
-consumer, so scheduling them only created unused data. See the disabled-folder
-README for the requirements to revive them.
-
----
-
-## Setup
-
-### 1. Configure the scraper environment
-
-From the repo root:
+## Configure and run one source
 
 ```bash
 pnpm env:setup --target scraper --scraper congress --file .env
-```
-
-The wizard asks only for the selected scraper, explains each variable, and
-links to its provider. Verify it without printing values:
-
-```bash
 pnpm env:doctor --target scraper --scraper congress --file .env
+pnpm --filter @acme/scraper run start congress --max-items 1 --concurrency 1
 ```
 
-Each adjacent `*.config.ts` file declares that scraper's source and required,
-recommended, and optional variables. The wizard and runtime validator consume
-the same declaration, so adding a scraper does not require duplicating its
-requirements in `@acme/env`. Zod validation runs before network or database
-work:
+Check the database target printed at startup. Local commands load root `.env.local` before `.env`, and existing process variables win. The doctor with `--file .env` validates that file; it does not prove a separate local override selects the same database. See [environment loading](../../docs/launch.md#loading-policy).
 
-| Variable                                     | Required by                             | Why it matters                                                                                                     |
-| -------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `POSTGRES_URL`                               | Every active scraper                    | Your Postgres connection. If inserting credentials manually, percent-encode only the username/password components. |
-| `OPENROUTER_API_KEY`                         | `federalregister`, `congress`, `scotus` | Preferred provider for article, summary, image-keyword, feed-copy, and web-research generation.                    |
-| `OPENROUTER_MODEL`                           | Optional                                | OpenRouter model slug; defaults to `deepseek/deepseek-v4-flash`.                                                   |
-| `LOCAL_LLM_BASE_URL` / `LOCAL_LLM_MODEL`     | Local fallback                          | OpenAI-compatible local text endpoint and model; the Big Mac deployment uses bounded-context Qwen.                 |
-| `DEEPSEEK_API_KEY`                           | Deprecated fallback                     | Keeps direct DeepSeek generation working during the OpenRouter credential migration.                               |
-| `CONGRESS_API_KEY`                           | `congress`                              | Free at [api.congress.gov/sign-up](https://api.congress.gov/sign-up/).                                             |
-| `BFL_API_KEY`                                | Optional                                | FLUX feed images; raw content and AI text still persist without it.                                                |
-| `LOCAL_FLUX_BASE_URL` / `LOCAL_FLUX_MODEL`   | Optional                                | Local FLUX HTTP fallback; the Big Mac deployment uses FLUX.2 Klein.                                                |
-| `COURTLISTENER_API_KEY`                      | Optional                                | Higher CourtListener limits for `scotus`.                                                                          |
-| `GOOGLE_API_KEY` / `GOOGLE_SEARCH_ENGINE_ID` | Optional pair                           | Google Custom Search article thumbnails.                                                                           |
-| `GOOGLE_GENERATIVE_AI_API_KEY`               | Optional                                | Gemini vision fallback for `scc-cvig` PDF extraction.                                                              |
-
-See [the launch environment guide](../../docs/launch.md) for the complete
-per-scraper matrix, provider setup links, defaults, and production guidance.
-
-### 2. Run it
+The first incremental Congress run starts at the beginning of the source feed. To inspect recent activity instead, use:
 
 ```bash
-pnpm install
-pnpm --filter @acme/scraper run start congress --concurrency 1
+pnpm --filter @acme/scraper run start congress --recent 1 --concurrency 1
 ```
 
-### Production build
+Source limits and generation budgets are different. `--max-items` limits source work in ordinary discovery; `--recent` selects a recent window. `SCRAPER_MAX_NEW_ITEMS_PER_RUN` limits items that generate assets, including existing records needing regeneration. Neither is a durable daily quota, and retry work has its own limits. Inspect `--help` and the source adapter before starting a larger job.
 
-Build the Node ESM production artifacts from the repository root:
+## Active sources
+
+[The registry](src/scrapers.ts) defines what the CLI accepts and what `all` runs.
+
+| CLI name            | Source                                                | Destination                               |
+| ------------------- | ----------------------------------------------------- | ----------------------------------------- |
+| `whitehouse`        | White House presidential actions                      | `government_content`                      |
+| `federalregister`   | Federal Register presidential documents               | `government_content`                      |
+| `legistar`          | San José meetings, matters, documents, and votes      | Normalized `local_*` tables               |
+| `congress`          | Congress.gov bills, text, summaries, and actions      | `bill`                                    |
+| `open-states`       | State legislation through Open States                 | `bill`                                    |
+| `scc-cvig`          | Santa Clara County voter-guide PDFs                   | Candidate statements in `civic_api_cache` |
+| `ca-sos-statements` | California candidate-statement pages and PDF fallback | Candidate statements in `civic_api_cache` |
+
+`all` starts registered scrapers concurrently and validates the whole set's environment first. It is broader than a production scheduled refresh. The supervisor names jobs separately so it can control timing, retention, and budgets.
+
+`scotus.ts` is present but unregistered, so the current CLI does not accept `scotus`. Existing court content can still be read. Files under [scrapers/disabled](src/scrapers/disabled/README.md) are also inactive.
+
+Each source declares its environment contract in an adjacent `*.config.ts`. Use those contracts and [the environment guide](../../docs/launch.md#scraper-and-scheduled-data-jobs) for required provider keys and current defaults.
+
+## Build for production
 
 ```bash
 pnpm --filter @acme/scraper build
+node apps/scraper/dist/main.js congress --max-items 1 --concurrency 1
 ```
 
-Vite writes the scraper CLI to `dist/main.js`, the dual-lens backfill to
-`dist/retroactive-lenses.js`, the incomplete-content repair job to
-`dist/reprocess-content.js`, the missing bill-description repair job to
-`dist/backfill-bill-descriptions.js`, and the retroactive-video job to
-`dist/retroactive-videos.js`. The build can also emit shared chunks; deploy the
-whole `dist/` directory rather than copying only an entry file. Linked
-`@acme/*` workspace source is included in the build, while normal third-party
-packages remain runtime dependencies.
+Vite writes Node ESM entries and shared chunks to `apps/scraper/dist/`. Deploy the whole directory and runtime dependencies. [vite.config.ts](vite.config.ts) lists the build entries; linked workspace source is bundled and third-party packages remain runtime dependencies.
 
-Start the production CLI with variables supplied by the container or scheduler:
+Production entries read process variables and do not load local dotenv files. CI packages the build in `Dockerfile.scraper`; the [deployment guide](../supervisor/README.md) explains image pinning and the production host.
+
+## Repair and backfill
+
+Use the focused command for the missing asset. Check its help and preview mode first; write defaults differ by command.
+
+| Command                      | Purpose                                                           |
+| ---------------------------- | ----------------------------------------------------------------- |
+| `reprocess-content`          | Inspect or repair incomplete content; read-only until `--apply`   |
+| `backfill-bill-descriptions` | Fill missing bill descriptions; writes require `--apply`          |
+| `retroactive-briefs`         | Generate missing or stale structured briefs; supports `--dry-run` |
+| `retroactive-lenses`         | Generate missing or stale perspectives; supports `--dry-run`      |
+| `content-images`             | Generate header artwork                                           |
+| `bill-interest`              | Score editorial interest; supports `--dry-run`                    |
+| `prune-bills`                | Inspect retention candidates; read-only until `--apply`           |
+
+For example:
 
 ```bash
-node apps/scraper/dist/main.js congress --concurrency 1
-```
-
-### Backfill dual-lens perspectives
-
-Generate missing or stale perspectives directly from stored content without
-waiting for an upstream scraper to return each item again:
-
-```bash
-pnpm --filter @acme/scraper retroactive-lenses --type all --limit 10
 pnpm --filter @acme/scraper retroactive-lenses --type bill --limit 1 --dry-run
 ```
 
-The limit applies per selected content type. Processing is sequential to keep
-AI cost and rate-limit behavior predictable.
-
-The production entry does not load `.env` files or bake their values into the
-bundle. Development commands continue to load the repository's local env files
-as described in the [launch environment guide](../../docs/launch.md).
-
-### Source and enrichment limits
-
-`--max-items` caps source records fetched/processed by each selected scraper for
-that run. It overrides the selected scraper's environment default:
-
-```bash
-# Process at most ten Congress.gov bills in this run
-pnpm --filter @acme/scraper run start congress --max-items 10
-
-# If scheduled once per day, this is effectively ten bills per day
-CONGRESS_MAX_ITEMS=10 pnpm --filter @acme/scraper run start congress
-```
-
-| Variable                        | Default | Counts                                              |
-| ------------------------------- | ------: | --------------------------------------------------- |
-| `FEDERALREGISTER_MAX_ITEMS`     |      20 | Presidential documents                              |
-| `CONGRESS_MAX_ITEMS`            |     100 | Bills                                               |
-| `SCOTUS_MAX_ITEMS`              |      50 | CourtListener opinion clusters                      |
-| `SCC_CVIG_MAX_ITEMS`            |      10 | Voter-guide PDF documents                           |
-| `CA_SOS_MAX_ITEMS`              |       9 | Statewide-office candidate-statement pages          |
-| `SCRAPER_MAX_NEW_ITEMS_PER_RUN` |      10 | New records receiving expensive AI/image enrichment |
-| `SCRAPER_SKIP_DUAL_LENS`        |       0 | Skip optional dual-lens generation during backfills |
-
-These are per-run limits, not durable calendar-day quotas. Schedule one run per
-day to obtain a daily cap. If the scheduler retries or runs multiple times, each
-invocation gets a fresh allowance. Source limits cap API/page work;
-`SCRAPER_MAX_NEW_ITEMS_PER_RUN` separately caps expensive enrichment. Extra
-bills that require a generated description are deferred before insertion;
-other content may still be stored raw for later backfill.
-
-For a large, explicitly bounded seed, set `SCRAPER_SKIP_DUAL_LENS=1` to write
-each bill as soon as its required summary, brief, and header art are complete.
-The optional lenses can then be filled by `retroactive-lenses` without holding
-up the source backfill.
-
----
-
-## Congress bills (`congress.ts`)
-
-Uses the official [Congress.gov API](https://api.congress.gov) so no scraping. For each bill it fetches:
-
-- Title, sponsor, status, and introduced date
-- The CRS-written summary (so we don't need AI to generate one)
-- Plain text of the bill (used for AI article generation)
-
-```ts
-await scrapeCongress({
-  congress: 119, // which Congress (default: 119)
-  maxBills: 100, // how many bills to fetch per run (default: 100)
-  bills: ["H.R. 7008"], // optional: fetch these directly, bypassing the cursor
-});
-```
-
-`chamber` exists on the config but does not filter anything: `/bill/{congress}`
-has no chamber parameter, so every run covers both chambers. It is only used as
-a fallback label when the detail endpoint omits `originChamber`.
-
-Without `bills`, the run walks the feed oldest-first from the cursor in
-`scraper_cursor` and advances it only across the leading run of successes. See
-[Incremental discovery](../../docs/scraper.md#incremental-discovery-congressgov)
-for why the cursor is source-based and why the order matters.
-
----
-
-## Court cases (`scotus.ts`)
-
-Uses the [CourtListener API](https://www.courtlistener.com/api/) — free, works without a key. Fetches recent opinions and pulls in the plain-text opinion content for AI article generation.
-
-```ts
-await scrapeScotus({
-  court: "scotus", // court ID (default: "scotus" = Supreme Court)
-  maxCases: 50, // how many cases to fetch (default: 50)
-});
-
-// Other courts you can use:
-// "ca9"  → 9th Circuit
-// "ca2"  → 2nd Circuit
-// "cadc" → D.C. Circuit
-// Full list: https://www.courtlistener.com/api/rest/v4/courts/
-```
-
----
-
-## How upserts work
-
-All scrapers call into `src/utils/db/operations.ts`. Each time a bill or case is processed:
-
-- If it's **new** → saves it and generates an AI article + thumbnail
-- If the **content changed** → regenerates the article
-- If **nothing changed** → backfills any missing AI summary/article/thumbnail fields, otherwise skips AI generation
-
-Set `SCRAPER_FORCE_AI_REGEN=1` to force a full AI refresh even when the record already has AI content.
-
-For a new bill whose description must be generated, the summary is now created
-before insertion. If every configured text provider fails, the insert fails and
-the next scheduled scrape retries it instead of leaving a blank bill row.
+[Maintenance and reprocessing](../../docs/scraper.md#maintenance-backfill--reprocessing-scripts) explains write gates, source recovery, and retention behavior. The source hash and each asset's cache determine whether a rerun needs generation. `SCRAPER_FORCE_AI_REGEN=1` bypasses reuse, so use it only for an intentional regeneration.

@@ -1,82 +1,24 @@
-# Scraper Pipeline
+# Scraper pipeline
 
 ## Overview
 
 `apps/scraper/` is a standalone Node.js process. It runs on demand or on a schedule and writes **directly to the database** via `@acme/db` — no HTTP, no tRPC, no auth. It's a trusted server-side process; routing writes through tRPC would add latency, require tokens, and force write endpoints to be secured for no benefit.
 
-Invoke via CLI: `pnpm start [scraper|all] [options]` (`scraper` defaults to
-`all`). From the repo root, use
-`pnpm --filter @acme/scraper run start [scraper] [options]`. Flags (`apps/scraper/src/main.ts`):
-
-| Flag                  | Default | Meaning                                                                                       |
-| --------------------- | ------- | --------------------------------------------------------------------------------------------- |
-| `--concurrency`, `-c` | `3`     | Items processed concurrently within each scraper, via `p-limit`.                              |
-| `--max-items`, `-n`   | —       | Cap on source records per scraper this run; overrides each scraper's `*_MAX_ITEMS` env value. |
-| `--bill`, `-b`        | —       | Fetch specific congress.gov bills by number (repeatable); requires the `congress` scraper.    |
-| `--congress`          | `119`   | Congress number for `--bill`; only valid alongside `--bill`.                                  |
-
-`all` runs every registered scraper with `Promise.allSettled` (one failure does
-not abort the others) and validates env for the whole set up front; a single
-named scraper validates only its own contract and is the only mode that accepts
-`--bill`/`--congress`/`targets`. Every run prints its **database target** (a
-loud warning when it resolves to production, from `env.ts`) and a metrics
-summary at the end.
-
-It ships as a multi-stage `Dockerfile.scraper` (Node 22-slim). Vite builds the
-Node ESM production entries, bundles linked workspace source, and leaves
-ordinary runtime dependencies external for the production install. The container
-starts the CLI with `node dist/main.js`; production configuration is read from
-the process environment at runtime, not embedded during the build. Where and how
-often it runs in production is covered in the ops memory, not here.
+For setup, bounded examples, active source names, and production builds, use the [scraper CLI guide](../apps/scraper/README.md). The CLI's default is `all`, which starts every registered source concurrently. Production jobs are explicitly configured in [the supervisor](../apps/supervisor/README.md); they are not equivalent to a bare `all` run.
 
 ## Scrapers
 
-The registered set lives in `apps/scraper/src/scrapers.ts` — **that array is the
-source of truth for what `all` runs**, in this order:
+[The registry](../apps/scraper/src/scrapers.ts) includes White House, Federal Register, Legistar, Congress, Open States, Santa Clara County voter guides, and California candidate statements. CourtListener code exists but is unregistered and unavailable through the current CLI.
 
-| Scraper                | Source                         | Content type         | Method                                                                                                                          |
-| ---------------------- | ------------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `federalregister.ts`   | federalregister.gov REST API   | `government_content` | REST (presidential documents); HTML→Markdown via Turndown                                                                       |
-| `congress.ts`          | congress.gov REST API          | `bill`               | REST (`CONGRESS_API_KEY`), incremental by source `updateDate` — see [Incremental discovery](#incremental-discovery-congressgov) |
-| `open-states.ts`       | Open States v3 API             | `bill`               | REST (`OPEN_STATES_API_KEY`), incremental by source `updated_at` — see [State bills](#state-bills-open-states)                  |
-| `scc-cvig.ts`          | Santa Clara County voter guide | `civic_api_cache`    | PDF extraction; optional Gemini fallback (`GOOGLE_GENERATIVE_AI_API_KEY`)                                                       |
-| `ca-sos-statements.ts` | CA Secretary of State guide    | `civic_api_cache`    | official candidate-statement pages, PDF fallback via `ca-sos-vig-pdf.ts`                                                        |
+Congress and Open States normalize legislation into `bill`. White House and Federal Register documents share `government_content`; source identity and title normalization prevent duplicate presidential records. Legistar has its own normalized local-decision ingestion path, described in [Local government and Legistar](local-government-legistar.md).
 
-The feed content types (`bill`, `government_content`, and `court_case` from the
-unregistered scotus scraper) all write through `upsertContent()` and share the
-full AI pipeline below. The two
-**civic** scrapers are different in kind: each collapses a whole election's
-material into a _single_ `CivicApiCache` row (`insert … onConflictDoUpdate` keyed
-on `(addressHash, endpoint, params)`), runs no AI pipeline, and feeds
-candidate/ballot enrichment rather than the content feed. See
-[candidate enrichment](./candidate-enrichment.md) and
-[civic data sources](./civic-data-sources.md).
+The candidate-statement scrapers write `civic_api_cache` for request-time enrichment. They do not run the article pipeline. The `scrapers/disabled/` folder contains inactive adapters and its [README](../apps/scraper/src/scrapers/disabled/README.md) explains the requirements for reactivation.
 
-**Present in the tree but not registered:**
-
-- `scotus.ts` (`court_case`, CourtListener REST) — implemented and runnable by
-  name (`pnpm start scotus`) but deliberately kept out of `scrapers.ts`, so `all`
-  never runs it. Why it's parked, and what re-enabling needs, is recorded in the
-  ingestion memory rather than duplicated here.
-- `ca-sos-vig-pdf.ts` — not a scraper. It's the PDF fallback reader
-  `ca-sos-statements.ts` imports when the CA SOS candidate HTML pages are blocked
-  by Imperva/CloudFront.
-- `scrapers/disabled/` — parked cache-warmers kept in-tree for reference but not
-  exported or run: `ca-lao-fiscal.ts` (CA LAO proposition fiscal analyses),
-  `ca-vig-archive.ts` (historical CA SOS voter-guide archive), `vote411.ts`
-  (League of Women Voters guides), and `vote411-ballot.ts` (Playwright
-  address-based ballot lookup). Several have live request-time adapters under
-  `packages/api/src/lib/measure-sources/` that fall back to fetching on cache
-  miss, so the feature still works without the warmer running — see
-  [measure enrichment](./measure-enrichment.md).
-
-All HTTP goes through one `fetchWithRetry()` utility (`apps/scraper/src/utils/fetch.ts`): exponential backoff (1s/2s/4s…), `Retry-After` support (seconds or HTTP-date), 30s default timeout via `AbortController`, retriable on 429/5xx and `ECONNRESET`/`ECONNREFUSED`, plus a stateful **per-host backoff** that ramps on 429/5xx and relaxes on success.
-
-> Note: `whitehouse.gov` cheerio scraping was replaced by the structured **Federal Register** REST API.
+Shared source HTTP requests use [fetchWithRetry](../apps/scraper/src/utils/fetch.ts), with timeouts, retry backoff, and per-host throttling. Inspect source-specific transport for integrations with separate clients.
 
 ## Incremental discovery (congress.gov)
 
-Each run walks the congress.gov bill feed forward from a stored cursor. Three
+An incremental run walks the Congress.gov feed forward from a stored cursor. A `--recent` run instead refreshes the newest activity and does not advance that cursor. Three
 properties matter, and each exists because its absence caused a real outage:
 
 **The cursor is the source's clock, not ours.** `scraper_cursor` holds the
@@ -93,9 +35,7 @@ older bill behind it. Only the feed walk writes the cursor.
 **The walk is oldest-first** (`sort=updateDate+asc`). Descending order only
 works with an unbounded window; bounded at `maxBills` it takes the newest N and
 strands the rest. Ascending drains monotonically — whatever a run does not
-reach is the next run's first page. The cursor advances only across the
-_leading run of successes_, so the first failure is the high-water mark and
-everything after it is simply re-offered.
+reach is the next run's first page. The cursor advances across records that were stored, deliberately skipped, or durably queued for retry. If recording a retry fails, it holds before that item so the next run re-offers it. See [the retry queue](#the-retry-queue).
 
 There is no chamber filter: `/bill/{congress}` does not support one. A
 `chamber=house` parameter was sent for years and silently ignored, so the feed
@@ -108,6 +48,10 @@ backfills run — stop and restart freely, the cursor is durable.
 `--bill "H.R. 7008"` (repeatable, plus `--congress`) fetches specific bills
 directly and bypasses the cursor entirely, for backfilling a single bill or
 regenerating one for testing.
+
+The scheduled federal `--recent` refresh also records failed or deferred bills
+in the retry queue. A count-limited source window cannot promise that an item
+will still be present on the next run.
 
 ## State bills (Open States)
 
@@ -201,7 +145,7 @@ treats the refusal as a deliberate skip rather than a retryable failure so one
 giant bill cannot wedge the cursor. Section-aware storage is the real fix
 (issue #191).
 
-## Upsert + Change Detection
+## Upsert and change detection
 
 `apps/scraper/src/utils/db/operations.ts` centralizes writes behind a discriminated-union `upsertContent(type, data)` (`type` ∈ bill | government_content | court_case). Each run:
 
@@ -211,22 +155,19 @@ giant bill cannot wedge the cursor. Section-aware storage is the real fix
 4. **New bill without a source description** → generate the required description first; skip the bill entirely if there is no summary source at all.
 5. **New or changed** → run the remaining AI pipeline, upsert via `onConflictDoUpdate`, append to `versions`.
 
-### Complete or not at all
+### Completion and deferral
 
-`upsertContent` returns one of three outcomes, and the difference between them
-is the whole contract with the cursor:
+`upsertContent` distinguishes three outcomes:
 
-| Outcome    | Meaning                                                      | Cursor    |
-| ---------- | ------------------------------------------------------------ | --------- |
-| `written`  | Stored, and as complete as its sources allow                 | advances  |
-| `skipped`  | Deliberately not stored; a retry reaches the same conclusion | advances  |
-| `deferred` | Not finished, for a reason a later run can fix               | **holds** |
+| Outcome    | Meaning                                                                     |
+| ---------- | --------------------------------------------------------------------------- |
+| `written`  | Stored and as complete as its sources allow                                 |
+| `skipped`  | Deliberately omitted; retrying unchanged source would reach the same result |
+| `deferred` | Incomplete for a reason a later attempt may resolve                         |
 
-A bill lands complete or it does not land. If enrichment throws — rate limit,
-provider error, an article that comes back empty — a bill we had never stored
-before is **deleted again** before returning `deferred`. The derived tables
-(`content_lens`, `content_brief`, `video`) hold plain uuids rather than foreign
-keys, so nothing cascades and the rollback clears each one by hand.
+New bills use an assembly path that generates required material before committing the bill and brief together. Failure leaves the bill available for retry. Existing content can refresh source fields while deferring missing enrichment. Read [operations.ts](../apps/scraper/src/utils/db/operations.ts) for the type-specific write and cleanup paths.
+
+A `deferred` outcome does not by itself mean the cursor must stop. The source adapter must remember the unfinished item durably, as described below.
 
 ### The retry queue
 
@@ -236,12 +177,13 @@ bill behind one bad item. `scraper_retry` is the third option.
 
 A `deferred` bill is written to `scraper_retry` — keyed
 `(scraper_key, item_key)`, where `item_key` is `"{billType}/{billNumber}"` —
-and the cursor then moves past it. Each run drains what is due **after**
-walking the feed, so a queue that has built up cannot push this week's
-legislation behind last month's problem cases. The drain is capped at
-`max(10, maxBills / 4)` for the same reason, and retried bills deliberately do
-not feed the cursor: they sit behind it by definition, so their timestamps
-could only drag it backwards.
+and the cursor then moves past it. Congress `--recent` runs use the same queue,
+because a bill can leave the bounded recent window before its deferred brief is
+generated. Each run drains what is due **after** fresh source records, so a
+queue that has built up cannot push this week's legislation behind last month's
+problem cases. The drain is capped at `max(10, source limit / 4)` for the same
+reason, and retried bills deliberately do not feed the cursor: they sit behind
+it by definition, so their timestamps could only drag it backwards.
 
 Backoff doubles from 15 minutes and caps at a day, so a permanently broken bill
 costs one attempt a day rather than one per run forever. Nothing is ever
@@ -265,7 +207,7 @@ bill too large to store whole.
 generation in one run. An item past the cap that we have never stored is
 **not stored at all** and reported as `deferred`; one already in the database
 gets its raw fields refreshed, skips the derived assets, and is still reported
-`deferred` so the cursor waits for them.
+`deferred` so the adapter can queue them for retry.
 
 The cap counts **items that generate**, not new items, and each item draws at
 most one slot however many assets it produces. A slot is claimed at the point
@@ -275,17 +217,11 @@ case uncapped: an existing bill whose content changed regenerated its brief and
 its dual lens with no limit, which meant a backfill correcting stored text
 ignored the budget almost entirely.
 
-Note what the budget now costs: a capped run walks only as far as it can
-finish. That is deliberate. The earlier design persisted past-budget bills raw
-so the cursor could keep moving, on the theory that the retroactive scripts
-would fill them in — but a raw row is a bill with no description, article, lens
-or brief in front of readers, and nothing guaranteed the backfill ever ran. Set
-the budget high (or unset it) for a backfill; the low default is a guard for
-the weekly run, not a throughput knob.
+A larger source window can therefore create deferred work without generating more content in that run. Size source limits and generation budgets together, then inspect the retry queue. Raising or bypassing the generation budget can invoke paid providers for many records.
 
 Every derived asset must be gated on the budget for the cap to mean anything —
 the dual lens in particular runs an agentic research loop. The article/summary/
-image block, the lens, the brief, and video generation all claim through the
+image block, the lens, and the brief all claim through the
 same per-item function.
 
 `SCRAPER_FORCE_AI_REGEN=1` overrides the cache. An `isUsableSourceText()` gate
@@ -297,51 +233,44 @@ boilerplate. A companion `isUsableAIArticle()` checks a generated article is
 ≥500 chars and carries all four required section headings; both gates are shared
 by the scrape path and the retroactive scripts.
 
-## AI Pipeline
+## AI pipeline
 
 Provider config lives in `apps/scraper/src/utils/ai/provider.ts`: text uses an OpenAI-compatible local endpoint (`LOCAL_LLM_BASE_URL`, such as Ollama) first, then **OpenRouter**, with direct DeepSeek retained only as a deprecated last resort. Two workloads stay API-first regardless: bill briefs (`getStructuredLlm()`), because local servers advertise structured output but cannot compile the brief's JSON grammar, and the dual lens (`getSearchModel()`), which needs a provider-native web-search tool. PDF vision fallback uses **Gemini `gemini-2.5-flash`**. Images use the local FLUX server (`LOCAL_FLUX_BASE_URL`) first, then hosted **Black Forest Labs FLUX.2 Klein 9B**. Provider usage and hosted-image costs are tracked per run.
 
 Each new/changed item runs through:
 
 1. **Summary** (`text-generation.ts`) — ≤100-char punchy summary, 8th-grade reading level.
-2. **Article** (`text-generation.ts`) — structured 4-section markdown: _What This Means For You_, _Overview_, _Impact & Implications_, _The Debate_; balanced across perspectives. Stored in `ai_generated_article`. Throws a typed `AIRateLimitError` on 429.
+2. **Article, for non-bill content** (`text-generation.ts`) — structured 4-section markdown: _What This Means For You_, _Overview_, _Impact & Implications_, _The Debate_; balanced across perspectives. Stored in `ai_generated_article`. Throws a typed `AIRateLimitError` on 429.
 3. **Brief** (`bill-brief.ts`, bills only) — the structured document that replaces the markdown wall of text in the app: hook, stat tiles, before/after changes, affected groups, unknowns, glossary, optional prose. Quotes are verified verbatim against the source and stripped if they don't match; loaded political phrasing in the model's own voice triggers one regeneration. The brief also receives the official CRS summary as authoritative,
    explicitly non-quotable context, so provisions past its source window are still
    known to it; quotes are verified against the official text alone. Cached in
    `content_brief` by `contentHash`. See [Article generation](./article-generation.md).
 4. **Dual lens** (`text-generation.ts`) — proponent/opponent arguments grounded in an agentic web-research loop, cached in `content_lens`. This is the most expensive step and the only one whose output is not reproducible: the same input can return different arguments, and the row is overwritten in place with no history. It is therefore cached on **its own inputs** (title + full text + article type + model version), not on the bill's overall `contentHash` — that hash also covers status and summary, so a routine action update ("Referred to committee" → "Received in the Senate") used to invalidate it and re-roll the dice. One such re-roll lost a finding that H.R. 7008 carried unrelated voter-ID provisions.
-5. **Marketing copy** (`marketing-generation.ts`) — Zod-validated `{ title ≤25 chars, description ≤25 words, imagePrompt }` for the `video` feed card.
-6. **Imagery** — multiple sources:
-   - _Scraped thumbnail_ (preferred, free): source-provided image URL → `thumbnail_url`.
-   - _Generated_: the configured local FLUX server produces a 768×768 image, falling back to hosted FLUX.2 Klein 9B at 1024×1024; `sharp` converts PNG→JPEG (q85); bytes land in the `image_data` `bytea` column. Hosted calls retry with backoff; moderation blocks return `null` silently.
-   - _Stock-photo fallback_: `image-keywords.ts` → Google Custom Search (`GOOGLE_API_KEY` + `GOOGLE_SEARCH_ENGINE_ID`) can supply a thumbnail URL.
+5. **Imagery** uses source/search thumbnails and separately generated header art. `content-images.ts` writes header art to object storage and records metadata in `content_image`. Per-change brief artwork uses a separate path. See [the data layer](data-layer.md#source-records-and-derived-content).
+
+The retired video feed no longer generates marketing cards or stores a `video` row.
 
 New bills that need an AI description generate it before the initial insert. A
 provider outage therefore leaves the source item eligible for the next scrape
 instead of persisting an incomplete bill that requires a manual repair.
 
-## Pipeline Flow
-
-The SHA-256 gate is the main cost control: unchanged content skips every AI call.
+## Pipeline flow
 
 ```mermaid
 flowchart TD
-    fetch["fetchWithRetry()<br/>(backoff, Retry-After, per-host throttle)"] --> hash["createContentHash()<br/>SHA-256 over key fields"]
-    hash --> lookup["Look up existing row<br/>(natural key)"]
-    lookup --> changed{"New or<br/>hash changed?"}
-
-    changed -->|no| backfill["Backfill missing<br/>AI assets only"]
-    changed -->|yes| usable{"isUsableSourceText()?<br/>(≥200 chars, not boilerplate)"}
-    usable -->|no| skipai["Upsert raw content,<br/>skip AI"]
-    usable -->|yes| ai["AI pipeline (OpenRouter)"]
-
-    ai --> summary["Summary (≤100 chars)"]
-    summary --> article["Article (4-section markdown)<br/>→ ai_generated_article"]
-    article --> thumburl["Optional source/search thumbnail_url"]
-    thumburl --> upsert["upsertContent()<br/>onConflictDoUpdate + append versions"]
-    skipai --> upsert
-    backfill --> upsert
+    fetch[Fetch and normalize source] --> hash[Compare source and asset hashes]
+    hash --> reuse{Reusable assets?}
+    reuse -->|yes| store[Refresh source fields as needed]
+    reuse -->|no| budget{Source usable and budget available?}
+    budget -->|yes| generate[Generate required assets]
+    generate --> complete{Complete?}
+    complete -->|yes| store
+    complete -->|no| defer[Defer and record retry]
+    budget -->|temporarily blocked| defer
+    budget -->|no usable source| skip[Skip until source changes]
 ```
+
+This is the bill path at a high level. Other content types have different minimum requirements; the implementation is in `utils/db/operations.ts`.
 
 ## Environment & provider-fallback contract
 
@@ -369,21 +298,19 @@ which caps how many fetched items may _pay for AI_ (see
 
 ## Maintenance, backfill & reprocessing scripts
 
-The scrape path persists every fetched item but only lets
-`SCRAPER_MAX_NEW_ITEMS_PER_RUN` of them generate AI assets; the rest carry raw
-content and are completed later by these standalone entry points. This section
+The scrape path can defer new records and leave existing records needing enrichment. These commands repair stored content; source adapters and their retry queues handle records that have not landed yet. This section
 also includes the manual retention command. All are `pnpm`-scripted in
 `apps/scraper` and share the pipeline's database safety conventions.
 
-| Command                      | File                            | What it fills                               | Safety                                                        |
-| ---------------------------- | ------------------------------- | ------------------------------------------- | ------------------------------------------------------------- |
-| `reprocess-content`          | `reprocess-content.ts`          | Any derived asset across all content tables | **Read-only by default**; needs `--apply` (+ `--yes` on prod) |
-| `retroactive-briefs`         | `retroactive-briefs.ts`         | Missing/stale bill `content_brief` rows     | `--dry-run` to preview                                        |
-| `retroactive-lenses`         | `retroactive-lenses.ts`         | Missing/stale `content_lens` rows           | `--dry-run` to preview                                        |
-| `backfill-bill-descriptions` | `backfill-bill-descriptions.ts` | Bills with no source/AI description         | `--apply` (+ `--yes` on prod)                                 |
-| `content-images`             | `content-images.ts`             | Missing or stale Storage-backed header art  | Bill selection is hard-limited to 80; local FLUX only         |
-| `bill-interest`              | `bill-interest.ts`              | Missing/stale editorial ranking assessments | `--dry-run` to preview                                        |
-| `prune-bills`                | `prune-bills.ts`                | Bills outside the editorial retention set   | **Read-only by default**; needs `--apply` (+ `--yes` on prod) |
+| Command                      | File                            | What it fills                               | Safety                                                           |
+| ---------------------------- | ------------------------------- | ------------------------------------------- | ---------------------------------------------------------------- |
+| `reprocess-content`          | `reprocess-content.ts`          | Any derived asset across all content tables | **Read-only by default**; needs `--apply` (+ `--yes` on prod)    |
+| `retroactive-briefs`         | `retroactive-briefs.ts`         | Missing/stale bill `content_brief` rows     | `--dry-run` to preview                                           |
+| `retroactive-lenses`         | `retroactive-lenses.ts`         | Missing/stale `content_lens` rows           | `--dry-run` to preview                                           |
+| `backfill-bill-descriptions` | `backfill-bill-descriptions.ts` | Bills with no source/AI description         | `--apply` (+ `--yes` on prod)                                    |
+| `content-images`             | `content-images.ts`             | Missing or stale Storage-backed header art  | Inspect command limits and provider configuration before running |
+| `bill-interest`              | `bill-interest.ts`              | Missing/stale editorial ranking assessments | `--dry-run` to preview                                           |
+| `prune-bills`                | `prune-bills.ts`                | Bills outside the editorial retention set   | **Read-only by default**; needs `--apply` (+ `--yes` on prod)    |
 
 The scheduled Congress refresh passes `--recent 80 --retain 50
 --retention-days 90`; Open States uses the same retention settings after a

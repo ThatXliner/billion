@@ -1,276 +1,51 @@
 ---
 name: release-billion-testflight
-description: Create, validate, build, submit, and monitor iOS TestFlight releases for the Billion Expo app. Use when asked to make a new Billion iOS build, bump the mobile version, upload an EAS build, submit a build to App Store Connect or TestFlight, replace a faulty TestFlight build, or verify the status of a Billion release.
+description: Build, submit, replace, or check a Billion iOS TestFlight release. Use for mobile version bumps, EAS builds, App Store Connect submission, and release-status verification.
 ---
 
 # Release Billion to TestFlight
 
-Ship a reproducible Billion iOS release through EAS and App Store Connect. Continue through build and submission completion unless an Apple account gate requires user action.
+Read [the iOS release guide](../../../docs/ios-release.md) for commands and fallback procedures. Complete the requested release through build and submission monitoring. Distinguish an EAS build, an accepted Apple upload, completed Apple processing, and tester availability.
 
-## Release principles
+## 1. Establish the release source and acceptance criteria
 
-- Preserve unrelated working-tree changes. Stage and commit only release files.
-- Treat the requested release behavior as acceptance criteria. Add targeted verification when the change involves navigation, environment-gated UI, authentication, or another runtime-sensitive feature; do not impose unrelated UI checks on every release.
-- Prefer the CI release path. Pushing a `vX.Y.Z` tag already builds and submits via `.github/workflows/release-ios.yml`; build by hand only when that path is unavailable, and say why.
-- Build from an exact commit or tag in a clean worktree, with its own real `pnpm install` — never a linked `node_modules`, which breaks fingerprint parity.
-- Run EAS from `apps/expo`, never from the monorepo root. Confirm the working directory before every build or submit command.
-- Do not confuse these states: EAS build finished, Apple upload accepted, Apple processing finished, testers can install.
-- Do not print secrets. Public Expo variables such as `EXPO_PUBLIC_API_URL` may be shown.
+Inspect the working tree, recent commits, tags, `apps/expo/app.config.base.json`, and `apps/expo/eas.json`. Verify identifiers from those files against the signed-in EAS project and App Store Connect. Run EAS commands from `apps/expo`.
 
-## 1. Inspect the release state
+Preserve unrelated changes and stage only intended release files. Build from an exact commit or tag in a clean worktree with its own real install. Linked `node_modules` can break native fingerprint parity.
 
-From the repository root, inspect:
+Extract the behavior the user wants shipped. A status-only request needs inspection and a report, not a new version or build. For a new release, define a check for each requested change before spending a build. Navigation checks must cover both Expo Router options and the custom tab renderer; environment-gated behavior needs a production bundle or runtime check.
 
-```bash
-git status --short --branch
-git log -10 --oneline --decorate
-git tag --sort=-version:refname | head
-sed -n '1,220p' apps/expo/app.config.base.json
-sed -n '1,220p' apps/expo/eas.json
-```
+Done when the source, target app, release path, and behavior checks are identified.
 
-Read `docs/ios-release.md` when present. Verify rather than assume these current identifiers:
+## 2. Validate the release
 
-- Expo project: `@thatxliner/billion`
-- Bundle identifier: `app.billion-news.billion`
-- App Store Connect app ID: `6761675243`
-- EAS project ID: `c38bc8f8-f82c-4a45-b819-d62bd366ac8b`
+Follow [release preflight](../../../docs/ios-release.md#release-preflight). Verify the canonical API URL against committed production configuration and EAS production. Show only public values; inspect secret settings by presence without printing credentials. Verify the live site and at least one public app API request, plus the relevant session flow for authentication changes.
 
-Confirm the EAS identity and remote build number:
+Require mobile typecheck, lint, Expo Doctor, and the production iOS export to pass. Native dependency, plugin, or app-configuration changes also require prebuild validation. Resolve missing native peers, SDK mismatches, duplicate native modules, and config errors before building.
 
-```bash
-pnpm dlx eas-cli@latest whoami
-pnpm dlx eas-cli@latest project:info
-pnpm dlx eas-cli@latest build:version:get --platform ios --profile production --non-interactive
-```
+Done when the preflight and release-specific checks pass, with evidence for the behavior being shipped.
 
-## 2. Define acceptance criteria
+## 3. Version once and choose the build owner
 
-Extract the user-requested changes and verify each one before releasing. Examples:
+Follow [TestFlight through CI](../../../docs/ios-release.md#testflight-through-ci). The bump script edits, commits, and tags; do not duplicate those operations. Review the staged diff before using it. EAS owns the remote iOS build number.
 
-- For an environment change, verify the production variable and live endpoint.
-- For a production-only tab or feature flag, inspect both the router and any custom navigation renderer, then validate a production bundle where `__DEV__` is false.
-- For authentication or API changes, exercise the relevant production endpoint without exposing credentials.
+Pushing a `v*` tag starts `release-ios.yml`, which builds and submits. Inspect the workflow and EAS builds for the exact tag before starting anything manually. If CI is running or has succeeded, proceed to monitoring.
 
-Do not claim a behavior is fixed solely because a framework option appears correct in source. Check custom components and runtime-specific branches that can override it.
+If CI cannot complete the release, state the reason and use the [manual EAS fallback](../../../docs/ios-release.md#manual-eas-fallback). Use the [local Xcode fallback](../../../docs/ios-release.md#local-xcode-fallback) when EAS quota or infrastructure prevents a build. Retain the same clean source, preflight, signing, and submission checks. For a local upload, choose an unused App Store build number and synchronize EAS's remote number afterward.
 
-## 3. Verify the production environment
+Done when one build path owns the exact release and its build/submission identifiers or local archive path are recorded.
 
-Compare the committed mobile environment with EAS production:
+## 4. Monitor and finish
 
-```bash
-sed -n '1,40p' apps/expo/.env
-cd apps/expo
-pnpm dlx eas-cli@latest env:list --environment production
-```
+Follow [build and submission verification](../../../docs/ios-release.md#verify-build-and-submission). On recoverable failure, inspect the current logs, correct the cause, rerun the relevant checks, and continue. Interactive Apple login, two-factor prompts, or agreements may require the account holder.
 
-The production API should use the canonical URL `https://www.billion-news.app` unless the repository explicitly changes it. Avoid shipping a redirecting hostname when cookies, authentication, or POST requests may be involved.
+Verify Apple processing directly when a signed-in session is available. Otherwise report the accepted upload and pending or unverified processing state; do not claim tester availability without evidence.
 
-If the EAS variable is wrong, update it before building and confirm the result:
+Before finishing, verify:
 
-```bash
-pnpm dlx eas-cli@latest env:update production \
-  --variable-name EXPO_PUBLIC_API_URL \
-  --value https://www.billion-news.app \
-  --non-interactive
-```
+- Release commit and tag, marketing version, and build number.
+- Completed build and submission, or the precise remaining account/processing gate.
+- Production API URL and checks for every requested behavior change.
+- Unrelated working-tree changes preserved.
 
-Verify the live site and at least one public app API request.
-
-## 4. Run preflight checks
-
-Run the standard mobile checks:
-
-```bash
-cd apps/expo
-pnpm typecheck
-pnpm lint
-pnpm dlx expo-doctor@latest .
-EXPO_PUBLIC_API_URL=https://www.billion-news.app \
-  pnpm exec expo export --platform ios --output-dir /tmp/billion-expo-export --clear
-```
-
-Require Expo Doctor to pass all checks. Treat missing direct native peer dependencies, SDK version mismatches, config schema errors, and duplicate native modules as release blockers.
-
-Run `expo prebuild --platform ios --no-install` when native dependencies, Expo plugins, or app configuration changed. Remove only generated ignored output that this task created.
-
-Run targeted checks for the current acceptance criteria. Keep them proportional to the change; a normal content-only release does not require an unrelated UI audit.
-
-## 5. Version and record the release
-
-Increment `version` in `apps/expo/app.config.base.json` using semver. That file holds the static Expo config; `apps/expo/app.config.js` wraps it to inject PostHog values at load time, so there is no `app.config.json`. `just bump <patch|minor|major>` (via `scripts/bump.mjs`) does the edit, commit, and tag for you. EAS owns the iOS build number remotely and the production profile should use `autoIncrement: true`.
-
-Review the full diff before committing. Commit only intended release files, create the matching tag, and push both:
-
-```bash
-git add <intended-files>
-git commit -m "chore: release X.Y.Z"
-git tag vX.Y.Z
-git push origin main
-git push origin vX.Y.Z
-```
-
-Use a fix-oriented commit message when the release is primarily a correction. Never stage unrelated user work.
-
-## 6. Check whether CI already owns the build
-
-`.github/workflows/release-ios.yml` triggers on any pushed `v*` tag and runs the
-same `eas build --platform ios --profile production --auto-submit` this skill
-describes, after its own version/typecheck/lint/doctor gate. **Pushing the tag in
-step 5 therefore already starts a TestFlight build.**
-
-Check before building anything by hand:
-
-```bash
-gh run list --workflow release-ios.yml --limit 3
-pnpm dlx eas-cli@latest build:list --platform ios --limit 3 --non-interactive
-```
-
-If that workflow is running or succeeded for this tag, **stop here** and monitor
-it (step 8). Running this skill's build as well produces two TestFlight builds of
-the same commit, wastes an EAS build, and forces someone to pick between
-identical entries in App Store Connect.
-
-Build manually only when CI cannot: the workflow is disabled or failing for an
-infrastructure reason, `EXPO_TOKEN` is unavailable, or you are rebuilding a
-version whose tag already exists and will not be re-pushed. Say which of these
-applies before proceeding.
-
-## 7. Build from a clean release worktree
-
-Create a detached worktree from the exact release tag or commit. This prevents unrelated local changes from entering the EAS archive.
-
-```bash
-git worktree add --detach /tmp/billion-release-X.Y.Z vX.Y.Z
-```
-
-Run a real `pnpm install` inside the worktree. Do **not** symlink the main checkout's `node_modules` into it: the `fingerprint` runtime policy hashes resolved native module paths, so a symlink makes the local fingerprint reflect the main checkout while EAS computes its own from a clean install. The build then fails in `Configure expo-updates` with a runtime version mismatch, and a build that did slip through would never receive OTA updates.
-
-Confirm fingerprint parity before spending a build — this must match the hash EAS reports for the build:
-
-```bash
-cd /tmp/billion-release-X.Y.Z/apps/expo
-pnpm dlx eas-cli@latest fingerprint:generate --platform ios
-```
-
-Before invoking EAS, confirm all three:
-
-```bash
-pwd
-test -f app.config.js
-test -f eas.json
-```
-
-The directory must end in `/apps/expo`. Running EAS from the repository root can generate unintended root `app.json` and `eas.json` files.
-
-Start the production build and schedule submission:
-
-```bash
-cd /tmp/billion-release-X.Y.Z/apps/expo
-pnpm dlx eas-cli@latest build \
-  --platform ios \
-  --profile production \
-  --auto-submit \
-  --non-interactive \
-  --message "Release X.Y.Z"
-```
-
-The production submit profile must contain the verified `ios.ascAppId`. Capture the EAS build and submission IDs immediately.
-
-### Manual Xcode fallback for EAS quota exhaustion
-
-Use a local Xcode archive when EAS reports that the account has exhausted its free iOS builds, credits, or build quota. Do not use quota exhaustion as a reason to skip validation, versioning, signing, or TestFlight submission.
-
-Continue in the clean release worktree. Choose an App Store build number greater than every build already uploaded for this marketing version. The EAS remote number is a starting point, but App Store Connect is authoritative:
-
-```bash
-cd /tmp/billion-release-X.Y.Z/apps/expo
-pnpm dlx eas-cli@latest build:version:get \
-  --platform ios \
-  --profile production \
-  --non-interactive
-```
-
-Set explicit shell values; never allow a local development `.env.local` URL into the archive:
-
-```bash
-VERSION=X.Y.Z
-BUILD_NUMBER=N
-PRODUCTION_API_URL=https://www.billion-news.app
-```
-
-Generate the native project and install pods:
-
-```bash
-EXPO_PUBLIC_API_URL="$PRODUCTION_API_URL" \
-  pnpm exec expo prebuild --platform ios --clean
-cd ios
-pod install
-```
-
-Archive from the workspace with explicit marketing/build versions and the Billion Apple team:
-
-```bash
-EXPO_PUBLIC_API_URL="$PRODUCTION_API_URL" \
-xcodebuild \
-  -workspace billion.xcworkspace \
-  -scheme billion \
-  -configuration Release \
-  -destination 'generic/platform=iOS' \
-  -archivePath "/tmp/billion-${VERSION}-${BUILD_NUMBER}.xcarchive" \
-  DEVELOPMENT_TEAM=QKY5V6T98V \
-  CODE_SIGN_STYLE=Automatic \
-  MARKETING_VERSION="$VERSION" \
-  CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-  -allowProvisioningUpdates \
-  archive
-```
-
-Always use `billion.xcworkspace`, not `billion.xcodeproj`. Treat an archive warning or signing error as a blocker and inspect the complete Xcode result before uploading.
-
-Open the successful archive in Xcode:
-
-```bash
-open "/tmp/billion-${VERSION}-${BUILD_NUMBER}.xcarchive"
-```
-
-In Organizer, choose **Distribute App → App Store Connect → Upload**. Use the configured QIONG CHEN team and allow Xcode to validate the archive before the final upload. This is an authorized release action, but an interactive Apple login, two-factor prompt, agreement, or final Organizer confirmation may require the user.
-
-After Apple accepts the local upload, synchronize EAS's remote iOS build number so a later `autoIncrement` build does not reuse it:
-
-```bash
-cd /tmp/billion-release-X.Y.Z/apps/expo
-pnpm dlx eas-cli@latest build:version:set \
-  --platform ios \
-  --profile production
-```
-
-Enter the exact locally uploaded `BUILD_NUMBER`. Then monitor App Store Connect processing and record the local archive path in the handoff. Never attempt to download or reconstruct an App Store Connect private key stored only on EAS servers.
-
-## 8. Monitor build and submission
-
-Poll the build until it reaches `FINISHED`:
-
-```bash
-pnpm dlx eas-cli@latest build:view BUILD_ID --json
-```
-
-On failure, inspect the current EAS/Xcode logs, fix the root cause, rerun preflight, create a new build number, and continue. Do not stop at the first recoverable build or submission error.
-
-Verify submission completion using the EAS submit command output or submission URL. A successful transport log should state that the package was uploaded to App Store Connect and the submission finished without an error.
-
-Apple may keep the build in `Processing` after EAS submission succeeds. Verify App Store Connect directly when a signed-in session is available. Otherwise state precisely that Apple accepted the upload and that processing is pending; do not claim tester availability without evidence.
-
-## 9. Final audit and handoff
-
-Confirm:
-
-- Marketing version and remote build number
-- EAS build status `FINISHED`
-- EAS submission status `FINISHED` with no error
-- Canonical production environment value
-- Release commit and tag pushed
-- Requested release-specific behavior verified
-- Unrelated working-tree changes preserved
-
-Remove the temporary worktree after monitoring is complete. Report the final version/build and provide direct EAS build, EAS submission, and App Store Connect TestFlight links.
+Remove the temporary worktree after monitoring completes. Report version/build and direct build, submission, and TestFlight links where available. For status-only requests, report the observed state and identifiers without creating release artifacts.

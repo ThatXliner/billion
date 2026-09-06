@@ -1,6 +1,6 @@
 # Civic Data Source Setup
 
-How to obtain keys/access for every civic integration. For local dev, copy `.env.example` to `.env` and fill in the keys below. (Every key is optional — see [Mock data](../CONTRIBUTING.md#mock-data--development-without-api-keys).)
+How to obtain keys/access for every civic integration. For local dev, copy `.env.example` to `.env` and fill in the keys below. (Every key is optional — see [Mock data](../CONTRIBUTING.md#configure-the-app-you-are-working-on).)
 
 | Source                                 | Key required | Cost                             | Env variable                                                          |
 | -------------------------------------- | ------------ | -------------------------------- | --------------------------------------------------------------------- |
