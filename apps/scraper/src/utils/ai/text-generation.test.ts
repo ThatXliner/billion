@@ -50,6 +50,69 @@ test("non-bill summary prompts preserve the original event-focused goal", () => 
   assert.doesNotMatch(prompt, /Official legislative status:/);
 });
 
+test("bill prompts include operative text beyond the short non-bill excerpt", () => {
+  const operativeText = "OPERATIVE PROVISION BEYOND TWO THOUSAND CHARACTERS";
+  const billContent = "x".repeat(2_000) + operativeText;
+  const billPrompt = buildAISummaryPrompt("A bill", billContent, referred);
+
+  assert.match(billPrompt, new RegExp(operativeText));
+  assert.match(billPrompt, /Existing law.*This bill would/);
+  assert.match(
+    billPrompt,
+    /do not infer new effects from the title, introduction, findings/,
+  );
+
+  const nonBillPrompt = buildAISummaryPrompt(
+    "An executive order",
+    "x".repeat(2_000) + "NON-BILL TAIL",
+  );
+  assert.doesNotMatch(nonBillPrompt, /NON-BILL TAIL/);
+  assert.doesNotMatch(nonBillPrompt, /Existing law.*This bill would/);
+  assert.doesNotMatch(nonBillPrompt, /Source text is truncated/);
+});
+
+test("bill prompt caps source at 32,000 characters and warns about omitted text", () => {
+  const prompt = buildAISummaryPrompt(
+    "A bill",
+    "x".repeat(32_000) + "OMITTED BILL PROVISION",
+    referred,
+  );
+
+  assert.doesNotMatch(prompt, /OMITTED BILL PROVISION/);
+  assert.match(
+    prompt,
+    /Source text is truncated to the first 32000 characters/,
+  );
+  assert.match(prompt, /Do not infer provisions omitted from the excerpt/);
+});
+
+test("adopted resolution prompts describe the event separately from policy effects", () => {
+  const prompt = buildAISummaryPrompt(
+    "A state resolution",
+    "Existing law provides background. This bill would request a study.",
+    {
+      billNumber: "TX SR 23 (891)",
+      status: "Reported enrolled",
+      actions: [
+        {
+          text: "Read & adopted",
+          type: "introduction, passage",
+        },
+      ],
+    },
+  );
+
+  assert.match(
+    prompt,
+    /Distinguish the recorded adoption event from policy language/,
+  );
+  assert.match(
+    prompt,
+    /recorded adoption may be described as a completed event/,
+  );
+  assert.doesNotMatch(prompt, /No completed chamber vote is recorded/);
+});
+
 test("proposal summary validation rejects present-law and unsupported-vote claims", () => {
   const lifecycle = deriveBillLifecycle(referred);
 

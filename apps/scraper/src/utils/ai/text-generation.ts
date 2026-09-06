@@ -65,6 +65,8 @@ export function buildAISummaryPrompt(
   content: string,
   context?: BillSummaryContext,
 ): string {
+  const sourceLimit = context ? 32_000 : 2_000;
+  const sourceText = content.substring(0, sourceLimit);
   const lifecycle = context
     ? deriveBillLifecycle({
         billNumber: context.billNumber,
@@ -82,6 +84,14 @@ export function buildAISummaryPrompt(
     "Style: Use active voice, plain English (8th-grade level), and NO jargon. Focus on the direct impact.",
     "Keep the mechanism and scope precise: a condition on receiving federal funds limits funding eligibility for the covered recipients; it does not by itself ban the underlying activity or all institutions.",
   ];
+  if (context) {
+    lines.push(
+      "",
+      lifecycle?.status.startsWith("adopted_")
+        ? "Distinguish the recorded adoption event from policy language; summarize only that event unless the source clearly states a separate effect."
+        : 'Distinguish paragraphs labeled "Existing law" from "This bill would." Summarize only changes supported by the source; do not infer new effects from the title, introduction, findings, or existing law alone.',
+    );
+  }
   if (lifecycle) {
     const adoptedResolution = lifecycle.status.startsWith("adopted_");
     lines.push("", "Official legislative status: " + lifecycle.label + ".");
@@ -98,11 +108,17 @@ export function buildAISummaryPrompt(
         : "This measure is not enacted. Every policy effect must use explicit conditional language such as 'would' or 'would have'; 'could' or 'aims to' may add nuance but cannot replace that framing. Never say it 'will' or that it already bans, blocks, requires, or changes something.",
     );
   }
+  if (context && content.length > sourceLimit) {
+    lines.push(
+      "",
+      `Source text is truncated to the first ${sourceLimit} characters. Do not infer provisions omitted from the excerpt.`,
+    );
+  }
   lines.push(
     "",
     "Title: " + title,
     "",
-    "Content: " + content.substring(0, 2000),
+    "Content: " + sourceText,
     "",
     "Summary (max 100 characters):",
   );

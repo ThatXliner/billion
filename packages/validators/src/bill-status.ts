@@ -93,15 +93,35 @@ function actionChamber(
   actionCode: string,
 ): "House" | "Senate" | undefined {
   const passageChamber =
-    /(?:passed(?:\s*\/\s*agreed to)?|agreed to)\s+(?:in|by)\s+(?:the\s+)?(house|senate)\b/.exec(
+    /(?:passed(?:\s*\/\s*agreed to)?|agreed to)\s+(?:in|by)\s+(?:the\s+)?(house|assembly|senate)\b/.exec(
       text,
     )?.[1];
   if (passageChamber) {
-    return passageChamber === "house" ? "House" : "Senate";
+    return passageChamber === "senate" ? "Senate" : "House";
   }
-  const directPassageChamber = /\bpassed\s+(house|senate)\b/.exec(text)?.[1];
+  const adoptionChamber =
+    /\b(?:adopted|agreed to)\s+(?:in|by)\s+(?:the\s+)?(house|assembly|senate)\b/.exec(
+      text,
+    )?.[1];
+  if (adoptionChamber) {
+    return adoptionChamber === "senate" ? "Senate" : "House";
+  }
+  const directPassageChamber = /\bpassed\s+(house|assembly|senate)\b/.exec(
+    text,
+  )?.[1];
   if (directPassageChamber) {
-    return directPassageChamber === "house" ? "House" : "Senate";
+    return directPassageChamber === "senate" ? "Senate" : "House";
+  }
+
+  // State resolution histories commonly describe the chamber that acted by
+  // naming the chamber that receives the measure next, e.g. "Ordered to the
+  // Assembly" after a Senate adoption. This is only a supporting signal; the
+  // action still has to contain passage/adoption evidence before it can affect
+  // the lifecycle.
+  const orderedTo =
+    /\bordered\s+to\s+(?:the\s+)?(assembly|house|senate)\b/.exec(text)?.[1];
+  if (orderedTo) {
+    return orderedTo === "senate" ? "House" : "Senate";
   }
 
   // Action codes are only a supporting signal. Congress has reused them, so
@@ -134,10 +154,15 @@ function classifyAction(action: BillLifecycleAction): ActionFacts {
     text,
   );
   const chamber = actionChamber(text, code);
+  const isCommitteeAction =
+    /\bcommittee\b/.test(text) ||
+    classifications.has("committee-passage") ||
+    classifications.has("committee-passage-favorable");
+  const isProceduralAmendmentOrMotion =
+    /^(?:(?:the|an?)\s+)?(?:amendment|motion)\b/.test(text) &&
+    !/\bon passage\b/.test(text);
   const isSimpleOrConcurrentClassification =
-    classifications.has("adoption") ||
-    classifications.has("passage") ||
-    classifications.has("committee-passage");
+    classifications.has("adoption") || classifications.has("passage");
 
   const enacted =
     classifications.has("became-law") ||
@@ -175,14 +200,17 @@ function classifyAction(action: BillLifecycleAction): ActionFacts {
 
   const explicitChamberPassage =
     !isReconsideration &&
-    (/(?:passed(?:\s*\/\s*agreed to)?|agreed to)\s+(?:in|by)\s+(?:the\s+)?(?:house|senate)\b/.test(
+    !isProceduralAmendmentOrMotion &&
+    (/(?:passed(?:\s*\/\s*agreed to)?|agreed to)\s+(?:in|by)\s+(?:the\s+)?(?:house|assembly|senate)\b/.test(
       text,
     ) ||
-      /\bpassed\s+(?:house|senate)\b/.test(text) ||
+      /\bpassed\s+(?:house|assembly|senate)\b/.test(text) ||
       /\bon passage\b.*\bpassed\b/.test(text) ||
       /\bpassed by the yeas and nays\b/.test(text));
   const passed =
     !isReconsideration &&
+    !isCommitteeAction &&
+    !isProceduralAmendmentOrMotion &&
     (explicitChamberPassage ||
       (isSimpleOrConcurrentClassification && classifications.has("passage")) ||
       (/(?:passed|passage)/.test(text) &&
@@ -190,7 +218,11 @@ function classifyAction(action: BillLifecycleAction): ActionFacts {
 
   const adopted =
     !isReconsideration &&
+    !isCommitteeAction &&
+    !isProceduralAmendmentOrMotion &&
     (classifications.has("adoption") ||
+      (/^(?:read[\s.&]+)?adopted(?:[\s.,;:!?]|$)/.test(text) &&
+        !/\b(?:amendment|motion)\b/.test(text)) ||
       /\b(?:adopted|agreed to)\s+(?:in|by)\s+(?:the\s+)?(?:house|senate)\b/.test(
         text,
       ));
@@ -223,13 +255,120 @@ function fallbackStatusLabel(text: string): string {
   return clean;
 }
 
+type ResolutionKind = "simple" | "concurrent" | "joint";
+
+interface ResolutionInfo {
+  kind: ResolutionKind;
+  chamber?: "House" | "Senate";
+}
+
+const STATE_CODES = new Set([
+  "AL",
+  "AK",
+  "AZ",
+  "AR",
+  "CA",
+  "CO",
+  "CT",
+  "DE",
+  "FL",
+  "GA",
+  "HI",
+  "ID",
+  "IL",
+  "IN",
+  "IA",
+  "KS",
+  "KY",
+  "LA",
+  "ME",
+  "MD",
+  "MA",
+  "MI",
+  "MN",
+  "MS",
+  "MO",
+  "MT",
+  "NE",
+  "NV",
+  "NH",
+  "NJ",
+  "NM",
+  "NY",
+  "NC",
+  "ND",
+  "OH",
+  "OK",
+  "OR",
+  "PA",
+  "RI",
+  "SC",
+  "SD",
+  "TN",
+  "TX",
+  "UT",
+  "VT",
+  "VA",
+  "WA",
+  "WV",
+  "WI",
+  "WY",
+  "DC",
+  "AS",
+  "GU",
+  "MP",
+  "PR",
+  "VI",
+]);
+
 function resolutionKind(
   billNumber: string | null | undefined,
-): "simple" | "concurrent" | "joint" | undefined {
+): ResolutionInfo | undefined {
   const compact = compactBillNumber(billNumber);
-  if (/^[HS]RES/.test(compact)) return "simple";
-  if (/^[HS]CONRES/.test(compact)) return "concurrent";
-  if (/^[HS]JRES/.test(compact)) return "joint";
+  const federal = /^(H|S)(CONRES|JRES|RES)/.exec(compact);
+  if (federal) {
+    const prefix = federal[1] === "H" ? "House" : "Senate";
+    const kind =
+      federal[2] === "CONRES"
+        ? "concurrent"
+        : federal[2] === "JRES"
+          ? "joint"
+          : "simple";
+    return { kind, chamber: prefix };
+  }
+
+  // Open States prefixes state measures with the jurisdiction, unlike
+  // Congress.gov's H.Res./S.Con.Res. forms. Keep the state prefix requirement
+  // so federal H.R. and S.R. bills cannot be mistaken for resolutions.
+  const normalized = (billNumber ?? "")
+    .toUpperCase()
+    .replace(/\./g, "")
+    .replace(/[\u2010-\u2015-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const state = /^([A-Z]{2})\s+([HS])\s*(CR|JR|R)(?=\s|\d|\(|$)/.exec(
+    normalized,
+  );
+  const stateCode = state?.[1];
+  const chamberPrefix = state?.[2];
+  const resolutionSuffix = state?.[3];
+  if (
+    stateCode &&
+    chamberPrefix &&
+    resolutionSuffix &&
+    STATE_CODES.has(stateCode)
+  ) {
+    const kind =
+      resolutionSuffix === "CR"
+        ? "concurrent"
+        : resolutionSuffix === "JR"
+          ? "joint"
+          : "simple";
+    return {
+      kind,
+      chamber: chamberPrefix === "H" ? "House" : "Senate",
+    };
+  }
   return undefined;
 }
 
@@ -260,8 +399,10 @@ export function deriveBillLifecycle(args: {
     fallbackAction && !hasLatestInActions
       ? [...actions, { text: fallbackAction }]
       : actions;
-  const kind = resolutionKind(args.billNumber);
-  const isResolution = kind !== undefined;
+  const resolution = resolutionKind(args.billNumber);
+  const kind = resolution?.kind;
+  const isResolution = resolution !== undefined;
+  const originChamber = resolution?.chamber;
 
   let housePassed = false;
   let senatePassed = false;
@@ -287,6 +428,11 @@ export function deriveBillLifecycle(args: {
 
   for (const { action } of orderedActions) {
     const facts = classifyAction(action);
+    const chamber =
+      facts.chamber ??
+      (kind === "simple" && (facts.passed || facts.adopted)
+        ? originChamber
+        : undefined);
     if (facts.passed) {
       completedVote = true;
       // A later successful vote supersedes an earlier failed attempt on the
@@ -295,23 +441,40 @@ export function deriveBillLifecycle(args: {
         terminal = undefined;
       }
       if (kind === "simple" || kind === "concurrent") {
-        if (facts.chamber === "House") houseAdopted = true;
-        if (facts.chamber === "Senate") senateAdopted = true;
+        if (chamber === "House") houseAdopted = true;
+        if (chamber === "Senate") senateAdopted = true;
       } else {
-        if (facts.chamber === "House") housePassed = true;
-        if (facts.chamber === "Senate") senatePassed = true;
+        if (chamber === "House") housePassed = true;
+        if (chamber === "Senate") senatePassed = true;
       }
     }
     if (facts.adopted) {
       completedVote = true;
-      if (facts.chamber === "House") houseAdopted = true;
-      if (facts.chamber === "Senate") senateAdopted = true;
+      if (chamber === "House") houseAdopted = true;
+      if (chamber === "Senate") senateAdopted = true;
     }
     committeePassed ||= facts.committeePassed;
     if (facts.enacted) terminal = "enacted";
     else if (facts.vetoed) terminal = "vetoed";
     else if (facts.failed) terminal = "failed";
     else if (facts.withdrawn) terminal = "withdrawn";
+  }
+
+  // Some state feeds reduce a simple-resolution floor action to the exact
+  // latest label "Passed" and provide only an introduction action in history.
+  // The state resolution's H/S prefix supplies the originating chamber, but a
+  // joint or concurrent resolution still needs explicit chamber evidence.
+  const latestText =
+    fallbackAction ?? orderedActions.at(-1)?.action.text?.trim() ?? "";
+  if (
+    !terminal &&
+    kind === "simple" &&
+    originChamber &&
+    /^(?:passed|adopted|agreed to)\.?$/i.test(latestText)
+  ) {
+    completedVote = true;
+    if (originChamber === "House") houseAdopted = true;
+    else senateAdopted = true;
   }
 
   if (terminal === "enacted") {
@@ -361,7 +524,7 @@ export function deriveBillLifecycle(args: {
         isResolution,
       };
     }
-    if (houseAdopted) {
+    if (houseAdopted && kind === "simple") {
       return {
         status: "adopted_house",
         label: "Agreed to in House",
@@ -370,10 +533,28 @@ export function deriveBillLifecycle(args: {
         isResolution,
       };
     }
-    if (senateAdopted) {
+    if (senateAdopted && kind === "simple") {
       return {
         status: "adopted_senate",
         label: "Agreed to in Senate",
+        isEnacted: false,
+        hasCompletedVote: true,
+        isResolution,
+      };
+    }
+    if (houseAdopted) {
+      return {
+        status: "passed_house",
+        label: "Passed House",
+        isEnacted: false,
+        hasCompletedVote: true,
+        isResolution,
+      };
+    }
+    if (senateAdopted) {
+      return {
+        status: "passed_senate",
+        label: "Passed Senate",
         isEnacted: false,
         hasCompletedVote: true,
         isResolution,
@@ -420,8 +601,6 @@ export function deriveBillLifecycle(args: {
   // The source's latestAction is authoritative for same-day ties. Congress
   // often returns same-day actions newest-first, so date sorting alone can
   // turn a referral into the earlier introduction.
-  const latestText =
-    fallbackAction ?? orderedActions.at(-1)?.action.text?.trim() ?? "";
   if (/\bpresented to (?:the )?president\b/i.test(latestText)) {
     return {
       status: "passed_both",
