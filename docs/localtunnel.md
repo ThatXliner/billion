@@ -35,7 +35,7 @@ Only the Next.js server. It handles the tRPC API (`/api/trpc`), auth (`/api/auth
    - The first time you visit the URL in a browser you'll see a warning page — click "Click to Continue" to whitelist your IP (once per IP)
    - Keep this terminal open; closing it stops the tunnel
 
-4. **Point the Expo app at the tunnel** in `.env` (or `.env.local`) at the project root:
+4. **Point the Expo app at the tunnel** in `apps/expo/.env.local`:
 
    ```bash
    EXPO_PUBLIC_API_URL=https://billion-dev.loca.lt
@@ -62,8 +62,10 @@ Expo app ── HTTPS (tRPC) ──▶ https://billion-dev.loca.lt ── tunnel
 ## Environment variables reference
 
 ```bash
-# .env (project root)
+# apps/expo/.env.local
 EXPO_PUBLIC_API_URL=https://billion-dev.loca.lt   # Your localtunnel URL
+
+# .env (project root, server only)
 POSTGRES_URL=postgresql://user:pass@localhost:5432/dbname
 
 # Optional
@@ -89,7 +91,7 @@ In production there's no tunnel: Next.js deploys to Vercel, and the Expo app is 
 ## Security considerations
 
 - localtunnel exposes your local dev server to the public internet — anyone with the URL can hit your API
-- Your authentication secrets stay in environment variables; **never commit** your `.env` or expose your `AUTH_SECRET`
+- Your authentication secrets stay in environment variables; **never commit** your `.env` or expose your `BETTER_AUTH_SECRET`
 - Consider ngrok's password protection for sensitive development
 
-Connection problems (timeouts, CORS, auth/cookie issues, random disconnects) are covered in [Troubleshooting](./troubleshooting.md#localtunnel-issues).
+Connection problems (timeouts, CORS, auth/cookie issues, random disconnects) are covered in [Troubleshooting](./troubleshooting.md#mobile-cannot-reach-the-api).

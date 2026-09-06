@@ -1,90 +1,64 @@
 # Troubleshooting
 
-Known failure modes and their fixes. See also the quick notes in the [README](../README.md#troubleshooting).
+Start from the failing layer: process startup, database, API connection, then the screen. [Contributing](../CONTRIBUTING.md) contains the supported setup path.
 
-## Expo / native build issues
+## The website will not start
 
-### `pnpm run ios` crashes immediately
+Run `pnpm env:doctor --target nextjs --file .env` and inspect the startup error. Next.js validates server settings and public PostHog settings. Fix the relevant declaration or local value rather than bypassing validation. Root `.env.local` may override a value you just changed in `.env`; see [loading policy](launch.md#loading-policy).
 
-The monorepo has transitive peer deps (via `@better-auth/expo`) that pull in expo 55 packages, which can win pnpm's hoist election over expo 53's versions and cause crashes like:
+If `pnpm dev` fails on Windows with an invalid package filter, use `pnpm dev:next` for the API and run `pnpm --filter @acme/expo dev` in another terminal. The root script uses quoted exclusion filters that some shells handle differently.
 
-- `ERR_PACKAGE_PATH_NOT_EXPORTED` — metro 0.83 hoisted instead of 0.82
-- `Cannot read properties of undefined (reading 'push')` — `metro-core` 0.83 hoisted, breaking `Terminal` API
-- `Cannot read properties of undefined (reading 'transformFile')` — `@expo/metro` 55 hoisted
+## Database errors or empty content
 
-These are fixed by the overrides in `pnpm-workspace.yaml` which pin `metro*`, `@expo/metro`, and `@expo/metro-config` to expo 53-compatible versions. If you ever see these errors after updating dependencies, check that the overrides haven't been removed.
+Confirm that `POSTGRES_URL` selects the intended local database and that the service is running. For Docker, use `pnpm postgres:status` and `pnpm postgres:logs`. Do not print the connection string into a shared log.
 
-### "Cannot find native module 'X'" / version mismatch warnings
+A new database needs a schema and sample data before Browse can display articles. Onboarding offers both. For migration-managed databases, follow [Migrations](data-layer.md#migrations); do not use baselining to hide a missing table.
 
-**Symptoms**: Errors like `Cannot find native module 'ExpoGlassEffect'` or `Mismatch between C++ code version and JavaScript code version`
+## Mobile cannot reach the API
 
-**Cause**: A native module is installed but the native binary hasn't been rebuilt to include it. This happens after adding a package with native code, upgrading Expo SDK, or running `pnpm install` without rebuilding.
+1. Start Next.js with `pnpm dev:next` or `pnpm dev` and check it on your computer at port `3000`.
+2. Check `apps/expo/.env.local`. The committed Expo `.env` points to production, so local development needs an override.
+3. From a phone, use the computer's reachable LAN address or [a tunnel](localtunnel.md). `localhost` on a physical phone is the phone itself.
+4. Restart Expo after changing `EXPO_PUBLIC_API_URL`. If stale bundler state remains, run `pnpm --filter @acme/expo exec expo start --clear`.
 
-**Solution**: Do a full native rebuild from `apps/expo/`:
+For localtunnel, open its URL in a browser and pass any interstitial page first. Keep the tunnel process running. A tunnel serving HTML instead of an API response can look like a CORS or parsing failure.
 
-```bash
-pnpm ios   # or pnpm android
-```
+## Authentication fails
 
-This runs prebuild + pod install + compiles the native project automatically. `expo start --clear` alone is not enough for native module errors.
+Check `BETTER_AUTH_SECRET`, the API URL, and the auth callback host. `AUTH_SECRET` is an obsolete name here. The mobile request must carry the cookie returned by the Expo auth client; the server must resolve it in `createTRPCContext`.
 
-### Always open the workspace, not the project
+For OAuth, inspect the configured provider callback and trusted origins in `packages/auth/src/index.ts`. A successful website response alone does not verify the native callback and stored session. See [Frontend authentication](frontend.md#authentication).
 
-Open `ios/billion.xcworkspace` — never `ios/billion.xcodeproj`. The `.xcodeproj` alone won't include CocoaPods dependencies and the build will fail to link.
+## No development build or missing native module
 
-## TypeScript
-
-### Errors about missing `.js` extensions in `packages/db`
-
-**Symptoms**: `tsc` in `apps/scraper` reports errors like:
-
-```
-../../packages/db/src/client.ts(4,25): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'.
-```
-
-**Cause**: The scraper uses `moduleResolution: "NodeNext"` which requires `.js` extensions on relative imports. When `packages/db/dist/` exists (with compiled `.d.ts` files), TypeScript resolves from those and everything is fine. When `dist/` is missing (e.g. in a fresh clone or git worktree), TypeScript falls back to the source `.ts` files and complains.
-
-**Solution**: Build the db package first:
+Errors such as `No development build ... is installed`, `Cannot find native module`, or a native/JavaScript version mismatch require a native build:
 
 ```bash
-pnpm -F @acme/db build
+pnpm ios
+# Or:
+pnpm android
 ```
 
-## Localtunnel issues
+Run those commands from the repository root. A clean Expo prebuild generates native project files; it does not install a compiled app. Restarting Metro cannot add a missing native module to the binary.
 
-### Expo app can't connect to the tunnel
+When using Xcode, open `apps/expo/ios/billion.xcworkspace` so CocoaPods dependencies are included.
 
-**Symptoms**: Network errors, timeout, or "Failed to fetch" errors
+## Metro or Expo package mismatch
 
-**Solutions**:
+Compare installed packages with `apps/expo/package.json` and the overrides in `pnpm-workspace.yaml`. Older docs referred to Expo 53 and pinned Metro versions from that SDK; those are not the current compatibility targets. Restore the committed dependency resolution with `pnpm install --frozen-lockfile` before investigating an upgrade. Rebuild the development binary when native dependencies changed.
 
-1. Verify the tunnel is running (`lt --port 3000`)
-2. Check the URL in your browser first — you may need to click "Click to Continue" on the warning page (once per IP)
-3. Ensure `EXPO_PUBLIC_API_URL` is set correctly in `.env`
-4. Restart your Expo dev server after changing environment variables
-5. Clear Expo cache: `pnpm --filter expo start -c`
+## Missing declarations or `.js` extension errors
 
-### "CORS error" or "Blocked by CORS policy"
+Some workspace packages export generated declarations from `dist/`. A fresh checkout or worktree may lack them, so an isolated package check can resolve source under a different module mode and report `TS2835` or missing declarations.
 
-The Next.js server already has CORS enabled (`Access-Control-Allow-Origin: *`). If you still see CORS errors:
+Build the database and its workspace dependencies from the root, then repeat the failing check:
 
-1. Check that you're using the full URL including `https://`
-2. Ensure you're not mixing HTTP and HTTPS
-3. Verify the tunnel is working by visiting the URL in a browser
+```bash
+pnpm exec turbo run build --filter=@acme/db...
+```
 
-### Authentication doesn't work
+Use the dependency's actual package name if the error points elsewhere. Give each worktree its own install; linking another checkout's `node_modules` can also break mobile release fingerprints.
 
-**Symptoms**: Session cookies not persisting, logged out after refresh
+## Development and production tabs differ
 
-**Solutions**:
-
-1. Check that your `AUTH_SECRET` is set in `.env`
-2. Ensure cookies are enabled in your app (better-auth handles this automatically)
-3. Verify the localtunnel URL uses HTTPS (required for secure cookies)
-4. Check `AUTH_REDIRECT_PROXY_URL` if using OAuth providers
-
-### Random disconnections or tunnel stops working
-
-1. localtunnel connections can be unstable — consider [ngrok or another alternative](./localtunnel.md#alternative-ngrok-more-reliable)
-2. Use a fixed subdomain to maintain consistent URLs
-3. Keep the tunnel terminal window open
+Settings is intentionally hidden outside development, and Feed is hidden in both modes. Check `apps/expo/src/app/(tabs)/_layout.tsx` and the custom `TabBar` when a visibility change does not take effect. Verify the production bundle for changes involving `__DEV__`.

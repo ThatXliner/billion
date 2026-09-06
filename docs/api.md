@@ -1,75 +1,58 @@
-# API Layer
+# API
 
-## Why tRPC
+`packages/api` defines the shared tRPC router. Next.js serves it at `/api/trpc`; Expo and browser clients call it over HTTP, while server-rendered web pages can call it in-process. Router types flow to the clients through `AppRouter`, and SuperJSON preserves values such as dates across the HTTP boundary.
 
-The API is a [tRPC v11](https://trpc.io/) router in `packages/api/`, served by Next.js at `/api/trpc`. Because mobile can't reach the database directly, tRPC is the typed RPC layer the phone calls over HTTP.
+## Request path
 
-- **End-to-end type safety, no schema file.** Router input/output types flow straight to both the Next.js server and the Expo client — no OpenAPI spec, no codegen, no drift.
-- **One package, all clients.** Both `apps/expo` and `apps/nextjs` import `@acme/api` and get identical type-safe procedures.
+Follow these files when debugging a request:
 
-`superjson` is the transformer. `protectedProcedure` throws `UNAUTHORIZED` when `ctx.session?.user` is null; the session comes from `@acme/auth`'s `getSession({ headers })` in the tRPC context.
+1. The client creates typed query options, for example in [Expo's API client](../apps/expo/src/utils/api.tsx).
+2. The [Next.js route handler](../apps/nextjs/src/app/api/trpc/[trpc]/route.ts) passes the request to tRPC.
+3. [createTRPCContext](../packages/api/src/trpc.ts) reads the Better Auth session from request headers and supplies `session`, `authApi`, and `db`.
+4. [appRouter](../packages/api/src/root.ts) selects a procedure from `router/`.
+5. The procedure validates input, checks access, then reads stored data or calls a provider through `lib/`.
 
-## Router Structure
+`publicProcedure` can see a session but does not require one. `protectedProcedure` rejects requests without a session user. It establishes authentication; the procedure still needs to scope reads and writes to that user. User-owned operations should derive the user ID from `ctx.session.user.id`.
 
-The root router (`packages/api/src/root.ts`) composes **nine** sub-routers:
+The development timing middleware adds a random 100 to 500 ms delay to procedures. Account for that when diagnosing local latency.
 
-| Router       | Procedures (Q = query, M = mutation, 🔒 = protected)                                                                                           |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auth`       | `getSession` (Q), `getSecretMessage` (Q 🔒)                                                                                                    |
-| `civic`      | `getElections`, `getVoterInfo`, `getRepresentatives`, `getRepresentativesEnriched` (all Q) — Google Civic + measure/candidate cross-validation |
-| `places`     | `autocomplete` (Q), `details` (M) — Google Places address autocomplete for the ballot lookup                                                   |
-| `legistar`   | `listDecisions`, `getDecision`, `listBodies`, `getIngestionHealth` (Q); deprecated source-format queries remain temporarily — local decisions  |
-| `openStates` | `searchBills`, `getBillDetails`, `getLegislators`, `getBillVotes` (all Q) — CA state legislature (Open States v3)                              |
-| `content`    | `getAll`, `getByType`, `getById` (all Q) — aggregates bill / government_content / court_case                                                   |
-| `video`      | `getInfinite` (Q) — cursor-paginated feed; converts `bytea` images to data URIs                                                                |
-| `post`       | `all`, `byId` (Q); `create`, `delete` (M 🔒)                                                                                                   |
-| `user`       | preferences, blocked content, settings, profile, and saved-article CRUD (all 🔒)                                                               |
+## Where to make a change
 
-## Civic Data & External Sources
+The root router is the authoritative list. This table describes responsibility rather than copying every procedure signature.
 
-The `civic` router calls the **Google Civic Information API** (`GOOGLE_CIVIC_API_KEY`). Responses are cached in the `civic_api_cache` table, keyed by a SHA-256 of the (lower-cased) address plus endpoint and params, with per-endpoint TTLs — elections 7d, voter info 24h, representatives 30d. When the key is absent it returns realistic mock data so dev/demo still works. `getVoterInfo` retries without a stale `electionId` if Google rejects it ("Election unknown").
+| Router       | Responsibility                                                                          |
+| ------------ | --------------------------------------------------------------------------------------- |
+| `content`    | Browse, search, detail, featured bills, sponsors, and content saves                     |
+| `civic`      | Elections, voter information, representatives, and ballot enrichment                    |
+| `places`     | Address autocomplete and address resolution                                             |
+| `legistar`   | Stored local decisions, bodies, and ingestion health; also legacy source-format queries |
+| `openStates` | Request-time state legislation, legislator, and vote lookups                            |
+| `user`       | Preferences, blocked content, settings, profile, and saved articles                     |
+| `feedback`   | Public feedback submission with optional session context                                |
+| `auth`       | Session access and the protected example procedure                                      |
+| `post`       | Legacy sample-post CRUD inherited from the template                                     |
+| `video`      | Compatibility endpoint returning an empty feed page                                     |
 
-Other live civic integrations:
+For Browse and article detail, start in [content.ts](../packages/api/src/router/content.ts). `getByType` reads paginated stored content, `search` searches the corpus, and `getById` assembles the detail response with available derived content. The [architecture tour](architecture.md#follow-a-bill-to-the-screen) traces these back to ingestion.
 
-- **`legistar`** — new clients read durable, normalized local-government decisions populated by the registered scraper. The source transport is stateless and paged; deprecated prototype queries still make read-only source calls during the UI transition. See [Local government decisions and Legistar](./local-government-legistar.md).
-- **`openStates`** — California bills, legislators, and votes via the Open States v3 API (`OPEN_STATES_API_KEY`).
-- **`places`** — Google **Places Autocomplete (New)** for the ballot address entry (`packages/api/src/lib/places.ts`). `autocomplete` returns US street-address predictions (biased `includedRegionCodes: ["us"]`, `includedPrimaryTypes: street_address/premise/subpremise`) for queries ≥3 chars; `details` resolves a `placeId` to its full `formattedAddress` (the ZIP the prediction omits, which Civic wants). A **session token** (UUID stable across one address entry) bundles all keystroke calls plus the closing `details` into a single billed unit. Reuses `GOOGLE_PLACES_API_KEY` → `GOOGLE_API_KEY` → `GOOGLE_CIVIC_API_KEY`; with no key it serves a small mock list so the dropdown still works in dev (same fallback pattern as `civic`).
+## Civic lookups and caching
 
-Ballot measures and candidates returned by `getVoterInfo` are run through cross-validation engines that merge multiple public-record sources by trust tier — see [Ballot-measure enrichment](./measure-enrichment.md) and [Candidate enrichment](./candidate-enrichment.md). Key/access setup for every source is in [Civic data source setup](./civic-data-sources.md).
+The [civic integration](../packages/api/src/lib/civic.ts) calls Google Civic and caches responses in `civic_api_cache`. Keys include a hashed normalized address, endpoint, and parameters. Expiry varies by endpoint. Candidate and measure enrichment also use this cache; inspect their modules before assuming the normalized election tables hold a response.
 
-## LLM Provider
+Civic and Places provide mock responses when keys are absent, which helps local UI development. A populated mock ballot is not evidence that real provider access works. See [provider setup](civic-data-sources.md) and [the integration reference](data-sources-api.md) when testing live data.
 
-`packages/api/src/lib/ai-provider.ts` exports a single swappable `llm` via the Vercel AI SDK: **Groq** when `GROQ_API_KEY` is set, then **OpenRouter** when `OPENROUTER_API_KEY` is present (using `OPENROUTER_MODEL`, default `deepseek/deepseek-v4-flash`), then **OpenAI `gpt-4o-mini`**, then deprecated direct **DeepSeek `deepseek-v4-flash`** during migration, and `null` otherwise. Callers treat `null` as "AI unavailable" and skip generation rather than throw.
+[Places](../packages/api/src/lib/places.ts) resolves predictions to a full address. Keep the session token stable across one address entry, including the closing details request, so the provider can group them into one session.
 
-## Why Next.js as the Single API Host
+Local decisions have a separate durable ingestion path. New consumers should use the normalized decision API described in [Local government and Legistar](local-government-legistar.md). The old source-format queries remain during the UI transition.
 
-Next.js (port 3000) serves the web frontend, hosts the tRPC API at `/api/trpc`, and serves the marketing/landing page — one deployment, deployed to Vercel. The Expo app points at this same server. This keeps a single better-auth implementation (cookies for web, header pass-through for mobile), one thing to deploy for API + web + landing, and the database never exposed outside the server process. Next.js is the most widely adopted React framework with first-class Vercel deploys, which the project leans on for zero-config previews and production.
+## Enrichment and AI
 
-## Request Path
+[Measure enrichment](measure-enrichment.md) and [candidate enrichment](candidate-enrichment.md) merge evidence by trust tier and retain field-level citations. Candidate biographies come from sources. Measure generation needs supporting source material; a title alone is insufficient.
 
-Both clients call the same router; only the auth transport differs — web rides an HttpOnly cookie, mobile injects the session as a `Cookie` header.
+API-side model selection lives in [ai-provider.ts](../packages/api/src/lib/ai-provider.ts). It exports a nullable `llm`, allowing callers to handle unavailable generation. The scraper has its own provider selection and fallback behavior in [utils/ai/provider.ts](../apps/scraper/src/utils/ai/provider.ts); changing one does not change the other.
 
-```mermaid
-sequenceDiagram
-    participant Expo as Expo app
-    participant Web as Web browser
-    participant Next as Next.js /api/trpc
-    participant API as appRouter (@acme/api)
-    participant Auth as better-auth
-    participant DB as PostgreSQL
+## Add or change a procedure
 
-    Expo->>Next: httpBatchLink + Cookie header<br/>(x-trpc-source: expo-react)
-    Web->>Next: httpBatchStreamLink + HttpOnly cookie
-    Next->>Auth: getSession(headers)
-    Auth-->>Next: session | null
-    Next->>API: ctx = { session, db }
-    alt protectedProcedure && no session
-        API-->>Next: UNAUTHORIZED
-    else
-        API->>DB: Drizzle query (+ civic_api_cache check)
-        DB-->>API: rows
-        API-->>Next: typed result (superjson)
-    end
-    Next-->>Expo: response
-    Next-->>Web: streamed response
-```
+Choose the existing router that owns the behavior. Define runtime input validation, choose public or authenticated access, and keep provider-specific transport and parsing in `lib/`. Register a new router in `root.ts` only when the behavior needs its own group.
+
+Read an adjacent procedure and test for the project's conventions. Check the response from its real caller, including missing data and unauthorized access where relevant. Installed mobile apps may keep calling an old procedure after a server deploy, which is why retired paths such as `video.getInfinite` can remain as compatibility stubs.

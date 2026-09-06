@@ -1,22 +1,54 @@
-# Data Layer
+# Data layer
 
-## Why Drizzle ORM
+The database separates records fetched from government sources from the explanations and artwork generated from them. Start with that distinction before reading individual columns. The complete definitions live in [schema.ts](../packages/db/src/schema.ts); [auth-schema.ts](../packages/db/src/auth-schema.ts) contains Better Auth's generated tables.
 
-We use [Drizzle ORM](https://orm.drizzle.team/) over a **PostgreSQL** backend hosted on **Supabase** (connection string points at `pooler.supabase.com:6543`).
+## Source records and derived content
 
-Drizzle was chosen because:
+| Table or group                    | What it stores                                                                                             |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `bill`                            | Federal and state legislation, source identity, text, status, actions, and source or generated description |
+| `government_content`              | Presidential documents collected from White House and Federal Register sources                             |
+| `court_case`                      | Stored court opinions; the CourtListener scraper is currently unregistered                                 |
+| `content_brief`                   | Structured bill explanations, validated by `@acme/validators`                                              |
+| `content_lens`                    | Competing perspectives with citations and generation metadata                                              |
+| `content_image`                   | Generated header-art storage paths, hashes, prompts, and dimensions                                        |
+| `brief_change_image`              | Artwork for individual changes in a brief, including explicit decisions to omit an image                   |
+| `bill_interest`, `featured_bill`  | Editorial assessments and featured-bill selection                                                          |
+| `scraper_cursor`, `scraper_retry` | Source discovery progress and work that needs another attempt                                              |
 
-- **Schema-as-code with full type inference.** Every query's TypeScript type is derived from the schema definition — no codegen, no type drift. Change a column and TypeScript immediately flags every affected callsite.
-- **Thin abstraction.** Drizzle stays close to SQL; there's no opaque query builder hiding what's sent to the database.
-- **drizzle-zod integration.** Insert schemas (`createInsertSchema`) are derived directly from table definitions, keeping validation in sync with the DB.
+Content hashes let generation code compare its inputs with stored results. Each derived asset has its own reuse rules; for example, a lens uses its generation inputs so a routine status change need not regenerate the arguments. See [Scraper pipeline](scraper.md).
 
-**Why not the Supabase client directly?** Supabase's PostgREST JS client generates relatively loose types (`Json` for JSONB, unions that don't reflect actual data shapes, no inference across joins). With a non-trivial schema — polymorphic references, typed JSONB columns, per-field citation arrays — Drizzle's precise inferred types matter. Using Supabase as the Postgres _host_ is fine; using its client as the _ORM_ loses too much type fidelity.
+Generated header bytes live in object storage; `content_image` keeps the path and checksum in Postgres. `brief_change_image` still supports binary data in `image_data`. These are separate storage paths. The former `video` table is absent from the current schema, and its API endpoint is a compatibility stub.
 
-## DB Client
+## Civic data and local decisions
 
-`packages/db/src/client.ts` exports a lazy-initialized `db` singleton via a `Proxy`. The Drizzle connection (`drizzle-orm/node-postgres`, native `pg` driver, `snake_case` casing) isn't created until the first query, so importing the package never opens a connection on its own.
+The election model has `election`, `contest`, `candidate`, `polling_location`, and `role_description` tables. A contest can be a candidate race or a referendum. Request-time civic results and enrichment also use `civic_api_cache`, keyed by address hash, endpoint, and parameters with an expiry timestamp. Candidate enrichment is cache-based; do not assume every ballot response becomes normalized election rows.
 
-Because the driver opens a raw TCP socket via Node's `net`/`tls`, **only server-side code can use the DB client directly.** The mobile app's JS runtime has no socket layer (see [Frontend apps](./frontend.md)).
+Local government uses the `local_*` tables. A `local_decision` represents a matter; `local_meeting_item` represents its occurrence at a meeting. Keeping those distinct allows one matter to appear across multiple meetings. Related tables retain documents, history, votes, source provenance, and ingestion runs. Read [Local government and Legistar](local-government-legistar.md) before changing their lifecycle or geography rules.
+
+## User data and relationships
+
+Better Auth owns `user`, `session`, `account`, and `verification`. Application tables store preferences, settings, blocked content, and saved articles. `post` remains a legacy example from the original template.
+
+`saved_article` and the derived content tables identify their source through a `content_type` and `content_id` pair. Those polymorphic references do not enforce a foreign key to every possible source table. Deletion and retention code must account for related rows explicitly. By contrast, `brief_change_image.content_brief_id` has a foreign key with cascade deletion.
+
+```mermaid
+flowchart LR
+    source[Bill / government content / court case]
+    source -. type and ID .-> brief[content_brief]
+    source -. type and ID .-> lens[content_lens]
+    source -. type and ID .-> image[content_image]
+    source -. type and ID .-> saved[saved_article]
+    brief -->|foreign key, cascade delete| changes[brief_change_image]
+```
+
+## Database access
+
+[client.ts](../packages/db/src/client.ts) exports a lazy Drizzle singleton backed by the Node PostgreSQL driver. Importing it does not open a connection; accessing it initializes the client from `POSTGRES_URL`. It uses `snake_case` database names and typed table definitions.
+
+The API, auth package, and scraper use this client on the server. Mobile and browser code use the API. Drizzle provides typed queries; Zod and drizzle-zod validate data at runtime. These checks serve different purposes.
+
+Production Postgres is hosted on Supabase, while development can use ordinary local Postgres. The database tools load repository environment files through `@acme/env/load`; existing process variables win, followed by root `.env.local`, then root `.env`. Confirm the effective target before running a write command.
 
 ## Migrations
 
@@ -135,102 +167,3 @@ For a migration that has already succeeded on a shared database, correct it
 with a new forward migration. For destructive changes where a forward repair is
 not sufficient, restore the verified backup according to the environment's
 database recovery procedure before redeploying compatible application code.
-
-## Schema Overview
-
-The schema (`packages/db/src/schema.ts` + better-auth-generated `auth-schema.ts`) has ~20 tables in five groups.
-
-**Government content** — the scraped source material:
-
-| Table                | Purpose                                                                            |
-| -------------------- | ---------------------------------------------------------------------------------- |
-| `bill`               | Congressional legislation (congress.gov)                                           |
-| `government_content` | Presidential documents — EOs, proclamations, memoranda, notices (Federal Register) |
-| `court_case`         | SCOTUS & federal court opinions (CourtListener)                                    |
-| `post`               | Legacy sample-post table from the T3 template                                      |
-
-All three content tables share a common pattern:
-
-- `content_hash` (SHA-256 over key fields) — detects changes between scrape runs to avoid redundant AI generation
-- `versions` (JSONB array) — append-only `{ hash, updatedAt, changes }` log
-- `ai_generated_article` — AI-enriched markdown stored on the row
-- `images` (JSONB array) — `{ url, alt, source, sourceUrl }[]`
-- `thumbnail_url` — primary display image
-
-**Feed layer:**
-
-| Table   | Purpose                                                                                                                                                                                                                                                                 |
-| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `video` | Derived feed cards — one row per content item via a polymorphic `(content_type, content_id)` ref. Holds AI marketing copy (title ≤25 chars, ~50-word description) and either a JPEG in `image_data` (`bytea`) or a scraped `thumbnail_url`. `engagement_metrics` JSONB. |
-
-**Civic / elections** — the voter-information model:
-
-| Table              | Purpose                                                                                                                                                                                                                                                                                     |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `election`         | Election records (external id, date, type, OCD division, deadlines JSONB)                                                                                                                                                                                                                   |
-| `contest`          | Races _and_ ballot measures. `type` = candidate \| referendum. For measures: `referendum_title`, pro/con statements, `summary`, `summary_is_ai_generated`, `fiscal_impact`, and a `citations` JSONB array (per-field source attribution: field, source name/url, trust tier, official flag) |
-| `candidate`        | Candidates within a contest (party, incumbent, contact, bio)                                                                                                                                                                                                                                |
-| `polling_location` | Polling places / early-vote sites / drop boxes, geo-located (lat/long), with hours                                                                                                                                                                                                          |
-| `role_description` | Reusable descriptions of offices/roles by level (seeded with ~18 federal→local roles)                                                                                                                                                                                                       |
-
-**Local government decisions** — `local_jurisdiction`, `local_body`, `local_decision`, `local_meeting`, `local_meeting_item`, `local_decision_document`, `local_decision_history`, `local_decision_vote`, and `local_ingestion_run`. These source-neutral tables normalize Legistar Matters separately from their meeting occurrences, retain raw provenance and document hashes/extraction state, record complete ingestion windows, and soft-delete records that disappear upstream. San José is the first active adapter. See [Local government decisions and Legistar](./local-government-legistar.md).
-
-**User engagement & caching:**
-
-| Table             | Purpose                                                                                                                                                                                                                     |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `saved_article`   | Bookmarks — polymorphic `(content_type, content_id)` per user                                                                                                                                                               |
-| `user_preference` | Preferred topics / content types (JSONB string arrays)                                                                                                                                                                      |
-| `blocked_content` | Hidden sources/topics                                                                                                                                                                                                       |
-| `user_settings`   | Privacy & consent flags (location, personalize, analytics, crash, offline)                                                                                                                                                  |
-| `civic_api_cache` | Google Civic responses **and** enrichment results, keyed by `(address_hash, endpoint, params)` with `expires_at` TTL. Also backs per-candidate enrichment under endpoint `candidate-enrich` (global `address_hash`, 7d TTL) |
-
-**Auth** — better-auth-managed `user`, `session`, `account`, `verification` (regenerated into `auth-schema.ts` via `pnpm auth:generate`).
-
-## Key Relationships
-
-The content tables feed the `video` table and are referenced by `saved_article` through the same polymorphic `(content_type, content_id)` pair — neither uses a foreign key, so the dashed links below denote polymorphic refs, not enforced constraints.
-
-```mermaid
-erDiagram
-    bill ||..o{ video : "content_type=bill"
-    government_content ||..o{ video : "content_type=government_content"
-    court_case ||..o{ video : "content_type=court_case"
-    user ||--o{ saved_article : bookmarks
-    bill ||..o{ saved_article : "polymorphic ref"
-    government_content ||..o{ saved_article : "polymorphic ref"
-    court_case ||..o{ saved_article : "polymorphic ref"
-
-    election ||--o{ contest : has
-    election ||--o{ polling_location : has
-    contest ||--o{ candidate : "candidate races"
-    role_description }o..o{ contest : "describes office"
-
-    user ||--o{ session : ""
-    user ||--o{ account : ""
-    user ||--|| user_preference : ""
-    user ||--|| user_settings : ""
-    user ||--o{ blocked_content : ""
-
-    bill {
-        string content_hash "SHA-256 change detection"
-        jsonb versions "append-only history"
-        text ai_generated_article
-        jsonb images
-    }
-    contest {
-        string type "candidate | referendum"
-        bool summary_is_ai_generated
-        text fiscal_impact
-        jsonb citations "per-field attribution"
-    }
-    video {
-        string content_type "polymorphic"
-        bytea image_data "AI image, or"
-        string thumbnail_url "scraped URL"
-    }
-    civic_api_cache {
-        string address_hash
-        timestamp expires_at "TTL: 7d/24h/30d; candidate-enrich 7d"
-    }
-```

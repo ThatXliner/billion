@@ -1,33 +1,48 @@
-# Frontend Apps
+# Frontend apps
 
-## Expo (Mobile) — primary client
+Expo is the primary client. Next.js serves the website and public article pages, and hosts the API both clients use. Start both for local mobile development with `pnpm dev`; use `pnpm dev:next` for website/API work. Setup is in [Contributing](../CONTRIBUTING.md).
 
-**Expo SDK 53, React 19, Expo Router 5.** It talks to the backend **exclusively over the tRPC HTTP API** — no direct DB access.
+## Find a mobile feature
 
-**Why mobile can't hit the DB directly:**
+Expo Router maps files in `apps/expo/src/app/` to routes. Start with the route, follow its query into `packages/api/src/router/`, then inspect the components it renders.
 
-1. **No TCP socket in React Native.** Drizzle's `pg` driver needs Node's `net`/`tls` to open a Postgres connection; RN's runtime has no socket layer.
-2. **Security.** A connection string in an app binary is extractable → unrestricted DB access for anyone.
+| Area                                                | Entry point                                                                                                            |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Providers, fonts, and app initialization            | [Root layout](../apps/expo/src/app/_layout.tsx)                                                                        |
+| Browse, filters, and search                         | [Browse route](<../apps/expo/src/app/(tabs)/index.tsx>)                                                                |
+| Address-based ballot lookup                         | [Elections route](<../apps/expo/src/app/(tabs)/elections.tsx>)                                                         |
+| Original content, explanation, brief, and citations | [Article detail](../apps/expo/src/app/article-detail.tsx)                                                              |
+| Candidate race and ballot measure details           | [Contest detail](../apps/expo/src/app/contest-detail.tsx), [measure detail](../apps/expo/src/app/measure-detail.tsx)   |
+| Tab registration and visibility                     | [Tab layout](<../apps/expo/src/app/(tabs)/_layout.tsx>) and [custom TabBar](../apps/expo/src/components/ui/TabBar.tsx) |
 
-A PostgREST-style HTTP API (Supabase anon key + RLS) would solve both, but our business logic and auth live in the tRPC layer, so we keep the DB server-side and reach it via RPC.
+Browse, Elections, and Feedback are visible tabs. Settings is available in development and hidden in production. Feed remains a route but is hidden, and its API returns an empty page for older clients. A navigation change must account for both the router's options and the custom tab renderer. Check production behavior when changing `__DEV__` conditions.
 
-**tRPC client** (`apps/expo/src/utils/api.tsx`) uses `httpBatchLink`. The base URL (`utils/base-url.ts`) prefers `EXPO_PUBLIC_API_URL`, else auto-detects the dev machine's IP from the Expo debugger host, else `localhost:3000`. Requests carry `x-trpc-source: expo-react` and the auth cookie.
+The historical notes in `src/new_pages_implementation/` describe earlier page plans. Read the actual route before using one as an implementation reference.
 
-**Screens** (Expo Router): four tabs — Browse (`index`, content + search + an election banner for the signed-in user's own election), Feed (`feed`, swipeable video cards), Elections (`elections`, address-based voter info — a Places-backed address autocomplete resolves the registered address, then a **Candidates / Measures** segmented control splits the resolved ballot into the two contest types), Settings. Detail routes include `article-detail`, `contest-detail`, `measure-detail`, and `local-elections`. The measure-detail screen renders the short summary on the card and the long summary on detail, the `summaryIsAiGenerated` label, structured pro/con arguments, fiscal impact, and per-field source citations linking back to origin. The contest-detail screen renders the enriched candidate fields — photo, biography, incumbent badge, contact link, social channels — alongside the same per-field source citations.
+## How mobile reaches the API
 
-**Styling:** NativeWind v5. All Expo styles are consolidated in `apps/expo/src/styles.ts`, which re-exports shared tokens from `@acme/ui/theme-tokens` and adds RN-specific layers (`planes` for surface depth, `hair` hairline borders, content-type colors) plus the `sp`/`rd` rem-to-px helpers and a `useTheme()` hook. Brand fonts (IBM Plex Serif, Inria Serif, Albert Sans) load via `expo-font`. See the [Expo styling guide](./expo-styling.md) for the full style API.
+The [tRPC client](../apps/expo/src/utils/api.tsx) creates typed query options for TanStack Query. It uses `httpBatchLink`, SuperJSON, and the API base URL from [base-url.ts](../apps/expo/src/utils/base-url.ts). The link forwards the stored auth cookie and adds `x-trpc-source: expo-react`.
 
-## Next.js (Web)
+URL selection first uses `EXPO_PUBLIC_API_URL`, then the Expo development host on port `3000`. Expo web has a browser-host fallback. Native clients throw when neither an explicit URL nor a development host is available. A configured production URL wins over auto-detection, so set `apps/expo/.env.local` for local API work as described in [Contributing](../CONTRIBUTING.md#run-the-mobile-app).
 
-**Next.js 16, React 19, App Router.** Serves the marketing/landing page (hero, privacy, terms) and hosts the tRPC API. The route handler is `apps/nextjs/src/app/api/trpc/[trpc]/route.ts` (`fetchRequestHandler` over `appRouter`, with the server-side `auth` instance and CORS). RSC prefetch + `HydrateClient` on the server (`trpc/server.tsx`); the client (`trpc/react.tsx`) uses `httpBatchStreamLink`. In production it deploys to Vercel; in dev the Expo app tunnels to it via localtunnel (see [Localtunnel setup](./localtunnel.md)).
+Mobile imports API types, not the database client. `@acme/db/client` requires Node's PostgreSQL driver and server credentials. Put data access and authorization in the API procedure.
 
-## Shared UI
+## Styling and shared UI
 
-`packages/ui/` provides Radix-based, shadcn-style web components (button, input, field, label, separator, dropdown-menu, toast via Sonner) plus React Native variants (`button-native`, `card-native`) and the cross-platform `theme-tokens.ts` (colors, dark/light themes — dark is default — font sizes, weights, shadows). Add components with `pnpm ui-add`.
+Use [styles.ts](../apps/expo/src/styles.ts) as the mobile styling entry point. It combines shared theme tokens with native helpers and reusable styles. The [Expo styling guide](expo-styling.md) explains tokens, spacing, and the theme hook.
 
-## Auth (cross-platform)
+`packages/ui` contains web components, native helpers, and shared tokens. Radix/shadcn web components require browser APIs; choose native exports or mobile components for Expo. `pnpm ui-add` adds shared web components.
 
-better-auth (`packages/auth/`, `initAuth()`): Drizzle/Postgres adapter, Discord OAuth (when configured), `oAuthProxy`, and a custom **`expoPlugin`** that bridges OAuth/magic-link callbacks back to the native app. The plugin mirrors the `expo-origin` header to `origin` for better-auth's origin check and appends the set-cookie into deep-link params so the native client can store the session.
+Dependency versions live in the [Expo manifest](../apps/expo/package.json) and [workspace catalog](../pnpm-workspace.yaml). After adding a native dependency, rebuild with `pnpm ios` or `pnpm android`; restarting Metro only reloads JavaScript.
 
-- **Web** — better-auth sets an HttpOnly cookie; fetch sends it automatically.
-- **Mobile** — `@better-auth/expo` stores the session locally and the tRPC link injects it as a `Cookie` header; trusted origin `expo://`.
+## Web pages and server rendering
+
+The Next.js App Router lives in [apps/nextjs/src/app](../apps/nextjs/src/app). It includes the landing page, legal/support pages, public content previews, waitlist routes, and API endpoints. [Sharing and saves](virality.md) follows the public preview and share-image paths in detail.
+
+[trpc/server.tsx](../apps/nextjs/src/trpc/server.tsx) supplies server-side callers and query hydration. [trpc/react.tsx](../apps/nextjs/src/trpc/react.tsx) supplies the browser client with `httpBatchStreamLink`. Both use the same `appRouter`; server callers can invoke it without an HTTP request.
+
+## Authentication
+
+[packages/auth/src/index.ts](../packages/auth/src/index.ts) configures Better Auth with the Drizzle adapter, optional Discord OAuth, the OAuth proxy, and the native callback bridge. Next.js exposes it through `/api/auth` and passes the resulting session into the tRPC context.
+
+Web requests carry session cookies. The Expo auth client stores its session locally and supplies a `Cookie` header through the tRPC link. For an auth failure, follow the callback, stored cookie, and API context before changing a screen. See [API](api.md#request-path) and [Troubleshooting](troubleshooting.md).
