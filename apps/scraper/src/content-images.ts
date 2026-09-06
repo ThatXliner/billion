@@ -18,6 +18,7 @@ import {
   versionContentImageHash,
 } from "./utils/ai/content-image-visual.js";
 import { generateLocalPhoto } from "./utils/ai/image-generation.js";
+import { runImageBatches } from "./utils/image-batches.js";
 import { createLogger } from "./utils/log.js";
 import { uploadContentImage } from "./utils/storage/content-images.js";
 
@@ -163,6 +164,12 @@ const argv = await yargs(hideBin(process.argv))
   })
   .option("concurrency", { type: "number", default: 1 })
   .option("dry-run", { type: "boolean", default: false })
+  .option("drain", {
+    type: "boolean",
+    default: false,
+    describe:
+      "Repeat batches until no missing or stale images remain; stop on failure",
+  })
   .strict()
   .parseAsync();
 
@@ -176,38 +183,41 @@ if (argv.concurrency < 1 || argv.concurrency > 2) {
   throw new Error("--concurrency must be 1 or 2");
 }
 
-const candidates = [
-  ...(await billCandidates(argv.billLimit)),
-  ...(await governmentCandidates(argv.otherLimit)),
-  ...(await courtCandidates(argv.otherLimit)),
-];
-logger.info(
-  `Found ${candidates.length} missing or stale header image(s), capped at ${argv.billLimit} bills and ${argv.otherLimit} per other type`,
-);
-if (argv.dryRun) {
-  for (const item of candidates)
-    logger.info(`Would generate ${item.type}:${item.id} ${item.title}`);
-  process.exit(0);
-}
+await runImageBatches(async () => {
+  const candidates = [
+    ...(await billCandidates(argv.billLimit)),
+    ...(await governmentCandidates(argv.otherLimit)),
+    ...(await courtCandidates(argv.otherLimit)),
+  ];
+  logger.info(
+    `Found ${candidates.length} missing or stale header image(s), capped at ${argv.billLimit} bills and ${argv.otherLimit} per other type`,
+  );
+  if (argv.dryRun) {
+    for (const item of candidates)
+      logger.info(`Would generate ${item.type}:${item.id} ${item.title}`);
+    process.exit(0);
+  }
 
-let completed = 0;
-let failed = 0;
-const limit = pLimit(argv.concurrency);
-await Promise.all(
-  candidates.map((item) =>
-    limit(async () => {
-      try {
-        await generate(item);
-        completed += 1;
-        logger.success(
-          `${completed}/${candidates.length} ${item.type}:${item.id}`,
-        );
-      } catch (error) {
-        failed += 1;
-        logger.warn(`Failed ${item.type}:${item.id}`, error);
-      }
-    }),
-  ),
-);
-logger.info(`Done: generated=${completed} failed=${failed}`);
-if (failed > 0) process.exitCode = 1;
+  let completed = 0;
+  let failed = 0;
+  const limit = pLimit(argv.concurrency);
+  await Promise.all(
+    candidates.map((item) =>
+      limit(async () => {
+        try {
+          await generate(item);
+          completed += 1;
+          logger.success(
+            `${completed}/${candidates.length} ${item.type}:${item.id}`,
+          );
+        } catch (error) {
+          failed += 1;
+          logger.warn(`Failed ${item.type}:${item.id}`, error);
+        }
+      }),
+    ),
+  );
+  logger.info(`Done: generated=${completed} failed=${failed}`);
+  if (failed > 0) process.exitCode = 1;
+  return { completed, failed };
+}, argv.drain);

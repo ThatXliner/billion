@@ -82,6 +82,8 @@ export interface JobState {
   lastStartedAt?: string;
   lastFinishedAt?: string;
   lastExitCode?: number;
+  /** Start of the last successful run, preserved across failed attempts. */
+  lastSuccessfulStartedAt?: string;
   /** Drives backoff. Reset to 0 on any successful run. */
   consecutiveFailures: number;
   /**
@@ -102,5 +104,5 @@ export interface QueueEntry {
   readonly jobId: string;
   readonly priority: number;
   /** Why this run was queued — surfaced in logs to make history readable. */
-  readonly reason: "scheduled" | "requested" | "resumed";
+  readonly reason: "scheduled" | "requested" | "resumed" | "follow-up";
 }

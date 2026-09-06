@@ -28,6 +28,25 @@ Three properties follow from that, and they are what this app is for:
 Defined in `src/config.ts`. Each names a script in the scraper's `dist/` and
 the arguments it takes; the supervisor supplies everything else.
 
+After content ingestion or repair, the supervisor queues `content-images-daily`
+as a follow-up. This includes federal/state bills, targeted import batches,
+presidential documents, and content/description repairs. Ballot and candidate
+cache scrapers do not need header artwork. Partially failed imports also trigger
+the pass because they may have saved rows before failing.
+
+The follow-up uses persisted job timestamps: any content run newer than the last
+successful image pass needs another pass. It survives supervisor restarts and
+repeats for later import batches. Failed image passes preserve the previous
+success timestamp and retry with backoff. The daily schedule remains as a
+fallback for content inserted outside the supervisor.
+
+Both image jobs use `--drain`: their limits are batch sizes, and they repeat
+until no missing or stale images remain. A failed batch exits with an error
+instead of retrying the same failed candidates in a tight loop. Direct CLI
+imports should be followed by `pnpm --filter @acme/scraper content-images --drain`.
+Without `--drain`, the CLI processes one batch. Image generation runs serially
+with ingestion and may wait behind higher-priority scheduled jobs.
+
 | id                             | schedule          | notes                                                                            |
 | ------------------------------ | ----------------- | -------------------------------------------------------------------------------- |
 | `congress-daily`               | daily 03:15 local | Refreshes federal bills and applies the 90-day editorial retention policy        |

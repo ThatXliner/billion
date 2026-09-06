@@ -4,6 +4,7 @@ import { createConsola } from "consola";
 
 import type { QueueEntry, Schedule, SupervisorState } from "./types.js";
 import { findJob, jobs } from "./config.js";
+import { contentImageFollowUp } from "./content-images.js";
 import { JobQueue } from "./queue.js";
 import { runJob } from "./run.js";
 import {
@@ -107,6 +108,9 @@ async function execute(
 
   state.jobs[entry.jobId] = {
     lastStartedAt: startedAt,
+    lastSuccessfulStartedAt: succeeded
+      ? startedAt
+      : previous?.lastSuccessfulStartedAt,
     lastFinishedAt: new Date().toISOString(),
     lastExitCode: result.exitCode,
     consecutiveFailures: failures,
@@ -212,6 +216,11 @@ async function main(): Promise<void> {
 
   while (!stopping) {
     await drainRequests();
+
+    const imageFollowUp = contentImageFollowUp(jobs, state.jobs, new Date());
+    if (imageFollowUp && queue.enqueue(imageFollowUp)) {
+      logger.info(`Queued "${imageFollowUp.jobId}" after content ingestion`);
+    }
 
     for (const entry of dueJobs(jobs, state.jobs, new Date())) {
       if (queue.enqueue(entry)) {
