@@ -21,10 +21,8 @@ import {
   colors,
   fontBody,
   fontDisplay,
-  fontSize,
   hair,
   planes,
-  sp,
   useTheme,
 } from "~/styles";
 
@@ -127,10 +125,6 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
     transform: [{ translateY: enterY.value }],
   }));
 
-  const topRuleStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: ruleProgress.value }],
-  }));
-
   const bottomRuleStyle = useAnimatedStyle(() => ({
     transform: [{ scaleX: ruleProgress.value }],
   }));
@@ -141,7 +135,6 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
 
   const surface = isDark ? planes.navy : theme.card;
   const ruleColor = hair[2];
-  const markMuted = isDark ? "rgba(255,255,255,0.35)" : hair[3];
 
   return (
     <View
@@ -159,29 +152,15 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
         accessibilityRole="alert"
         accessibilityLiveRegion="polite"
       >
-        {/* Top hairline — draws in like a masthead rule */}
-        <Animated.View
-          style={[
-            styles.rule,
-            { backgroundColor: ruleColor },
-            topRuleStyle,
-          ]}
-        />
-
         <View style={styles.row}>
           <View style={styles.markWrap}>
-            {/* Civic architecture → download morph (see UpdateReadyMark) */}
-            <UpdateReadyMark
-              size={44}
-              color={colors.bill}
-              mutedColor={markMuted}
-            />
+            <UpdateReadyMark size={28} color={colors.bill} />
           </View>
 
           <View style={styles.copy}>
             <Text
               style={[styles.title, { color: theme.foreground }]}
-              numberOfLines={2}
+              numberOfLines={1}
             >
               A new edition is ready
             </Text>
@@ -204,15 +183,7 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
                 pressed && styles.restartPressed,
               ]}
             >
-              <Text style={[styles.restartText, { color: theme.foreground }]}>
-                Restart
-              </Text>
-              <View
-                style={[
-                  styles.restartUnderline,
-                  { backgroundColor: theme.foreground },
-                ]}
-              />
+              <Text style={styles.restartText}>Restart</Text>
             </Pressable>
 
             <Pressable
@@ -232,6 +203,7 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
           </View>
         </View>
 
+        {/* Single bottom rule — same quiet divider language as Browse chrome */}
         <Animated.View
           style={[
             styles.rule,
@@ -253,24 +225,24 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   banner: {
-    // Flush with chrome — no card radius, no drop shadow, no floating toast
+    // Same navy canvas as Browse — no card, no shadow, no masthead frame
   },
   rule: {
     height: StyleSheet.hairlineWidth,
-    alignSelf: "center",
     width: "100%",
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: sp[3],
-    paddingVertical: sp[4],
-    paddingHorizontal: sp[4],
-    minHeight: 80,
+    gap: 12,
+    // Match Browse `headerPad` / ContentCard horizontal rhythm
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 10,
   },
   markWrap: {
-    width: 48,
-    height: 48,
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -278,52 +250,47 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     justifyContent: "center",
-    gap: 1,
+    gap: 2,
   },
   title: {
+    // Sit under Browse's 36 display title — quieter editorial, not competing
     fontFamily: fontDisplay.bold,
-    fontSize: fontSize.xl,
-    lineHeight: fontSize.xl * 1.25,
+    fontSize: 16,
+    lineHeight: 20,
   },
   subtitle: {
+    // Match Browse subtitle weight (~14.5 Albert)
     fontFamily: fontBody.regular,
-    fontSize: fontSize.base,
-    lineHeight: fontSize.base * 1.3,
+    fontSize: 13,
+    lineHeight: 16,
   },
   actions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: sp[3],
-    paddingLeft: sp[1],
+    gap: 14,
+    paddingLeft: 4,
   },
   restartHit: {
-    alignItems: "center",
-    paddingVertical: 2,
-    minHeight: 44,
     justifyContent: "center",
+    minHeight: 36,
+    paddingVertical: 4,
   },
   restartPressed: {
     opacity: 0.7,
   },
   restartText: {
-    fontFamily: fontBody.medium,
-    fontSize: fontSize.base,
-    lineHeight: fontSize.base * 1.2,
-  },
-  restartUnderline: {
-    marginTop: 3,
-    height: 2,
-    alignSelf: "stretch",
-    opacity: 1,
+    // Same cue as Browse "Change >" / "Browse Federal instead"
+    fontFamily: fontBody.semibold,
+    fontSize: 13,
+    color: colors.bill,
   },
   laterHit: {
-    paddingVertical: 2,
-    minHeight: 44,
     justifyContent: "center",
+    minHeight: 36,
+    paddingVertical: 4,
   },
   laterText: {
-    fontFamily: fontBody.regular,
-    fontSize: fontSize.sm,
-    lineHeight: fontSize.sm * 1.3,
+    fontFamily: fontBody.medium,
+    fontSize: 13,
   },
 });

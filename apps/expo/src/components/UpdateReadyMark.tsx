@@ -96,20 +96,20 @@ function StaticDownloadMark({
       <Path
         d={DL_CHEVRON}
         stroke={color}
-        strokeWidth={2.25}
+        strokeWidth={1.75}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
         d={DL_SHAFT}
         stroke={color}
-        strokeWidth={2.4}
+        strokeWidth={1.9}
         strokeLinecap="round"
       />
       <Path
         d={DL_TRAY}
         stroke={color}
-        strokeWidth={2.1}
+        strokeWidth={1.65}
         strokeLinecap="square"
         strokeLinejoin="miter"
         opacity={1}
@@ -241,7 +241,7 @@ export function UpdateReadyMark({
             d={DL_SHAFT}
             animatedProps={shaftProps}
             stroke={color}
-            strokeWidth={2.4}
+            strokeWidth={1.9}
             strokeLinecap="round"
             strokeDasharray={`${LEN_SHAFT}`}
           />
@@ -249,7 +249,7 @@ export function UpdateReadyMark({
             d={DL_CHEVRON}
             animatedProps={chevronProps}
             stroke={color}
-            strokeWidth={2.25}
+            strokeWidth={1.75}
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeDasharray={`${LEN_CHEVRON}`}
@@ -258,7 +258,7 @@ export function UpdateReadyMark({
             d={DL_TRAY}
             animatedProps={trayProps}
             stroke={color}
-            strokeWidth={2.1}
+            strokeWidth={1.65}
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeDasharray={`${LEN_TRAY}`}
