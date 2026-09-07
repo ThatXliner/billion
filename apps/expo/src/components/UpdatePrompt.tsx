@@ -170,7 +170,7 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
         <View style={styles.row}>
           <View style={styles.markWrap}>
             <UpdateReadyMark
-              size={20}
+              size={36}
               color={colors.bill}
               mutedColor={markMuted}
             />
@@ -179,7 +179,7 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
           <View style={styles.copy}>
             <Text
               style={[styles.title, { color: theme.foreground }]}
-              numberOfLines={1}
+              numberOfLines={2}
             >
               A new edition is ready
             </Text>
@@ -261,14 +261,14 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: sp[2],
-    paddingVertical: sp[2] - 1,
-    paddingHorizontal: sp[3],
-    minHeight: 44,
+    gap: sp[3],
+    paddingVertical: sp[4],
+    paddingHorizontal: sp[4],
+    minHeight: 72,
   },
   markWrap: {
-    width: 24,
-    height: 24,
+    width: 40,
+    height: 40,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -280,13 +280,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fontDisplay.bold,
-    fontSize: fontSize.sm,
-    lineHeight: fontSize.sm * 1.25,
+    fontSize: fontSize.lg,
+    lineHeight: fontSize.lg * 1.25,
   },
   subtitle: {
     fontFamily: fontBody.regular,
-    fontSize: fontSize.xs,
-    lineHeight: fontSize.xs * 1.3,
+    fontSize: fontSize.sm,
+    lineHeight: fontSize.sm * 1.3,
   },
   actions: {
     flexDirection: "row",
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   restartHit: {
     alignItems: "center",
     paddingVertical: 2,
-    minHeight: 28,
+    minHeight: 44,
     justifyContent: "center",
   },
   restartPressed: {
@@ -305,8 +305,8 @@ const styles = StyleSheet.create({
   },
   restartText: {
     fontFamily: fontBody.medium,
-    fontSize: fontSize.sm,
-    lineHeight: fontSize.sm * 1.2,
+    fontSize: fontSize.base,
+    lineHeight: fontSize.base * 1.2,
   },
   restartUnderline: {
     marginTop: 2,
@@ -316,12 +316,12 @@ const styles = StyleSheet.create({
   },
   laterHit: {
     paddingVertical: 2,
-    minHeight: 28,
+    minHeight: 44,
     justifyContent: "center",
   },
   laterText: {
     fontFamily: fontBody.regular,
-    fontSize: fontSize.xs,
-    lineHeight: fontSize.xs * 1.3,
+    fontSize: fontSize.sm,
+    lineHeight: fontSize.sm * 1.3,
   },
 });
