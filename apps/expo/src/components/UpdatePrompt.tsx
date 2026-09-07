@@ -172,7 +172,7 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
           <View style={styles.markWrap}>
             {/* Civic architecture → download morph (see UpdateReadyMark) */}
             <UpdateReadyMark
-              size={36}
+              size={44}
               color={colors.bill}
               mutedColor={markMuted}
             />
@@ -266,11 +266,11 @@ const styles = StyleSheet.create({
     gap: sp[3],
     paddingVertical: sp[4],
     paddingHorizontal: sp[4],
-    minHeight: 72,
+    minHeight: 80,
   },
   markWrap: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -282,13 +282,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fontDisplay.bold,
-    fontSize: fontSize.lg,
-    lineHeight: fontSize.lg * 1.25,
+    fontSize: fontSize.xl,
+    lineHeight: fontSize.xl * 1.25,
   },
   subtitle: {
     fontFamily: fontBody.regular,
-    fontSize: fontSize.sm,
-    lineHeight: fontSize.sm * 1.3,
+    fontSize: fontSize.base,
+    lineHeight: fontSize.base * 1.3,
   },
   actions: {
     flexDirection: "row",
@@ -311,10 +311,10 @@ const styles = StyleSheet.create({
     lineHeight: fontSize.base * 1.2,
   },
   restartUnderline: {
-    marginTop: 2,
-    height: StyleSheet.hairlineWidth,
+    marginTop: 3,
+    height: 2,
     alignSelf: "stretch",
-    opacity: 0.85,
+    opacity: 1,
   },
   laterHit: {
     paddingVertical: 2,

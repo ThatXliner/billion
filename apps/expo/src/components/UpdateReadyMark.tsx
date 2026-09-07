@@ -96,23 +96,23 @@ function StaticDownloadMark({
       <Path
         d={DL_CHEVRON}
         stroke={color}
-        strokeWidth={1.3}
+        strokeWidth={2.25}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
         d={DL_SHAFT}
         stroke={color}
-        strokeWidth={1.35}
+        strokeWidth={2.4}
         strokeLinecap="round"
       />
       <Path
         d={DL_TRAY}
-        stroke={structure}
-        strokeWidth={1.15}
+        stroke={color}
+        strokeWidth={2.1}
         strokeLinecap="square"
         strokeLinejoin="miter"
-        opacity={0.85}
+        opacity={1}
       />
     </Svg>
   );
@@ -157,7 +157,7 @@ export function UpdateReadyMark({
     const scale = interpolate(
       p,
       [0, 0.12, 0.42, 0.78, 1],
-      [1, 1.03, 0.985, 1.045, 1],
+      [1, 1.06, 0.97, 1.08, 1],
       Extrapolation.CLAMP,
     );
     return {
@@ -171,8 +171,8 @@ export function UpdateReadyMark({
     const p = clock.value;
     const fadeOut = window01(p, 0.18, 0.62);
     const morph = window01(p, 0.15, 0.7);
-    const scale = interpolate(morph, [0, 1], [1, 0.82]);
-    const rotate = interpolate(morph, [0, 1], [0, -8]);
+    const scale = interpolate(morph, [0, 1], [1, 0.78]);
+    const rotate = interpolate(morph, [0, 1], [0, -10]);
     return {
       opacity: 1 - fadeOut,
       transform: [{ scale }, { rotate: `${rotate}deg` }],
@@ -185,8 +185,8 @@ export function UpdateReadyMark({
     const p = clock.value;
     const fadeIn = window01(p, 0.28, 0.72);
     const morph = window01(p, 0.2, 0.78);
-    const scale = interpolate(morph, [0, 1], [0.82, 1]);
-    const rotate = interpolate(morph, [0, 1], [8, 0]);
+    const scale = interpolate(morph, [0, 1], [0.78, 1]);
+    const rotate = interpolate(morph, [0, 1], [10, 0]);
     return {
       opacity: fadeIn,
       transform: [{ scale }, { rotate: `${rotate}deg` }],
@@ -212,7 +212,7 @@ export function UpdateReadyMark({
     const draw = window01(clock.value, 0.42, 0.76);
     return {
       strokeDashoffset: LEN_TRAY * (1 - draw),
-      opacity: 0.85,
+      opacity: 1,
     };
   });
 
@@ -241,7 +241,7 @@ export function UpdateReadyMark({
             d={DL_SHAFT}
             animatedProps={shaftProps}
             stroke={color}
-            strokeWidth={1.35}
+            strokeWidth={2.4}
             strokeLinecap="round"
             strokeDasharray={`${LEN_SHAFT}`}
           />
@@ -249,7 +249,7 @@ export function UpdateReadyMark({
             d={DL_CHEVRON}
             animatedProps={chevronProps}
             stroke={color}
-            strokeWidth={1.3}
+            strokeWidth={2.25}
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeDasharray={`${LEN_CHEVRON}`}
@@ -257,10 +257,10 @@ export function UpdateReadyMark({
           <AnimatedPath
             d={DL_TRAY}
             animatedProps={trayProps}
-            stroke={structure}
-            strokeWidth={1.15}
-            strokeLinecap="square"
-            strokeLinejoin="miter"
+            stroke={color}
+            strokeWidth={2.1}
+            strokeLinecap="round"
+            strokeLinejoin="round"
             strokeDasharray={`${LEN_TRAY}`}
           />
         </Svg>
