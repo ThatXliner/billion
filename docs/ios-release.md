@@ -163,21 +163,9 @@ pnpm dlx eas-cli@latest build --platform ios --profile preview
 
 Use `preview-simulator` for the iOS Simulator.
 
-Production updates use [Release OTA (Production)](../.github/workflows/release-ota.yml) in GitHub Actions. Supply:
+Production updates use [Release OTA (Production)](../.github/workflows/release-ota.yml) in GitHub Actions. Choose the branch containing the JavaScript update from GitHub's **Use workflow from** menu and run the workflow without inputs.
 
-- `source_ref`, the release branch, tag, or commit containing the JavaScript update.
-- `target_build_id`, the exact EAS store build installed by the affected users.
-- `platform`, either `ios` or `android`.
-- `message`, a description of the update.
-
-Find the EAS build ID from `apps/expo`:
-
-```bash
-pnpm dlx eas-cli@latest build:list \
-  --platform ios --build-profile production --status finished --limit 10
-```
-
-Match the app version and build number to the installed binary, then copy its `ID` UUID. The numeric iOS build number and EAS project ID are different identifiers.
+The workflow uses that branch's exact commit and creates the update message from its commit subject. It generates the production iOS fingerprint, selects the newest finished production store build with the same fingerprint, and validates that build's app identity and runtime before publishing. If no compatible build exists, the workflow stops and the change needs a new TestFlight build.
 
 The workflow runs checks and compares the source's native fingerprint and app identity with that store build. If they match, it publishes to production. If native code changed on `main`, create a release branch from the installed build's source and backport only the compatible fix, or ship a new store binary. Keep the fingerprint runtime policy and compatibility check intact.
 

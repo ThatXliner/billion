@@ -1,40 +1,18 @@
 name: Release OTA (Production)
 
-# Production OTA releases are deliberately dispatched from a chosen ref. The
-# runtime guard proves that ref can reach the exact store build selected below.
+# Production OTA releases use the ref selected in GitHub's "Use workflow from"
+# menu. The runtime guard finds and verifies a compatible production store build.
 on:
   workflow_dispatch:
-    inputs:
-      source_ref:
-        description: "Git ref containing the OTA (release branch, tag, or SHA)"
-        required: true
-        type: string
-      target_build_id:
-        description: "EAS build ID currently installed by the target users"
-        required: true
-        type: string
-      platform:
-        description: "Store build platform"
-        required: true
-        type: choice
-        options:
-          - ios
-          - android
-      message:
-        description: "Human-readable release message"
-        required: true
-        type: string
 
 concurrency:
-  group: production-ota-${{ inputs.platform }}
+  group: production-ota
   cancel-in-progress: false
 
 env:
   FORCE_COLOR: 3
-  OTA_MESSAGE: ${{ inputs.message }}
-  OTA_PLATFORM: ${{ inputs.platform }}
-  SOURCE_REF: ${{ inputs.source_ref }}
-  TARGET_BUILD_ID: ${{ inputs.target_build_id }}
+  OTA_PLATFORM: ios
+  SOURCE_REF: ${{ github.ref_name }}
 
 jobs:
   validate-publish:
@@ -57,7 +35,7 @@ jobs:
       - name: Checkout OTA source
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_ref }}
+          ref: ${{ github.sha }}
           path: source
           persist-credentials: false
 
@@ -65,7 +43,11 @@ jobs:
         id: source
         working-directory: source
         shell: bash
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        run: |
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          SOURCE_SUBJECT="$(git log -1 --pretty=%s)"
+          echo "sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "OTA_MESSAGE=Production OTA ${SOURCE_SHA:0:7}: $SOURCE_SUBJECT" >> "$GITHUB_ENV"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -108,10 +90,6 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Read target store build
-        working-directory: source/apps/expo
-        run: eas build:view "$TARGET_BUILD_ID" --json > "$RUNNER_TEMP/eas-target-build.json"
-
       - name: Generate OTA fingerprint
         working-directory: source/apps/expo
         run: |
@@ -119,6 +97,44 @@ jobs:
             --platform "$OTA_PLATFORM" \
             --environment production \
             --json > "$RUNNER_TEMP/eas-update-fingerprint.json"
+
+      - name: Find compatible production build
+        working-directory: source/apps/expo
+        run: |
+          FINGERPRINT_HASH="$(node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            import { parseEasJsonOutput } from "../../../workflow/scripts/assert-eas-update-runtime.mjs";
+            const fingerprint = parseEasJsonOutput(readFileSync(process.argv[1], "utf8"));
+            if (!fingerprint.hash) throw new Error("Generated OTA has no fingerprint hash.");
+            process.stdout.write(fingerprint.hash);
+          ' "$RUNNER_TEMP/eas-update-fingerprint.json")"
+
+          eas build:list \
+            --platform "$OTA_PLATFORM" \
+            --build-profile production \
+            --status finished \
+            --distribution store \
+            --channel production \
+            --fingerprint-hash "$FINGERPRINT_HASH" \
+            --limit 50 \
+            --json > "$RUNNER_TEMP/eas-compatible-builds.json"
+
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            import { parseEasJsonOutput } from "../../../workflow/scripts/assert-eas-update-runtime.mjs";
+            const builds = parseEasJsonOutput(readFileSync(process.argv[1], "utf8"));
+            const build = builds.sort(
+              (left, right) => new Date(right.createdAt) - new Date(left.createdAt),
+            )[0];
+            if (!build) {
+              throw new Error("No finished production iOS store build matches this OTA fingerprint. Ship a new TestFlight build instead.");
+            }
+            process.stdout.write(`TARGET_BUILD_ID=${build.id}\n`);
+          ' "$RUNNER_TEMP/eas-compatible-builds.json" >> "$GITHUB_ENV"
+
+      - name: Read compatible production build
+        working-directory: source/apps/expo
+        run: eas build:view "$TARGET_BUILD_ID" --json > "$RUNNER_TEMP/eas-target-build.json"
 
       - name: Assert runtime compatibility
         id: runtime
