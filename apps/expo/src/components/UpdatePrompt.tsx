@@ -55,7 +55,7 @@ export type UpdatePromptProps = {
 };
 
 /**
- * Gazette / new-edition OTA notice — typography-first civic masthead slip.
+ * In-app OTA update notice — Browse-chrome strip, typography-first.
  *
  * Placement: absolute overlay at the **top**, under the status-bar safe area.
  * Flush with app chrome (no floating toast card, no left accent bar, no pill CTA).
@@ -162,13 +162,13 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
               style={[styles.title, { color: theme.foreground }]}
               numberOfLines={1}
             >
-              A new edition is ready
+              An update is ready
             </Text>
             <Text
               style={[styles.subtitle, { color: theme.textSecondary }]}
               numberOfLines={1}
             >
-              Restart to load it
+              Restart to install it
             </Text>
           </View>
 
