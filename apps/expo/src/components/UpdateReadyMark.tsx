@@ -85,20 +85,24 @@ const T = {
   settleEnd: 1,
 } as const;
 
-const easeOutCubic = Easing.out(Easing.cubic);
-const easeInOutCubic = Easing.inOut(Easing.cubic);
-const easeOutQuad = Easing.out(Easing.quad);
+type EaseKind = "outCubic" | "inOutCubic" | "outQuad";
 
-/** Map clock → eased 0..1 within [start, end]. */
+/** Map clock → eased 0..1 within [start, end]. Easing resolved inside the worklet. */
 function stageProgress(
   clock: number,
   start: number,
   end: number,
-  ease: (t: number) => number = easeOutCubic,
+  easeKind: EaseKind = "outCubic",
 ): number {
   "worklet";
   const raw = interpolate(clock, [start, end], [0, 1], Extrapolation.CLAMP);
-  return ease(raw);
+  if (easeKind === "inOutCubic") {
+    return Easing.inOut(Easing.cubic)(raw);
+  }
+  if (easeKind === "outQuad") {
+    return Easing.out(Easing.quad)(raw);
+  }
+  return Easing.out(Easing.cubic)(raw);
 }
 
 function StaticDownloadMark({
@@ -171,7 +175,7 @@ export function UpdateReadyMark({
       clock.value,
       0,
       T.beatEnd,
-      easeInOutCubic,
+      "inOutCubic",
     );
     // 0→0.5→1 maps to 1→1.04→1
     const breath =
@@ -183,7 +187,7 @@ export function UpdateReadyMark({
       clock.value,
       T.trayEnd,
       T.settleEnd,
-      easeOutCubic,
+      "outCubic",
     );
     const settle =
       settleT <= 0.4
@@ -203,7 +207,7 @@ export function UpdateReadyMark({
       clock.value,
       T.beatEnd + (T.collapseEnd - T.beatEnd) * 0.55,
       T.collapseEnd,
-      easeOutQuad,
+      "outQuad",
     );
     return {
       opacity: 1 - fade,
@@ -217,7 +221,7 @@ export function UpdateReadyMark({
       clock.value,
       T.beatEnd + (T.collapseEnd - T.beatEnd) * 0.55,
       T.collapseEnd,
-      easeOutQuad,
+      "outQuad",
     );
     return {
       opacity: 1 - fade,
@@ -232,7 +236,7 @@ export function UpdateReadyMark({
       clock.value,
       T.beatEnd + (T.collapseEnd - T.beatEnd) * 0.35,
       T.collapseEnd,
-      easeOutQuad,
+      "outQuad",
     );
     return {
       opacity: 1 - fade,
@@ -245,7 +249,7 @@ export function UpdateReadyMark({
       clock.value,
       T.beatEnd,
       T.collapseEnd * 0.9,
-      easeOutQuad,
+      "outQuad",
     );
     return { opacity: 0.5 * (1 - fade) };
   });
@@ -257,7 +261,7 @@ export function UpdateReadyMark({
       clock.value,
       T.beatEnd + (T.collapseEnd - T.beatEnd) * 0.45,
       T.collapseEnd,
-      easeOutQuad,
+      "outQuad",
     );
     return {
       opacity: 1 - fade,
@@ -271,7 +275,7 @@ export function UpdateReadyMark({
       clock.value,
       T.beatEnd + (T.collapseEnd - T.beatEnd) * 0.45,
       T.collapseEnd,
-      easeOutQuad,
+      "outQuad",
     );
     return {
       opacity: 1 - fade,
@@ -284,7 +288,7 @@ export function UpdateReadyMark({
       clock.value,
       T.beatEnd + (T.collapseEnd - T.beatEnd) * 0.4,
       T.collapseEnd,
-      easeOutQuad,
+      "outQuad",
     );
     return { opacity: 1 - fade };
   });
@@ -295,7 +299,7 @@ export function UpdateReadyMark({
       clock.value,
       T.beatEnd,
       T.collapseEnd * 0.88,
-      easeOutCubic,
+      "outCubic",
     );
     const scale = interpolate(fade, [0, 1], [1, 0.88]);
     return {
@@ -316,13 +320,13 @@ export function UpdateReadyMark({
       clock.value,
       T.revealStart,
       T.shaftEnd,
-      easeOutCubic,
+      "outCubic",
     );
     const appear = stageProgress(
       clock.value,
       T.revealStart - 0.02,
       T.revealStart,
-      easeOutQuad,
+      "outQuad",
     );
     return {
       strokeDashoffset: LEN_SHAFT * (1 - p),
@@ -335,13 +339,13 @@ export function UpdateReadyMark({
       clock.value,
       T.chevronStart,
       T.chevronEnd,
-      easeOutCubic,
+      "outCubic",
     );
     const appear = stageProgress(
       clock.value,
       T.chevronStart - 0.02,
       T.chevronStart,
-      easeOutQuad,
+      "outQuad",
     );
     return {
       strokeDashoffset: LEN_CHEVRON * (1 - p),
@@ -354,13 +358,13 @@ export function UpdateReadyMark({
       clock.value,
       T.trayStart,
       T.trayEnd,
-      easeOutCubic,
+      "outCubic",
     );
     const appear = stageProgress(
       clock.value,
       T.trayStart - 0.02,
       T.trayStart,
-      easeOutQuad,
+      "outQuad",
     );
     return {
       strokeDashoffset: LEN_TRAY * (1 - p),
