@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -38,60 +38,42 @@ async function restartWithUpdate() {
   }
 }
 
-/** DEV-only: set EXPO_PUBLIC_FORCE_UPDATE_BANNER=1 to preview without a real OTA. */
+/** DEV: EXPO_PUBLIC_FORCE_UPDATE_BANNER=1 to preview without a real OTA. */
 function shouldForceShowBanner(forceShowProp?: boolean): boolean {
   if (forceShowProp) return true;
   if (!__DEV__) return false;
   return process.env.EXPO_PUBLIC_FORCE_UPDATE_BANNER === "1";
 }
 
-export type UpdatePromptProps = {
-  /**
-   * Force the banner visible (DEV / Storybook-style preview).
-   * Prefer `EXPO_PUBLIC_FORCE_UPDATE_BANNER=1` for simulator QA.
-   * No-ops in production builds unless explicitly passed in tests.
-   */
+export interface UpdatePromptProps {
+  /** Force banner visible for DEV / preview. */
   forceShow?: boolean;
-};
+}
 
-/**
- * In-app OTA update notice — elevated slate strip, distinct from Browse navy.
- *
- * Placement: absolute overlay at the **top**, under the status-bar safe area.
- * Visual distinction (BRANDING card accent): slate elevated surface vs navy
- * canvas, thin civic-blue top stripe, stronger bottom rule, optional UPDATE
- * micro-label. Mark morphs B → download via UpdateReadyMark.
- * Restart is a bill text link (no white pill CTA). Update still applies on
- * next cold start if dismissed.
- */
+/** Dismissible in-app OTA update banner (top overlay). */
 export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion();
   const { downloadedUpdate, isUpdatePending } = Updates.useUpdates();
-  const promptedUpdateId = useRef<string | null>(null);
-  const [visible, setVisible] = useState(false);
+  const [dismissedUpdateId, setDismissedUpdateId] = useState<string | null>(
+    null,
+  );
 
   const forcePreview = shouldForceShowBanner(forceShow);
+  const updateId = forcePreview
+    ? "dev-preview"
+    : isUpdatePending
+      ? (downloadedUpdate?.updateId ?? "pending")
+      : null;
+  const visible =
+    updateId != null &&
+    dismissedUpdateId !== updateId &&
+    (forcePreview || isUpdatePending);
 
   const enterY = useSharedValue(-8);
   const enterOpacity = useSharedValue(0);
   const ruleProgress = useSharedValue(0);
-
-  useEffect(() => {
-    if (!forcePreview && !isUpdatePending) {
-      setVisible(false);
-      return;
-    }
-
-    const updateId = forcePreview
-      ? "dev-preview"
-      : (downloadedUpdate?.updateId ?? "pending");
-
-    if (promptedUpdateId.current === updateId) return;
-    promptedUpdateId.current = updateId;
-    setVisible(true);
-  }, [downloadedUpdate?.updateId, forcePreview, isUpdatePending]);
 
   useEffect(() => {
     if (!visible) {
@@ -133,9 +115,8 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
 
   if (!visible) return null;
 
-  const dismiss = () => setVisible(false);
+  const dismiss = () => setDismissedUpdateId(updateId);
 
-  // Elevated plane vs Browse navy canvas — one step above feed cards (BRANDING).
   const surface = isDark ? planes.surface : theme.card;
   const bottomRuleColor = isDark ? hair[3] : hair[2];
 
@@ -158,9 +139,7 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
         accessibilityRole="alert"
         accessibilityLiveRegion="polite"
       >
-        {/* Civic-blue top stripe — content-type card accent (BRANDING) */}
         <View style={styles.topStripe} />
-        {/* Matching left spine for glanceable distinction from Browse navy */}
         <View style={styles.leftSpine} pointerEvents="none" />
 
         <View style={styles.row}>
@@ -217,7 +196,6 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
           </View>
         </View>
 
-        {/* Stronger bottom rule than Browse hairline chrome */}
         <Animated.View
           style={[
             styles.rule,
@@ -238,9 +216,7 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 1000,
   },
-  banner: {
-    // Elevated slate fill — no drop shadow; plane + bill accent distinguish it
-  },
+  banner: {},
   topStripe: {
     height: 2,
     width: "100%",

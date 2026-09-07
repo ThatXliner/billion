@@ -1,12 +1,4 @@
-/**
- * UpdateReadyMark — Billion B monogram (filled brand paths) morphs into a download glyph.
- *
- * The B is vectorized from apps/expo/assets/billion-logo.png as closed filled paths
- * (serif stem, thin stem, tapering crescent, 4-point spark, three diagonal hatches,
- * baseline) — NOT constant-width strokes. Morph: hold filled B → scale/fade B out while
- * download strokes draw in (strokeDashoffset) → hold download. Loop ~5s.
- * useReducedMotion → static download. No PNG / Image.
- */
+/** Billion B mark that morphs into a download glyph. */
 import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, {
@@ -26,17 +18,15 @@ import Svg, { Path } from "react-native-svg";
 
 import { colors } from "~/styles";
 
-export type UpdateReadyMarkProps = {
+export interface UpdateReadyMarkProps {
   size?: number;
-  /** Accent fill/stroke — defaults to civic blue (bill). */
   color?: string;
-  /** Secondary stroke for download tray (theme-aware). */
   mutedColor?: string;
-};
+}
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-/** Filled Billion B mark paths (viewBox 0 0 24 24), traced from the brand PNG. */
+/** Filled B paths (viewBox 0 0 24 24). */
 const B_PATHS = [
   "M4.03 1.32C4.01 1.33 3.94 1.38 3.88 1.44C3.77 1.55 3.76 1.56 3.76 1.66C3.76 1.82 3.78 1.83 4.17 1.83L4.51 1.84L4.58 1.91L4.64 1.98L4.82 1.99L5 2L5.19 2.19C5.36 2.36 5.37 2.38 5.39 2.48C5.4 2.56 5.41 2.59 5.47 2.64L5.54 2.7L5.55 2.88L5.56 3.06L5.63 3.12L5.71 3.18L5.71 10.94L5.71 18.7L5.63 18.76L5.56 18.82L5.55 19L5.54 19.18L5.19 19.53L4.84 19.88L4.58 19.89L4.32 19.89L4.25 19.97L4.19 20.04L4.01 20.05C3.79 20.06 3.76 20.08 3.76 20.23C3.76 20.41 3.73 20.4 4.51 20.4L5.18 20.4L5.24 20.33C5.3 20.27 5.33 20.25 5.41 20.24C5.49 20.23 5.52 20.22 5.57 20.16C5.62 20.11 5.65 20.09 5.74 20.08C5.82 20.07 5.85 20.05 5.9 20C5.95 19.94 5.98 19.93 6.06 19.92C6.14 19.91 6.18 19.89 6.22 19.83C6.27 19.78 6.31 19.76 6.39 19.75C6.47 19.74 6.5 19.73 6.55 19.67L6.61 19.6L6.79 19.59C6.93 19.59 6.98 19.58 7.01 19.55C7.04 19.52 7.04 19.02 7.04 11.1L7.04 2.69L6.96 2.62L6.89 2.56L6.88 1.97C6.88 1.44 6.87 1.38 6.84 1.35C6.81 1.32 6.72 1.32 5.43 1.31C4.68 1.31 4.05 1.31 4.03 1.32Z",
   "M8.26 1.32C8.16 1.34 8.16 1.36 8.15 1.89L8.15 2.4L8.07 2.46L8 2.53L8 4.67L8 6.81L8.06 6.86C8.1 6.89 8.13 6.93 8.13 6.95C8.13 6.96 8.1 7 8.06 7.03L8 7.09L8 8.09L8 9.09L8.07 9.15L8.15 9.22L8.16 13.96L8.16 18.7L8.2 18.74C8.23 18.77 8.27 18.77 8.42 18.77L8.6 18.77L8.67 18.7C8.72 18.64 8.75 18.62 8.83 18.61C8.91 18.6 8.95 18.59 9 18.53C9.04 18.48 9.08 18.46 9.16 18.45C9.33 18.43 9.32 18.45 9.32 17.78L9.32 17.19L9.25 17.13L9.17 17.07L9.17 9.56L9.17 2.04L9.25 1.98L9.32 1.92L9.32 1.65C9.32 1.29 9.37 1.32 8.78 1.31C8.51 1.31 8.28 1.31 8.26 1.32Z",
@@ -47,14 +37,12 @@ const B_PATHS = [
   "M19.9 14.53L17.3 15.83L14.2 17.3L11.43 18.6L8.82 19.9L5.73 21.37L4.91 22.67L5.07 22.67L7.68 21.37L10.78 19.9L13.55 18.6L16.32 17.3L19.09 15.83L20.07 14.53Z"
 ] as const;
 
-/** Download glyph stroke paths (arrow + tray). */
 const DL_ARROW = "M8.2 11 L10.1 13 L12 15.75 L13.9 13 L15.8 11";
 const DL_SHAFT = "M12 4.5 L12 14";
 const DL_TRAY_L = "M6.5 17.25 L6.5 20.6";
 const DL_TRAY_R = "M17.5 17.25 L17.5 20.6";
 const DL_TRAY_F = "M6.5 20.6 L17.5 20.6";
 
-/** Approx path lengths for dash draw-in. */
 const LEN_ARROW = 22;
 const LEN_SHAFT = 10;
 const LEN_TRAY = 12;
@@ -148,7 +136,6 @@ export function UpdateReadyMark({
     );
   }, [reduceMotion, progress]);
 
-  // Filled B: hold, then shrink / fade / slight rotate out.
   const bLayerStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const opacity = interpolate(
@@ -165,7 +152,6 @@ export function UpdateReadyMark({
     };
   });
 
-  // Download: fade/scale in while strokes draw.
   const dlLayerStyle = useAnimatedStyle(() => {
     const t = progress.value;
     const opacity = interpolate(
@@ -226,7 +212,6 @@ export function UpdateReadyMark({
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      {/* Layer A — accurate filled Billion B */}
       <Animated.View
         style={[StyleSheet.absoluteFill, styles.center, bLayerStyle]}
         pointerEvents="none"
@@ -238,7 +223,6 @@ export function UpdateReadyMark({
         </Svg>
       </Animated.View>
 
-      {/* Layer B — download glyph draws in */}
       <Animated.View
         style={[StyleSheet.absoluteFill, styles.center, dlLayerStyle]}
         pointerEvents="none"
