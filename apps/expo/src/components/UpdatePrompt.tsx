@@ -84,7 +84,7 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
     (forcePreview || isUpdatePending);
 
   // Reset phase when a new update id becomes active (render-time adjust).
-  if (visible && updateId != null && phaseForId !== updateId) {
+  if (updateId != null && phaseForId !== updateId && dismissedUpdateId !== updateId && (forcePreview || isUpdatePending)) {
     setPhaseForId(updateId);
     setPhase(reduceMotion ? "ask" : "toast");
   }
