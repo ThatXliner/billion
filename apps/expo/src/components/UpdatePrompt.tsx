@@ -4,7 +4,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import Animated, {
@@ -12,24 +11,19 @@ import Animated, {
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withRepeat,
-  withSequence,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Updates from "expo-updates";
 
-import { Icon } from "~/components/ui";
 import { UpdateReadyMark } from "~/components/UpdateReadyMark";
 import {
   colors,
   fontBody,
+  fontDisplay,
   fontSize,
-  getShadow,
   hair,
   planes,
-  rd,
   sp,
   useTheme,
 } from "~/styles";
@@ -63,12 +57,11 @@ export type UpdatePromptProps = {
 };
 
 /**
- * Compact, non-blocking OTA update banner.
+ * Gazette / new-edition OTA notice — typography-first civic masthead slip.
  *
  * Placement: absolute overlay at the **top**, under the status-bar safe area.
- * Top keeps the floating tab bar free and treats the update as optional chrome
- * rather than a competing bottom CTA. The update still applies on next cold
- * start if the reader dismisses or ignores the banner.
+ * Flush with app chrome (no floating toast card, no left accent bar, no pill CTA).
+ * The update still applies on next cold start if the reader dismisses.
  */
 export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
   const { theme, isDark } = useTheme();
@@ -80,9 +73,9 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
 
   const forcePreview = shouldForceShowBanner(forceShow);
 
-  const enterY = useSharedValue(-14);
+  const enterY = useSharedValue(-8);
   const enterOpacity = useSharedValue(0);
-  const markPulse = useSharedValue(1);
+  const ruleProgress = useSharedValue(0);
 
   useEffect(() => {
     if (!forcePreview && !isUpdatePending) {
@@ -101,109 +94,149 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
 
   useEffect(() => {
     if (!visible) {
-      enterY.value = -14;
+      enterY.value = -8;
       enterOpacity.value = 0;
-      markPulse.value = 1;
+      ruleProgress.value = 0;
       return;
     }
 
     if (reduceMotion) {
       enterY.value = 0;
       enterOpacity.value = 1;
-      markPulse.value = 1;
+      ruleProgress.value = 1;
       return;
     }
 
-    enterY.value = withSpring(0, { damping: 18, stiffness: 220, mass: 0.85 });
-    enterOpacity.value = withTiming(1, {
-      duration: 220,
+    enterY.value = withTiming(0, {
+      duration: 280,
       easing: Easing.out(Easing.cubic),
     });
-    markPulse.value = withRepeat(
-      withSequence(
-        withTiming(1.06, { duration: 900, easing: Easing.inOut(Easing.sin) }),
-        withTiming(1, { duration: 900, easing: Easing.inOut(Easing.sin) }),
-      ),
-      -1,
-      false,
-    );
-  }, [visible, reduceMotion, enterY, enterOpacity, markPulse]);
+    enterOpacity.value = withTiming(1, {
+      duration: 260,
+      easing: Easing.out(Easing.quad),
+    });
+    ruleProgress.value = withTiming(1, {
+      duration: 420,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [visible, reduceMotion, enterY, enterOpacity, ruleProgress]);
 
   const hostStyle = useAnimatedStyle(() => ({
     opacity: enterOpacity.value,
     transform: [{ translateY: enterY.value }],
   }));
 
-  const markStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: markPulse.value }],
+  const topRuleStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: ruleProgress.value }],
+  }));
+
+  const bottomRuleStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: ruleProgress.value }],
   }));
 
   if (!visible) return null;
 
   const dismiss = () => setVisible(false);
 
+  const surface = isDark ? planes.navy : theme.card;
+  const ruleColor = hair[2];
+  const markMuted = isDark ? "rgba(255,255,255,0.35)" : hair[3];
+
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.host, { paddingTop: insets.top + sp[1] }]}
+      style={[styles.host, { paddingTop: insets.top }]}
       accessibilityElementsHidden={false}
       importantForAccessibility="yes"
     >
       <Animated.View
         style={[
           styles.banner,
-          {
-            backgroundColor: theme.card,
-            borderColor: hair[2],
-          },
-          getShadow("sm", isDark),
+          { backgroundColor: surface },
           hostStyle,
         ]}
         accessibilityRole="alert"
         accessibilityLiveRegion="polite"
       >
-        <View style={[styles.accent, { backgroundColor: colors.bill }]} />
+        {/* Top hairline — draws in like a masthead rule */}
+        <Animated.View
+          style={[
+            styles.rule,
+            { backgroundColor: ruleColor },
+            topRuleStyle,
+          ]}
+        />
 
         <View style={styles.row}>
-          <Animated.View style={[styles.markWrap, markStyle]}>
-            <UpdateReadyMark size={20} color={colors.bill} />
-          </Animated.View>
+          <View style={styles.markWrap}>
+            <UpdateReadyMark
+              size={20}
+              color={colors.bill}
+              mutedColor={markMuted}
+            />
+          </View>
 
           <View style={styles.copy}>
             <Text
               style={[styles.title, { color: theme.foreground }]}
               numberOfLines={1}
             >
-              Update ready
+              A new edition is ready
             </Text>
             <Text
               style={[styles.subtitle, { color: theme.textSecondary }]}
               numberOfLines={1}
             >
-              Restart for latest
+              Restart to load it
             </Text>
           </View>
 
-          <TouchableOpacity
-            onPress={() => void restartWithUpdate()}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel="Restart now to install update"
-            style={styles.primaryCta}
-          >
-            <Text style={styles.primaryCtaText}>Restart</Text>
-          </TouchableOpacity>
+          <View style={styles.actions}>
+            <Pressable
+              onPress={() => void restartWithUpdate()}
+              hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Restart now to install update"
+              style={({ pressed }) => [
+                styles.restartHit,
+                pressed && styles.restartPressed,
+              ]}
+            >
+              <Text style={[styles.restartText, { color: theme.foreground }]}>
+                Restart
+              </Text>
+              <View
+                style={[
+                  styles.restartUnderline,
+                  { backgroundColor: theme.foreground },
+                ]}
+              />
+            </Pressable>
 
-          <Pressable
-            onPress={dismiss}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel="Dismiss update banner"
-            style={styles.dismissHit}
-          >
-            <Icon name="close" size={16} color={theme.textSecondary} />
-          </Pressable>
+            <Pressable
+              onPress={dismiss}
+              hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss update notice"
+              style={({ pressed }) => [
+                styles.laterHit,
+                pressed && { opacity: 0.55 },
+              ]}
+            >
+              <Text style={[styles.laterText, { color: theme.textSecondary }]}>
+                Later
+              </Text>
+            </Pressable>
+          </View>
         </View>
+
+        <Animated.View
+          style={[
+            styles.rule,
+            { backgroundColor: ruleColor },
+            bottomRuleStyle,
+          ]}
+        />
       </Animated.View>
     </View>
   );
@@ -216,35 +249,26 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 1000,
-    paddingHorizontal: sp[3],
   },
   banner: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    borderRadius: rd.lg,
-    borderWidth: 1,
-    overflow: "hidden",
+    // Flush with chrome — no card radius, no drop shadow, no floating toast
   },
-  accent: {
-    width: 2.5,
+  rule: {
+    height: StyleSheet.hairlineWidth,
+    alignSelf: "center",
+    width: "100%",
   },
   row: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: sp[2],
-    paddingVertical: sp[2],
-    paddingLeft: sp[2],
-    paddingRight: sp[1],
+    paddingVertical: sp[2] - 1,
+    paddingHorizontal: sp[3],
     minHeight: 44,
   },
   markWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: rd.md,
-    backgroundColor: planes.surface,
-    borderWidth: 1,
-    borderColor: hair[1],
+    width: 24,
+    height: 24,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -255,30 +279,49 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   title: {
-    fontFamily: fontBody.semibold,
+    fontFamily: fontDisplay.bold,
     fontSize: fontSize.sm,
     lineHeight: fontSize.sm * 1.25,
   },
   subtitle: {
     fontFamily: fontBody.regular,
     fontSize: fontSize.xs,
-    lineHeight: fontSize.xs * 1.25,
+    lineHeight: fontSize.xs * 1.3,
   },
-  primaryCta: {
-    backgroundColor: colors.white,
-    paddingVertical: sp[1] + 2,
-    paddingHorizontal: sp[3],
-    borderRadius: rd.full,
-  },
-  primaryCtaText: {
-    fontFamily: fontBody.semibold,
-    fontSize: fontSize.xs,
-    color: planes.ink,
-  },
-  dismissHit: {
-    width: 28,
-    height: 28,
+  actions: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: sp[3],
+    paddingLeft: sp[1],
+  },
+  restartHit: {
+    alignItems: "center",
+    paddingVertical: 2,
+    minHeight: 28,
     justifyContent: "center",
+  },
+  restartPressed: {
+    opacity: 0.7,
+  },
+  restartText: {
+    fontFamily: fontBody.medium,
+    fontSize: fontSize.sm,
+    lineHeight: fontSize.sm * 1.2,
+  },
+  restartUnderline: {
+    marginTop: 2,
+    height: StyleSheet.hairlineWidth,
+    alignSelf: "stretch",
+    opacity: 0.85,
+  },
+  laterHit: {
+    paddingVertical: 2,
+    minHeight: 28,
+    justifyContent: "center",
+  },
+  laterText: {
+    fontFamily: fontBody.regular,
+    fontSize: fontSize.xs,
+    lineHeight: fontSize.xs * 1.3,
   },
 });
