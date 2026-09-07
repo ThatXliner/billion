@@ -61,6 +61,7 @@ export type UpdatePromptProps = {
  *
  * Placement: absolute overlay at the **top**, under the status-bar safe area.
  * Flush with app chrome (no floating toast card, no left accent bar, no pill CTA).
+ * Mark morphs architecture → download via UpdateReadyMark (respects reduce motion).
  * The update still applies on next cold start if the reader dismisses.
  */
 export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
@@ -169,6 +170,7 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
 
         <View style={styles.row}>
           <View style={styles.markWrap}>
+            {/* Civic architecture → download morph (see UpdateReadyMark) */}
             <UpdateReadyMark
               size={36}
               color={colors.bill}
