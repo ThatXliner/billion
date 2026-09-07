@@ -1,29 +1,28 @@
 /**
- * UpdateReadyMark — Billion brand mark morphs into a download glyph.
+ * UpdateReadyMark — Billion B monogram that morphs into a download glyph.
  *
- * One continuous metamorphosis driven by a single master `progress` 0→1
- * (~3.0s, inOut cubic). No discrete stage cuts: logo and download share a
- * long overlapping crossfade so the mid-morph reads as dissolving into the
- * glyph. Stroke-draw is synced to the same curve (slight stagger). Soft hold
- * near 0 and settle at 1 come from the inOut cubic itself.
+ * Custom stroke SVG of the real brand mark (twin-column stem, upper crescent,
+ * four-point waist spark, diagonal lower hatches, diagonal baseline). Path `d`
+ * pairs share command structure so reanimated can lerp coordinates via
+ * prepareMorph / mixPath (same technique as 4734929). Decorative bits (spark,
+ * mid hatch) opacity-fade mid-morph. No PNG / Animated.Image.
  *
- * LOOP_PERIOD_MS (~5s start→start): morph → hold finished glyph → reset.
- * useReducedMotion → static final download, no loop.
+ * Timing: hold B ~400ms → morph ~2.0s inOut cubic → hold download; gentle
+ * loop every ~5s. useReducedMotion → static final download.
  */
 import { useEffect } from "react";
-import { StyleSheet } from "react-native";
 import Animated, {
   Easing,
   Extrapolation,
   interpolate,
   useAnimatedProps,
-  useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withDelay,
   withRepeat,
   withSequence,
   withTiming,
+  type SharedValue,
 } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
 
@@ -31,7 +30,7 @@ import { colors } from "~/styles";
 
 export type UpdateReadyMarkProps = {
   size?: number;
-  /** Accent stroke — defaults to civic blue (bill). Used for download stroke. */
+  /** Accent stroke — defaults to civic blue (bill). */
   color?: string;
   /** Secondary stroke for softer structural lines (theme-aware). */
   mutedColor?: string;
@@ -39,40 +38,81 @@ export type UpdateReadyMarkProps = {
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-const LOGO = require("../../assets/billion-logo.png");
+type PathMorph = {
+  parts: string[];
+  from: number[];
+  to: number[];
+  fromD: string;
+};
 
-// —— Static geometry (download) ——————————————————————————————————————————————
-const DL_SHAFT = "M12 4.5L12 14";
-const DL_CHEVRON = "M8.2 11L12 15.75L15.8 11";
-const DL_TRAY = "M6.5 17.25L6.5 20.6L17.5 20.6L17.5 17.25";
-
-/** Approximate path lengths for stroke-draw (viewBox units). */
-const LEN_SHAFT = 9.5;
-const LEN_CHEVRON = 12.2;
-const LEN_TRAY = 17.7;
-
-/** Morph length (ms). Master clock is linear; progress is eased inOut cubic. */
-const TOTAL_MS = 3000;
-/** Restart the mark animation this often (ms from start→start). */
-const LOOP_PERIOD_MS = 5000;
-
-/**
- * Smoothstep (Hermite) — worklet-safe, no external easing defaults.
- * Used for wide opacity / draw windows on the continuous progress curve.
- */
-function smoothstep01(t: number): number {
-  "worklet";
-  const x = t < 0 ? 0 : t > 1 ? 1 : t;
-  return x * x * (3 - 2 * x);
+function prepareMorph(fromD: string, toD: string): PathMorph {
+  const from = (fromD.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+  const to = (toD.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+  if (from.length !== to.length) {
+    throw new Error(
+      `UpdateReadyMark path morph mismatch: ${from.length} vs ${to.length} (${fromD} → ${toD})`,
+    );
+  }
+  return {
+    parts: fromD.split(/-?\d*\.?\d+/g),
+    from,
+    to,
+    fromD,
+  };
 }
 
-/** Map progress → 0..1 inside [start, end] via smoothstep. */
-function window01(progress: number, start: number, end: number): number {
+function mixPath(morph: PathMorph, t: number): string {
   "worklet";
-  if (end <= start) {
-    return progress >= end ? 1 : 0;
+  const { parts, from, to } = morph;
+  const clamped = t < 0 ? 0 : t > 1 ? 1 : t;
+  let out = parts[0] ?? "";
+  for (let i = 0; i < from.length; i++) {
+    const a = from[i]!;
+    const b = to[i]!;
+    const v = a + (b - a) * clamped;
+    out += (Math.round(v * 100) / 100).toFixed(2);
+    out += parts[i + 1] ?? "";
   }
-  return smoothstep01((progress - start) / (end - start));
+  return out;
+}
+
+// —— Billion B (logo) → download glyph path pairs ————————————————————————————
+// Twin-column stem → arrow shaft (both converge on center).
+const MORPH_STEM_L = prepareMorph("M6.72 3.45L6.72 18.25", "M12 4.5L12 14");
+const MORPH_STEM_R = prepareMorph("M8.88 2.95L8.88 17.05", "M12 4.5L12 14");
+
+// Upper crescent bowl (5-pt medial) → download chevron (5-pt).
+const MORPH_CRESCENT = prepareMorph(
+  "M10.55 3.05L14.10 3.50L16.95 5.70L16.75 8.35L13.15 10.15",
+  "M8.20 11.00L10.10 13.00L12.00 15.75L13.90 13.00L15.80 11.00",
+);
+
+// Outer hatches → tray side walls; baseline → tray floor.
+const MORPH_HATCH_T = prepareMorph(
+  "M10.25 17.85L15.55 14.15",
+  "M6.50 17.25L6.50 20.60",
+);
+const MORPH_HATCH_B = prepareMorph(
+  "M12.70 19.25L18.05 15.55",
+  "M17.50 17.25L17.50 20.60",
+);
+const MORPH_BASE = prepareMorph("M5.30 21.55L14.60 18.20", "M6.50 20.60L17.50 20.60");
+
+/** Mid hatch — fades (no download counterpart with matching structure). */
+const HATCH_MID = "M11.40 18.55L16.75 14.85";
+
+/** Four-point waist spark — shrinks/fades early. */
+const SPARK =
+  "M12.35 9.15L12.82 10.48L14.15 10.95L12.82 11.42L12.35 12.75L11.88 11.42L10.55 10.95L11.88 10.48Z";
+
+const HOLD_MS = 400;
+const MORPH_MS = 2000;
+const LOOP_PERIOD_MS = 5000;
+
+function useMorphPathProps(morph: PathMorph, progress: SharedValue<number>) {
+  return useAnimatedProps(() => ({
+    d: mixPath(morph, progress.value),
+  }));
 }
 
 function StaticDownloadMark({
@@ -94,25 +134,35 @@ function StaticDownloadMark({
       importantForAccessibility="no-hide-descendants"
     >
       <Path
-        d={DL_CHEVRON}
+        d="M8.20 11.00L10.10 13.00L12.00 15.75L13.90 13.00L15.80 11.00"
         stroke={color}
         strokeWidth={1.75}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
-        d={DL_SHAFT}
+        d="M12 4.5L12 14"
         stroke={color}
         strokeWidth={1.9}
         strokeLinecap="round"
       />
       <Path
-        d={DL_TRAY}
-        stroke={color}
+        d="M6.50 17.25L6.50 20.60"
+        stroke={structure}
         strokeWidth={1.65}
         strokeLinecap="square"
-        strokeLinejoin="miter"
-        opacity={1}
+      />
+      <Path
+        d="M17.50 17.25L17.50 20.60"
+        stroke={structure}
+        strokeWidth={1.65}
+        strokeLinecap="square"
+      />
+      <Path
+        d="M6.50 20.60L17.50 20.60"
+        stroke={structure}
+        strokeWidth={1.65}
+        strokeLinecap="square"
       />
     </Svg>
   );
@@ -125,96 +175,75 @@ export function UpdateReadyMark({
 }: UpdateReadyMarkProps) {
   const structure = mutedColor ?? color;
   const reduceMotion = useReducedMotion();
-  // Linear master clock 0→1; all motion derives from one continuous curve.
-  const clock = useSharedValue(reduceMotion ? 1 : 0);
+  const progress = useSharedValue(reduceMotion ? 1 : 0);
 
   useEffect(() => {
     if (reduceMotion) {
-      clock.value = 1;
+      progress.value = 1;
       return;
     }
-    clock.value = 0;
-    const holdMs = Math.max(0, LOOP_PERIOD_MS - TOTAL_MS);
-    clock.value = withRepeat(
+    progress.value = 0;
+    const holdAfter = Math.max(0, LOOP_PERIOD_MS - HOLD_MS - MORPH_MS);
+    progress.value = withRepeat(
       withSequence(
-        withTiming(1, {
-          duration: TOTAL_MS,
-          // Single continuous inOut cubic — soft hold at start, settle at end.
-          easing: Easing.inOut(Easing.cubic),
-        }),
-        // Hold the finished download glyph, then snap back for the next loop.
-        withDelay(holdMs, withTiming(0, { duration: 0 })),
+        withDelay(
+          HOLD_MS,
+          withTiming(1, {
+            duration: MORPH_MS,
+            easing: Easing.inOut(Easing.cubic),
+          }),
+        ),
+        withDelay(holdAfter, withTiming(0, { duration: 0 })),
       ),
       -1,
       false,
     );
-  }, [reduceMotion, clock]);
+  }, [reduceMotion, progress]);
 
-  // —— Shared wrapper: one continuous scale track (no handoff discontinuity) ——
-  const markStyle = useAnimatedStyle(() => {
-    const p = clock.value;
-    // Gentle breath early → soft mid dip → settle overshoot → rest at 1.
-    const scale = interpolate(
-      p,
-      [0, 0.12, 0.42, 0.78, 1],
-      [1, 1.06, 0.97, 1.08, 1],
+  const crescentProps = useMorphPathProps(MORPH_CRESCENT, progress);
+  const hatchTProps = useMorphPathProps(MORPH_HATCH_T, progress);
+  const hatchBProps = useMorphPathProps(MORPH_HATCH_B, progress);
+  const baseProps = useMorphPathProps(MORPH_BASE, progress);
+
+  // Spark exits early so the waist clears for the chevron.
+  const sparkProps = useAnimatedProps(() => ({
+    opacity: interpolate(
+      progress.value,
+      [0, 0.12, 0.32],
+      [1, 0.55, 0],
       Extrapolation.CLAMP,
-    );
-    return {
-      transform: [{ scale }],
-    };
-  });
+    ),
+  }));
 
-  // —— Logo: wide smoothstep fade + yield (scale down + slight rotate) ——
-  // Opacity out: progress 0.18 → 0.62 (long dissolve)
-  const logoStyle = useAnimatedStyle(() => {
-    const p = clock.value;
-    const fadeOut = window01(p, 0.18, 0.62);
-    const morph = window01(p, 0.15, 0.7);
-    const scale = interpolate(morph, [0, 1], [1, 0.78]);
-    const rotate = interpolate(morph, [0, 1], [0, -10]);
-    return {
-      opacity: 1 - fadeOut,
-      transform: [{ scale }, { rotate: `${rotate}deg` }],
-    };
-  });
+  // Mid hatch dissolves as outer hatches become tray walls.
+  const hatchMidProps = useAnimatedProps(() => ({
+    opacity: interpolate(
+      progress.value,
+      [0, 0.2, 0.48],
+      [1, 0.4, 0],
+      Extrapolation.CLAMP,
+    ),
+  }));
 
-  // —— Download layer: overlapping fade-in + complementary scale/rotate ——
-  // Opacity in: progress 0.28 → 0.72 (overlaps logo; mid ~0.45 both visible)
-  const downloadStyle = useAnimatedStyle(() => {
-    const p = clock.value;
-    const fadeIn = window01(p, 0.28, 0.72);
-    const morph = window01(p, 0.2, 0.78);
-    const scale = interpolate(morph, [0, 1], [0.78, 1]);
-    const rotate = interpolate(morph, [0, 1], [10, 0]);
-    return {
-      opacity: fadeIn,
-      transform: [{ scale }, { rotate: `${rotate}deg` }],
-    };
-  });
-
-  // —— Stroke-draw synced to same progress (staggered, still overlaps fade) ——
-  const shaftProps = useAnimatedProps(() => {
-    const draw = window01(clock.value, 0.22, 0.55);
-    return {
-      strokeDashoffset: LEN_SHAFT * (1 - draw),
-    };
-  });
-
-  const chevronProps = useAnimatedProps(() => {
-    const draw = window01(clock.value, 0.32, 0.64);
-    return {
-      strokeDashoffset: LEN_CHEVRON * (1 - draw),
-    };
-  });
-
-  const trayProps = useAnimatedProps(() => {
-    const draw = window01(clock.value, 0.42, 0.76);
-    return {
-      strokeDashoffset: LEN_TRAY * (1 - draw),
-      opacity: 1,
-    };
-  });
+  // Stem weight eases from twin columns toward a single bold shaft.
+  const stemLWidthProps = useAnimatedProps(() => ({
+    d: mixPath(MORPH_STEM_L, progress.value),
+    strokeWidth: interpolate(
+      progress.value,
+      [0, 1],
+      [1.7, 1.9],
+      Extrapolation.CLAMP,
+    ),
+  }));
+  const stemRWidthProps = useAnimatedProps(() => ({
+    d: mixPath(MORPH_STEM_R, progress.value),
+    strokeWidth: interpolate(
+      progress.value,
+      [0, 0.45, 1],
+      [1.1, 1.5, 1.9],
+      Extrapolation.CLAMP,
+    ),
+  }));
 
   if (reduceMotion) {
     return (
@@ -223,56 +252,80 @@ export function UpdateReadyMark({
   }
 
   return (
-    <Animated.View
-      style={[{ width: size, height: size }, markStyle]}
+    <Svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <Animated.Image
-        source={LOGO}
-        style={[styles.layer, { width: size, height: size }, logoStyle]}
-        resizeMode="contain"
+      {/* Upper crescent → chevron */}
+      <AnimatedPath
+        d={MORPH_CRESCENT.fromD}
+        animatedProps={crescentProps}
+        stroke={color}
+        strokeWidth={1.55}
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      <Animated.View
-        style={[styles.layer, { width: size, height: size }, downloadStyle]}
-      >
-        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <AnimatedPath
-            d={DL_SHAFT}
-            animatedProps={shaftProps}
-            stroke={color}
-            strokeWidth={1.9}
-            strokeLinecap="round"
-            strokeDasharray={`${LEN_SHAFT}`}
-          />
-          <AnimatedPath
-            d={DL_CHEVRON}
-            animatedProps={chevronProps}
-            stroke={color}
-            strokeWidth={1.75}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeDasharray={`${LEN_CHEVRON}`}
-          />
-          <AnimatedPath
-            d={DL_TRAY}
-            animatedProps={trayProps}
-            stroke={color}
-            strokeWidth={1.65}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeDasharray={`${LEN_TRAY}`}
-          />
-        </Svg>
-      </Animated.View>
-    </Animated.View>
+
+      {/* Twin stem → shaft */}
+      <AnimatedPath
+        d={MORPH_STEM_L.fromD}
+        animatedProps={stemLWidthProps}
+        stroke={color}
+        strokeLinecap="round"
+      />
+      <AnimatedPath
+        d={MORPH_STEM_R.fromD}
+        animatedProps={stemRWidthProps}
+        stroke={color}
+        strokeLinecap="round"
+      />
+
+      {/* Four-point spark — fades early */}
+      <AnimatedPath
+        d={SPARK}
+        animatedProps={sparkProps}
+        stroke={color}
+        strokeWidth={0.9}
+        strokeLinejoin="round"
+      />
+
+      {/* Outer hatches → tray walls */}
+      <AnimatedPath
+        d={MORPH_HATCH_T.fromD}
+        animatedProps={hatchTProps}
+        stroke={structure}
+        strokeWidth={1.5}
+        strokeLinecap="square"
+      />
+      <AnimatedPath
+        d={MORPH_HATCH_B.fromD}
+        animatedProps={hatchBProps}
+        stroke={structure}
+        strokeWidth={1.5}
+        strokeLinecap="square"
+      />
+
+      {/* Mid hatch — fades */}
+      <AnimatedPath
+        d={HATCH_MID}
+        animatedProps={hatchMidProps}
+        stroke={structure}
+        strokeWidth={1.45}
+        strokeLinecap="butt"
+      />
+
+      {/* Baseline → tray floor */}
+      <AnimatedPath
+        d={MORPH_BASE.fromD}
+        animatedProps={baseProps}
+        stroke={structure}
+        strokeWidth={1.5}
+        strokeLinecap="square"
+      />
+    </Svg>
   );
 }
-
-const styles = StyleSheet.create({
-  layer: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-  },
-});

@@ -55,12 +55,14 @@ export type UpdatePromptProps = {
 };
 
 /**
- * In-app OTA update notice — Browse-chrome strip, typography-first.
+ * In-app OTA update notice — elevated slate strip, distinct from Browse navy.
  *
  * Placement: absolute overlay at the **top**, under the status-bar safe area.
- * Flush with app chrome (no floating toast card, no left accent bar, no pill CTA).
- * Mark morphs architecture → download via UpdateReadyMark (respects reduce motion).
- * The update still applies on next cold start if the reader dismisses.
+ * Visual distinction (BRANDING card accent): slate elevated surface vs navy
+ * canvas, thin civic-blue top stripe, stronger bottom rule, optional UPDATE
+ * micro-label. Mark morphs B → download via UpdateReadyMark.
+ * Restart is a bill text link (no white pill CTA). Update still applies on
+ * next cold start if dismissed.
  */
 export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
   const { theme, isDark } = useTheme();
@@ -133,31 +135,43 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
 
   const dismiss = () => setVisible(false);
 
-  const surface = isDark ? planes.navy : theme.card;
-  const ruleColor = hair[2];
+  // Elevated plane vs Browse navy canvas — one step above feed cards (BRANDING).
+  const surface = isDark ? planes.surface : theme.card;
+  const bottomRuleColor = isDark ? hair[3] : hair[2];
 
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.host, { paddingTop: insets.top }]}
+      style={styles.host}
       accessibilityElementsHidden={false}
       importantForAccessibility="yes"
     >
       <Animated.View
         style={[
           styles.banner,
-          { backgroundColor: surface },
+          {
+            backgroundColor: surface,
+            paddingTop: insets.top,
+          },
           hostStyle,
         ]}
         accessibilityRole="alert"
         accessibilityLiveRegion="polite"
       >
+        {/* Civic-blue top stripe — content-type card accent (BRANDING) */}
+        <View style={styles.topStripe} />
+        {/* Matching left spine for glanceable distinction from Browse navy */}
+        <View style={styles.leftSpine} pointerEvents="none" />
+
         <View style={styles.row}>
           <View style={styles.markWrap}>
-            <UpdateReadyMark size={28} color={colors.bill} />
+            <UpdateReadyMark size={32} color={colors.bill} />
           </View>
 
           <View style={styles.copy}>
+            <Text style={styles.kicker} numberOfLines={1}>
+              UPDATE
+            </Text>
             <Text
               style={[styles.title, { color: theme.foreground }]}
               numberOfLines={1}
@@ -203,11 +217,11 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
           </View>
         </View>
 
-        {/* Single bottom rule — same quiet divider language as Browse chrome */}
+        {/* Stronger bottom rule than Browse hairline chrome */}
         <Animated.View
           style={[
             styles.rule,
-            { backgroundColor: ruleColor },
+            { backgroundColor: bottomRuleColor },
             bottomRuleStyle,
           ]}
         />
@@ -225,24 +239,36 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   banner: {
-    // Same navy canvas as Browse — no card, no shadow, no masthead frame
+    // Elevated slate fill — no drop shadow; plane + bill accent distinguish it
+  },
+  topStripe: {
+    height: 2,
+    width: "100%",
+    backgroundColor: colors.bill,
+  },
+  leftSpine: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    backgroundColor: colors.bill,
   },
   rule: {
-    height: StyleSheet.hairlineWidth,
+    height: 1.5,
     width: "100%",
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    // Match Browse `headerPad` / ContentCard horizontal rhythm
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 10,
   },
   markWrap: {
-    width: 28,
-    height: 28,
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -250,16 +276,22 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     justifyContent: "center",
-    gap: 2,
+    gap: 1,
+  },
+  kicker: {
+    fontFamily: fontBody.semibold,
+    fontSize: 10,
+    lineHeight: 12,
+    letterSpacing: 0.8,
+    color: colors.bill,
+    textTransform: "uppercase",
   },
   title: {
-    // Sit under Browse's 36 display title — quieter editorial, not competing
     fontFamily: fontDisplay.bold,
     fontSize: 16,
     lineHeight: 20,
   },
   subtitle: {
-    // Match Browse subtitle weight (~14.5 Albert)
     fontFamily: fontBody.regular,
     fontSize: 13,
     lineHeight: 16,
@@ -279,7 +311,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   restartText: {
-    // Same cue as Browse "Change >" / "Browse Federal instead"
     fontFamily: fontBody.semibold,
     fontSize: 13,
     color: colors.bill,
