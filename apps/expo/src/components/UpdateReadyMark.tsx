@@ -1,16 +1,18 @@
 /**
  * UpdateReadyMark — civic architecture that dissolves into a download glyph.
  *
- * Choreography (~2.4s, once — no loop, no path-coordinate lerp):
+ * Choreography (~2.4s, no path-coordinate lerp), then holds and replays
+ * every LOOP_PERIOD_MS (~5s from start to start):
  *  1. Beat     (0.00–0.45s)  Hold clear columns + pediment + B; soft breath scale.
  *  2. Collapse (0.45–1.10s)  Twin columns translate inward as readable architecture;
  *                            pediment settles; B exits (opacity + scale).
  *  3. Reveal   (1.00–2.00s)  Static download paths stroke-draw: shaft → chevron → tray.
- *  4. Settle   (2.00–2.40s)  Subtle overshoot scale on the finished mark, then hold.
+ *  4. Settle   (2.00–2.40s)  Subtle overshoot scale on the finished mark, then hold
+ *                            until the next loop.
  *
  * Stages overlap slightly. Master clock is linear; each stage eases locally
  * (cubic out / smoothstep) so mid-frames stay legible. useReducedMotion →
- * static final download, no stages.
+ * static final download, no stages / no loop.
  */
 import { useEffect } from "react";
 import Animated, {
@@ -21,6 +23,9 @@ import Animated, {
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
 import Svg, { G, Path } from "react-native-svg";
@@ -68,6 +73,8 @@ const COL_INSET = 3.6;
 
 /** Total choreography length (ms). Master clock is linear 0→1 over this. */
 const TOTAL_MS = 2400;
+/** Restart the mark animation this often (ms from start→start). */
+const LOOP_PERIOD_MS = 5000;
 
 /**
  * Stage windows as fractions of TOTAL_MS.
@@ -163,10 +170,19 @@ export function UpdateReadyMark({
       return;
     }
     clock.value = 0;
-    clock.value = withTiming(1, {
-      duration: TOTAL_MS,
-      easing: Easing.linear,
-    });
+    const holdMs = Math.max(0, LOOP_PERIOD_MS - TOTAL_MS);
+    clock.value = withRepeat(
+      withSequence(
+        withTiming(1, {
+          duration: TOTAL_MS,
+          easing: Easing.linear,
+        }),
+        // Hold the finished download glyph, then snap back for the next beat.
+        withDelay(holdMs, withTiming(0, { duration: 0 })),
+      ),
+      -1,
+      false,
+    );
   }, [reduceMotion, clock]);
 
   // —— Overall breath + settle scale (View wrapper; reliable at ~36px) ——
