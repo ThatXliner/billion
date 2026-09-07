@@ -137,7 +137,6 @@ export default function RootLayout() {
         }}
       >
         <PostHogAuthSync />
-        <UpdatePrompt />
         <GestureHandlerRootView style={{ flex: 1 }}>
           <Stack
             screenOptions={{
@@ -147,6 +146,8 @@ export default function RootLayout() {
               },
             }}
           />
+          {/* Absolute overlay: update banner sits above Stack without affecting tab/stack layout */}
+          <UpdatePrompt />
           <StatusBar style="light" />
         </GestureHandlerRootView>
       </PostHogProvider>
