@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import Animated, {
   Easing,
+  runOnJS,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -21,10 +22,14 @@ import {
   colors,
   fontBody,
   fontDisplay,
+  getShadow,
   hair,
   planes,
+  rd,
   useTheme,
 } from "~/styles";
+
+const TIMER_MS = 8000;
 
 async function restartWithUpdate() {
   try {
@@ -50,7 +55,7 @@ export interface UpdatePromptProps {
   forceShow?: boolean;
 }
 
-/** Dismissible in-app OTA update banner (top overlay). */
+/** Dismissible in-app OTA update popup (top overlay). */
 export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
@@ -71,77 +76,83 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
     dismissedUpdateId !== updateId &&
     (forcePreview || isUpdatePending);
 
-  const enterY = useSharedValue(-8);
+  const enterY = useSharedValue(-12);
   const enterOpacity = useSharedValue(0);
-  const ruleProgress = useSharedValue(0);
+  const timerProgress = useSharedValue(1);
+
+  const dismiss = () => {
+    if (updateId != null) setDismissedUpdateId(updateId);
+  };
 
   useEffect(() => {
-    if (!visible) {
-      enterY.value = -8;
+    if (!visible || updateId == null) {
+      enterY.value = -12;
       enterOpacity.value = 0;
-      ruleProgress.value = 0;
+      timerProgress.value = 1;
       return;
     }
+
+    const id = updateId;
 
     if (reduceMotion) {
       enterY.value = 0;
       enterOpacity.value = 1;
-      ruleProgress.value = 1;
+      timerProgress.value = 0;
       return;
     }
 
     enterY.value = withTiming(0, {
-      duration: 280,
+      duration: 320,
       easing: Easing.out(Easing.cubic),
     });
     enterOpacity.value = withTiming(1, {
-      duration: 260,
+      duration: 280,
       easing: Easing.out(Easing.quad),
     });
-    ruleProgress.value = withTiming(1, {
-      duration: 420,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [visible, reduceMotion, enterY, enterOpacity, ruleProgress]);
+    timerProgress.value = 1;
+    timerProgress.value = withTiming(
+      0,
+      { duration: TIMER_MS, easing: Easing.linear },
+      (finished) => {
+        if (finished) runOnJS(setDismissedUpdateId)(id);
+      },
+    );
+  }, [visible, updateId, reduceMotion, enterY, enterOpacity, timerProgress]);
 
   const hostStyle = useAnimatedStyle(() => ({
     opacity: enterOpacity.value,
     transform: [{ translateY: enterY.value }],
   }));
 
-  const bottomRuleStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: ruleProgress.value }],
+  const timerStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: timerProgress.value }],
   }));
 
   if (!visible) return null;
 
-  const dismiss = () => setDismissedUpdateId(updateId);
-
   const surface = isDark ? planes.surface : theme.card;
-  const bottomRuleColor = isDark ? hair[3] : hair[2];
+  const timerTrack = hair[2];
 
   return (
     <View
       pointerEvents="box-none"
-      style={styles.host}
+      style={[styles.host, { paddingTop: insets.top + 8 }]}
       accessibilityElementsHidden={false}
       importantForAccessibility="yes"
     >
       <Animated.View
         style={[
-          styles.banner,
+          styles.popup,
           {
             backgroundColor: surface,
-            paddingTop: insets.top,
+            borderColor: hair[2],
           },
+          getShadow("md", isDark),
           hostStyle,
         ]}
         accessibilityRole="alert"
         accessibilityLiveRegion="polite"
       >
-        <View style={styles.topStripe} />
-        <View style={styles.leftSpine} pointerEvents="none" />
-
         <View style={styles.row}>
           <View style={styles.markWrap}>
             <UpdateReadyMark size={32} color={colors.bill} />
@@ -196,13 +207,11 @@ export function UpdatePrompt({ forceShow = false }: UpdatePromptProps) {
           </View>
         </View>
 
-        <Animated.View
-          style={[
-            styles.rule,
-            { backgroundColor: bottomRuleColor },
-            bottomRuleStyle,
-          ]}
-        />
+        <View style={[styles.timerTrack, { backgroundColor: timerTrack }]}>
+          <Animated.View
+            style={[styles.timerFill, timerStyle]}
+          />
+        </View>
       </Animated.View>
     </View>
   );
@@ -215,32 +224,20 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 1000,
+    paddingHorizontal: 12,
   },
-  banner: {},
-  topStripe: {
-    height: 2,
-    width: "100%",
-    backgroundColor: colors.bill,
-  },
-  leftSpine: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    backgroundColor: colors.bill,
-  },
-  rule: {
-    height: 1.5,
-    width: "100%",
+  popup: {
+    borderRadius: rd.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 10,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   markWrap: {
     width: 32,
@@ -299,5 +296,16 @@ const styles = StyleSheet.create({
   laterText: {
     fontFamily: fontBody.medium,
     fontSize: 13,
+  },
+  timerTrack: {
+    height: 3,
+    width: "100%",
+    overflow: "hidden",
+  },
+  timerFill: {
+    height: "100%",
+    width: "100%",
+    backgroundColor: colors.bill,
+    transformOrigin: "left",
   },
 });
