@@ -1,11 +1,16 @@
 /**
- * UpdateReadyMark — civic architecture monogram that morphs into a download glyph.
+ * UpdateReadyMark — civic architecture that dissolves into a download glyph.
  *
- * Starts as column / pediment “B” architecture, then (~1.5s after a short beat)
- * interpolates SVG path `d` into an arrow-into-tray. Each path pair shares the
- * same command structure so reanimated can lerp coordinates (no flubber / Lottie).
- * Morphs once and holds download — editorial, not looping.
- * Respects useReducedMotion: shows the final download mark with no motion.
+ * Choreography (~2.4s, once — no loop, no path-coordinate lerp):
+ *  1. Beat     (0.00–0.45s)  Hold clear columns + pediment + B; soft breath scale.
+ *  2. Collapse (0.45–1.10s)  Twin columns translate inward as readable architecture;
+ *                            pediment settles; B exits (opacity + scale).
+ *  3. Reveal   (1.00–2.00s)  Static download paths stroke-draw: shaft → chevron → tray.
+ *  4. Settle   (2.00–2.40s)  Subtle overshoot scale on the finished mark, then hold.
+ *
+ * Stages overlap slightly. Master clock is linear; each stage eases locally
+ * (cubic out / smoothstep) so mid-frames stay legible. useReducedMotion →
+ * static final download, no stages.
  */
 import { useEffect } from "react";
 import Animated, {
@@ -13,13 +18,12 @@ import Animated, {
   Extrapolation,
   interpolate,
   useAnimatedProps,
+  useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withDelay,
   withTiming,
-  type SharedValue,
 } from "react-native-reanimated";
-import Svg, { Path } from "react-native-svg";
+import Svg, { G, Path } from "react-native-svg";
 
 import { colors } from "~/styles";
 
@@ -32,85 +36,69 @@ export type UpdateReadyMarkProps = {
 };
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedG = Animated.createAnimatedComponent(G);
 
-type PathMorph = {
-  parts: string[];
-  from: number[];
-  to: number[];
-  fromD: string;
-};
-
-function prepareMorph(fromD: string, toD: string): PathMorph {
-  const from = (fromD.match(/-?\d*\.?\d+/g) ?? []).map(Number);
-  const to = (toD.match(/-?\d*\.?\d+/g) ?? []).map(Number);
-  if (from.length !== to.length) {
-    throw new Error(
-      `UpdateReadyMark path morph mismatch: ${from.length} vs ${to.length}`,
-    );
-  }
-  return {
-    parts: fromD.split(/-?\d*\.?\d+/g),
-    from,
-    to,
-    fromD,
-  };
-}
-
-function mixPath(morph: PathMorph, t: number): string {
-  "worklet";
-  const { parts, from, to } = morph;
-  const clamped = t < 0 ? 0 : t > 1 ? 1 : t;
-  let out = parts[0] ?? "";
-  for (let i = 0; i < from.length; i++) {
-    const a = from[i]!;
-    const b = to[i]!;
-    const v = a + (b - a) * clamped;
-    out += (Math.round(v * 100) / 100).toFixed(2);
-    out += parts[i + 1] ?? "";
-  }
-  return out;
-}
-
-/** Pediment roof → download chevron (arrow head). */
-const MORPH_PEDIMENT = prepareMorph(
-  "M5.75 5.35L12 2.9L18.25 5.35",
-  "M8.2 11L12 15.75L15.8 11",
-);
-
-/** Twin columns converge into the arrow shaft. */
-const MORPH_COL_L = prepareMorph("M7.15 6.5L7.15 18.35", "M12 4.5L12 14");
-const MORPH_COL_R = prepareMorph("M16.85 6.5L16.85 18.35", "M12 4.5L12 14");
-
-/** Column bases + plinth → download tray (U). */
-const MORPH_BASE_L = prepareMorph(
-  "M5.5 18.95L8.8 18.95",
-  "M6.5 17.25L6.5 20.6",
-);
-const MORPH_BASE_R = prepareMorph(
-  "M15.2 18.95L18.5 18.95",
-  "M17.5 17.25L17.5 20.6",
-);
-const MORPH_PLINTH = prepareMorph(
-  "M4.5 20.55L19.5 20.55",
-  "M6.5 20.6L17.5 20.6",
-);
-
+// —— Static geometry (civic) ————————————————————————————————————————————————
+const PEDIMENT = "M5.75 5.35L12 2.9L18.25 5.35";
+const ENTABLATURE = "M4.5 5.85L19.5 5.85";
+const COL_L = "M7.15 6.5L7.15 18.35";
+const COL_R = "M16.85 6.5L16.85 18.35";
+const BASE_L = "M5.5 18.95L8.8 18.95";
+const BASE_R = "M15.2 18.95L18.5 18.95";
+const PLINTH = "M4.5 20.55L19.5 20.55";
 const B_OUTER =
   "M9.9 7.5V16.7H12.35C14.35 16.7 15.55 15.65 15.55 14.2C15.55 13.15 14.95 12.35 13.95 12C14.8 11.6 15.3 10.85 15.3 9.8C15.3 8.3 14.1 7.5 12.2 7.5H9.9Z";
 const B_TOP =
   "M11.25 9.55H12.55C13.3 9.55 13.75 9.95 13.75 10.55C13.75 11.15 13.3 11.55 12.55 11.55H11.25";
 const B_BOT =
   "M11.25 12.95H12.8C13.65 12.95 14.15 13.4 14.15 14.1C14.15 14.8 13.65 15.25 12.8 15.25H11.25";
-const ENTABLATURE = "M4.5 5.85L19.5 5.85";
 
-/** Brief hold on architecture, then a single editorial morph. */
-const MORPH_DELAY_MS = 380;
-const MORPH_DURATION_MS = 1500;
+// —— Static geometry (download) ——————————————————————————————————————————————
+const DL_SHAFT = "M12 4.5L12 14";
+const DL_CHEVRON = "M8.2 11L12 15.75L15.8 11";
+const DL_TRAY = "M6.5 17.25L6.5 20.6L17.5 20.6L17.5 17.25";
 
-function useMorphPathProps(morph: PathMorph, progress: SharedValue<number>) {
-  return useAnimatedProps(() => ({
-    d: mixPath(morph, progress.value),
-  }));
+/** Approximate path lengths for stroke-draw (viewBox units). */
+const LEN_SHAFT = 9.5;
+const LEN_CHEVRON = 12.2;
+const LEN_TRAY = 17.7;
+
+/** Column → center travel (partial — dissolve before they fully meet). */
+const COL_INSET = 3.6;
+
+/** Total choreography length (ms). Master clock is linear 0→1 over this. */
+const TOTAL_MS = 2400;
+
+/**
+ * Stage windows as fractions of TOTAL_MS.
+ * Slight overlaps keep the civic→download handoff fluid.
+ */
+const T = {
+  beatEnd: 0.45 / 2.4,
+  collapseEnd: 1.1 / 2.4,
+  revealStart: 1.0 / 2.4,
+  shaftEnd: 1.45 / 2.4,
+  chevronStart: 1.3 / 2.4,
+  chevronEnd: 1.75 / 2.4,
+  trayStart: 1.55 / 2.4,
+  trayEnd: 2.0 / 2.4,
+  settleEnd: 1,
+} as const;
+
+const easeOutCubic = Easing.out(Easing.cubic);
+const easeInOutCubic = Easing.inOut(Easing.cubic);
+const easeOutQuad = Easing.out(Easing.quad);
+
+/** Map clock → eased 0..1 within [start, end]. */
+function stageProgress(
+  clock: number,
+  start: number,
+  end: number,
+  ease: (t: number) => number = easeOutCubic,
+): number {
+  "worklet";
+  const raw = interpolate(clock, [start, end], [0, 1], Extrapolation.CLAMP);
+  return ease(raw);
 }
 
 function StaticDownloadMark({
@@ -132,20 +120,20 @@ function StaticDownloadMark({
       importantForAccessibility="no-hide-descendants"
     >
       <Path
-        d="M8.2 11L12 15.75L15.8 11"
+        d={DL_CHEVRON}
         stroke={color}
         strokeWidth={1.3}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
-        d="M12 4.5L12 14"
+        d={DL_SHAFT}
         stroke={color}
         strokeWidth={1.35}
         strokeLinecap="round"
       />
       <Path
-        d="M6.5 17.25L6.5 20.6L17.5 20.6L17.5 17.25"
+        d={DL_TRAY}
         stroke={structure}
         strokeWidth={1.15}
         strokeLinecap="square"
@@ -163,56 +151,222 @@ export function UpdateReadyMark({
 }: UpdateReadyMarkProps) {
   const structure = mutedColor ?? color;
   const reduceMotion = useReducedMotion();
-  const progress = useSharedValue(reduceMotion ? 1 : 0);
+  const clock = useSharedValue(reduceMotion ? 1 : 0);
 
   useEffect(() => {
     if (reduceMotion) {
-      progress.value = 1;
+      clock.value = 1;
       return;
     }
-    progress.value = 0;
-    progress.value = withDelay(
-      MORPH_DELAY_MS,
-      withTiming(1, {
-        duration: MORPH_DURATION_MS,
-        easing: Easing.inOut(Easing.cubic),
-      }),
+    clock.value = 0;
+    clock.value = withTiming(1, {
+      duration: TOTAL_MS,
+      easing: Easing.linear,
+    });
+  }, [reduceMotion, clock]);
+
+  // —— Overall breath + settle scale (View wrapper; reliable at ~36px) ——
+  const markStyle = useAnimatedStyle(() => {
+    const breathT = stageProgress(
+      clock.value,
+      0,
+      T.beatEnd,
+      easeInOutCubic,
     );
-  }, [reduceMotion, progress]);
+    // 0→0.5→1 maps to 1→1.04→1
+    const breath =
+      breathT <= 0.5
+        ? interpolate(breathT, [0, 0.5], [1, 1.04])
+        : interpolate(breathT, [0.5, 1], [1.04, 1]);
 
-  const pedimentProps = useMorphPathProps(MORPH_PEDIMENT, progress);
-  const colLProps = useMorphPathProps(MORPH_COL_L, progress);
-  const colRProps = useMorphPathProps(MORPH_COL_R, progress);
-  const baseLProps = useMorphPathProps(MORPH_BASE_L, progress);
-  const baseRProps = useMorphPathProps(MORPH_BASE_R, progress);
-  const plinthProps = useMorphPathProps(MORPH_PLINTH, progress);
+    const settleT = stageProgress(
+      clock.value,
+      T.trayEnd,
+      T.settleEnd,
+      easeOutCubic,
+    );
+    const settle =
+      settleT <= 0.4
+        ? interpolate(settleT, [0, 0.4], [1, 1.055])
+        : interpolate(settleT, [0.4, 1], [1.055, 1]);
 
-  const fadeCivicProps = useAnimatedProps(() => ({
-    opacity: interpolate(
-      progress.value,
-      [0, 0.28, 0.52],
-      [1, 0.45, 0],
-      Extrapolation.CLAMP,
-    ),
-  }));
+    const scale = clock.value >= T.trayEnd ? settle : breath;
+    return {
+      transform: [{ scale }],
+    };
+  });
 
-  const fadeCivicSoftProps = useAnimatedProps(() => ({
-    opacity: interpolate(
-      progress.value,
-      [0, 0.22, 0.48],
-      [0.85, 0.35, 0],
-      Extrapolation.CLAMP,
-    ),
-  }));
+  // —— Collapse: columns translate inward (groups, not path lerp) ————
+  const colLProps = useAnimatedProps(() => {
+    const p = stageProgress(clock.value, T.beatEnd, T.collapseEnd);
+    const fade = stageProgress(
+      clock.value,
+      T.beatEnd + (T.collapseEnd - T.beatEnd) * 0.55,
+      T.collapseEnd,
+      easeOutQuad,
+    );
+    return {
+      opacity: 1 - fade,
+      transform: [{ translateX: p * COL_INSET }],
+    };
+  });
 
-  const fadeEntablatureProps = useAnimatedProps(() => ({
-    opacity: interpolate(
-      progress.value,
-      [0, 0.18, 0.4],
-      [0.5, 0.2, 0],
-      Extrapolation.CLAMP,
-    ),
-  }));
+  const colRProps = useAnimatedProps(() => {
+    const p = stageProgress(clock.value, T.beatEnd, T.collapseEnd);
+    const fade = stageProgress(
+      clock.value,
+      T.beatEnd + (T.collapseEnd - T.beatEnd) * 0.55,
+      T.collapseEnd,
+      easeOutQuad,
+    );
+    return {
+      opacity: 1 - fade,
+      transform: [{ translateX: -p * COL_INSET }],
+    };
+  });
+
+  // —— Pediment settles down, then dissolves ————————————————
+  const roofProps = useAnimatedProps(() => {
+    const p = stageProgress(clock.value, T.beatEnd, T.collapseEnd);
+    const fade = stageProgress(
+      clock.value,
+      T.beatEnd + (T.collapseEnd - T.beatEnd) * 0.35,
+      T.collapseEnd,
+      easeOutQuad,
+    );
+    return {
+      opacity: 1 - fade,
+      transform: [{ translateY: p * 1.4 }],
+    };
+  });
+
+  const entablatureProps = useAnimatedProps(() => {
+    const fade = stageProgress(
+      clock.value,
+      T.beatEnd,
+      T.collapseEnd * 0.9,
+      easeOutQuad,
+    );
+    return { opacity: 0.5 * (1 - fade) };
+  });
+
+  // —— Bases + plinth: slight inward crush, then fade ————————
+  const baseLProps = useAnimatedProps(() => {
+    const p = stageProgress(clock.value, T.beatEnd, T.collapseEnd);
+    const fade = stageProgress(
+      clock.value,
+      T.beatEnd + (T.collapseEnd - T.beatEnd) * 0.45,
+      T.collapseEnd,
+      easeOutQuad,
+    );
+    return {
+      opacity: 1 - fade,
+      transform: [{ translateX: p * 2.2 }],
+    };
+  });
+
+  const baseRProps = useAnimatedProps(() => {
+    const p = stageProgress(clock.value, T.beatEnd, T.collapseEnd);
+    const fade = stageProgress(
+      clock.value,
+      T.beatEnd + (T.collapseEnd - T.beatEnd) * 0.45,
+      T.collapseEnd,
+      easeOutQuad,
+    );
+    return {
+      opacity: 1 - fade,
+      transform: [{ translateX: -p * 2.2 }],
+    };
+  });
+
+  const plinthProps = useAnimatedProps(() => {
+    const fade = stageProgress(
+      clock.value,
+      T.beatEnd + (T.collapseEnd - T.beatEnd) * 0.4,
+      T.collapseEnd,
+      easeOutQuad,
+    );
+    return { opacity: 1 - fade };
+  });
+
+  // —— B monogram: clean exit (opacity + scale about center) ——
+  const bGroupProps = useAnimatedProps(() => {
+    const fade = stageProgress(
+      clock.value,
+      T.beatEnd,
+      T.collapseEnd * 0.88,
+      easeOutCubic,
+    );
+    const scale = interpolate(fade, [0, 1], [1, 0.88]);
+    return {
+      opacity: 1 - fade,
+      transform: [
+        { translateX: 12 },
+        { translateY: 12 },
+        { scale },
+        { translateX: -12 },
+        { translateY: -12 },
+      ],
+    };
+  });
+
+  // —— Download stroke-draw (clean static paths) ——————————————
+  const shaftProps = useAnimatedProps(() => {
+    const p = stageProgress(
+      clock.value,
+      T.revealStart,
+      T.shaftEnd,
+      easeOutCubic,
+    );
+    const appear = stageProgress(
+      clock.value,
+      T.revealStart - 0.02,
+      T.revealStart,
+      easeOutQuad,
+    );
+    return {
+      strokeDashoffset: LEN_SHAFT * (1 - p),
+      opacity: appear,
+    };
+  });
+
+  const chevronProps = useAnimatedProps(() => {
+    const p = stageProgress(
+      clock.value,
+      T.chevronStart,
+      T.chevronEnd,
+      easeOutCubic,
+    );
+    const appear = stageProgress(
+      clock.value,
+      T.chevronStart - 0.02,
+      T.chevronStart,
+      easeOutQuad,
+    );
+    return {
+      strokeDashoffset: LEN_CHEVRON * (1 - p),
+      opacity: appear,
+    };
+  });
+
+  const trayProps = useAnimatedProps(() => {
+    const p = stageProgress(
+      clock.value,
+      T.trayStart,
+      T.trayEnd,
+      easeOutCubic,
+    );
+    const appear = stageProgress(
+      clock.value,
+      T.trayStart - 0.02,
+      T.trayStart,
+      easeOutQuad,
+    );
+    return {
+      strokeDashoffset: LEN_TRAY * (1 - p),
+      opacity: 0.85 * appear,
+    };
+  });
 
   if (reduceMotion) {
     return (
@@ -221,94 +375,123 @@ export function UpdateReadyMark({
   }
 
   return (
-    <Svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
+    <Animated.View
+      style={[{ width: size, height: size }, markStyle]}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      {/* Pediment → arrow head (civic blue) */}
-      <AnimatedPath
-        d={MORPH_PEDIMENT.fromD}
-        animatedProps={pedimentProps}
-        stroke={color}
-        strokeWidth={1.3}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        {/* Civic layer — collapses via translate/opacity, never path-lerps */}
+        <AnimatedG animatedProps={roofProps}>
+          <Path
+            d={PEDIMENT}
+            stroke={color}
+            strokeWidth={1.3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </AnimatedG>
 
-      {/* Entablature — dissolves as the roof becomes the chevron */}
-      <AnimatedPath
-        d={ENTABLATURE}
-        animatedProps={fadeEntablatureProps}
-        stroke={structure}
-        strokeWidth={1.1}
-        strokeLinecap="square"
-      />
+        <AnimatedPath
+          d={ENTABLATURE}
+          animatedProps={entablatureProps}
+          stroke={structure}
+          strokeWidth={1.1}
+          strokeLinecap="square"
+        />
 
-      {/* Twin columns → stacked shaft (reads as one bold stem) */}
-      <AnimatedPath
-        d={MORPH_COL_L.fromD}
-        animatedProps={colLProps}
-        stroke={color}
-        strokeWidth={1.25}
-        strokeLinecap="round"
-      />
-      <AnimatedPath
-        d={MORPH_COL_R.fromD}
-        animatedProps={colRProps}
-        stroke={color}
-        strokeWidth={1.25}
-        strokeLinecap="round"
-      />
+        <AnimatedG animatedProps={colLProps}>
+          <Path
+            d={COL_L}
+            stroke={color}
+            strokeWidth={1.25}
+            strokeLinecap="round"
+          />
+        </AnimatedG>
+        <AnimatedG animatedProps={colRProps}>
+          <Path
+            d={COL_R}
+            stroke={color}
+            strokeWidth={1.25}
+            strokeLinecap="round"
+          />
+        </AnimatedG>
 
-      {/* Bases + plinth → tray (muted structure) */}
-      <AnimatedPath
-        d={MORPH_BASE_L.fromD}
-        animatedProps={baseLProps}
-        stroke={structure}
-        strokeWidth={1.15}
-        strokeLinecap="square"
-      />
-      <AnimatedPath
-        d={MORPH_BASE_R.fromD}
-        animatedProps={baseRProps}
-        stroke={structure}
-        strokeWidth={1.15}
-        strokeLinecap="square"
-      />
-      <AnimatedPath
-        d={MORPH_PLINTH.fromD}
-        animatedProps={plinthProps}
-        stroke={structure}
-        strokeWidth={1.15}
-        strokeLinecap="square"
-      />
+        <AnimatedG animatedProps={baseLProps}>
+          <Path
+            d={BASE_L}
+            stroke={structure}
+            strokeWidth={1.15}
+            strokeLinecap="square"
+          />
+        </AnimatedG>
+        <AnimatedG animatedProps={baseRProps}>
+          <Path
+            d={BASE_R}
+            stroke={structure}
+            strokeWidth={1.15}
+            strokeLinecap="square"
+          />
+        </AnimatedG>
+        <AnimatedPath
+          d={PLINTH}
+          animatedProps={plinthProps}
+          stroke={structure}
+          strokeWidth={1.15}
+          strokeLinecap="square"
+        />
 
-      {/* Geometric “B” — holds, then yields to the download glyph */}
-      <AnimatedPath
-        d={B_OUTER}
-        animatedProps={fadeCivicProps}
-        stroke={color}
-        strokeWidth={1.3}
-        strokeLinejoin="round"
-      />
-      <AnimatedPath
-        d={B_TOP}
-        animatedProps={fadeCivicSoftProps}
-        stroke={color}
-        strokeWidth={1.05}
-        strokeLinecap="round"
-      />
-      <AnimatedPath
-        d={B_BOT}
-        animatedProps={fadeCivicSoftProps}
-        stroke={color}
-        strokeWidth={1.05}
-        strokeLinecap="round"
-      />
-    </Svg>
+        <AnimatedG animatedProps={bGroupProps}>
+          <Path
+            d={B_OUTER}
+            stroke={color}
+            strokeWidth={1.3}
+            strokeLinejoin="round"
+          />
+          <Path
+            d={B_TOP}
+            stroke={color}
+            strokeWidth={1.05}
+            strokeLinecap="round"
+            opacity={0.85}
+          />
+          <Path
+            d={B_BOT}
+            stroke={color}
+            strokeWidth={1.05}
+            strokeLinecap="round"
+            opacity={0.85}
+          />
+        </AnimatedG>
+
+        {/* Download layer — stroke-draw reveal */}
+        <AnimatedPath
+          d={DL_SHAFT}
+          animatedProps={shaftProps}
+          stroke={color}
+          strokeWidth={1.35}
+          strokeLinecap="round"
+          strokeDasharray={`${LEN_SHAFT}`}
+        />
+        <AnimatedPath
+          d={DL_CHEVRON}
+          animatedProps={chevronProps}
+          stroke={color}
+          strokeWidth={1.3}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray={`${LEN_CHEVRON}`}
+        />
+        <AnimatedPath
+          d={DL_TRAY}
+          animatedProps={trayProps}
+          stroke={structure}
+          strokeWidth={1.15}
+          strokeLinecap="square"
+          strokeLinejoin="miter"
+          strokeDasharray={`${LEN_TRAY}`}
+        />
+      </Svg>
+    </Animated.View>
   );
 }
