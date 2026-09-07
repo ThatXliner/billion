@@ -1,17 +1,14 @@
 /**
- * UpdateReadyMark — Billion brand mark dissolves into a download glyph.
+ * UpdateReadyMark — Billion brand mark morphs into a download glyph.
  *
- * Choreography (~2.4s), then holds and replays every LOOP_PERIOD_MS (~5s
- * from start to start):
- *  1. Beat     (0.00–0.45s)  Real logo holds; soft breath scale.
- *  2. Collapse (0.45–1.10s)  Logo fades + slight scale-out.
- *  3. Reveal   (1.00–2.00s)  Download paths stroke-draw: shaft → chevron → tray.
- *  4. Settle   (2.00–2.40s)  Subtle overshoot scale on the finished mark, then
- *                            hold until the next loop.
+ * One continuous metamorphosis driven by a single master `progress` 0→1
+ * (~3.0s, inOut cubic). No discrete stage cuts: logo and download share a
+ * long overlapping crossfade so the mid-morph reads as dissolving into the
+ * glyph. Stroke-draw is synced to the same curve (slight stagger). Soft hold
+ * near 0 and settle at 1 come from the inOut cubic itself.
  *
- * Stages overlap slightly. Master clock is linear; each stage eases locally
- * (cubic out / smoothstep) so mid-frames stay legible. useReducedMotion →
- * static final download, no stages / no loop.
+ * LOOP_PERIOD_MS (~5s start→start): morph → hold finished glyph → reset.
+ * useReducedMotion → static final download, no loop.
  */
 import { useEffect } from "react";
 import { StyleSheet } from "react-native";
@@ -54,45 +51,28 @@ const LEN_SHAFT = 9.5;
 const LEN_CHEVRON = 12.2;
 const LEN_TRAY = 17.7;
 
-/** Total choreography length (ms). Master clock is linear 0→1 over this. */
-const TOTAL_MS = 2400;
+/** Morph length (ms). Master clock is linear; progress is eased inOut cubic. */
+const TOTAL_MS = 3000;
 /** Restart the mark animation this often (ms from start→start). */
 const LOOP_PERIOD_MS = 5000;
 
 /**
- * Stage windows as fractions of TOTAL_MS.
- * Slight overlaps keep the logo→download handoff fluid.
+ * Smoothstep (Hermite) — worklet-safe, no external easing defaults.
+ * Used for wide opacity / draw windows on the continuous progress curve.
  */
-const T = {
-  beatEnd: 0.45 / 2.4,
-  collapseEnd: 1.1 / 2.4,
-  revealStart: 1.0 / 2.4,
-  shaftEnd: 1.45 / 2.4,
-  chevronStart: 1.3 / 2.4,
-  chevronEnd: 1.75 / 2.4,
-  trayStart: 1.55 / 2.4,
-  trayEnd: 2.0 / 2.4,
-  settleEnd: 1,
-} as const;
-
-type EaseKind = "outCubic" | "inOutCubic" | "outQuad";
-
-/** Map clock → eased 0..1 within [start, end]. Easing resolved inside the worklet. */
-function stageProgress(
-  clock: number,
-  start: number,
-  end: number,
-  easeKind: EaseKind = "outCubic",
-): number {
+function smoothstep01(t: number): number {
   "worklet";
-  const raw = interpolate(clock, [start, end], [0, 1], Extrapolation.CLAMP);
-  if (easeKind === "inOutCubic") {
-    return Easing.inOut(Easing.cubic)(raw);
+  const x = t < 0 ? 0 : t > 1 ? 1 : t;
+  return x * x * (3 - 2 * x);
+}
+
+/** Map progress → 0..1 inside [start, end] via smoothstep. */
+function window01(progress: number, start: number, end: number): number {
+  "worklet";
+  if (end <= start) {
+    return progress >= end ? 1 : 0;
   }
-  if (easeKind === "outQuad") {
-    return Easing.out(Easing.quad)(raw);
-  }
-  return Easing.out(Easing.cubic)(raw);
+  return smoothstep01((progress - start) / (end - start));
 }
 
 function StaticDownloadMark({
@@ -145,6 +125,7 @@ export function UpdateReadyMark({
 }: UpdateReadyMarkProps) {
   const structure = mutedColor ?? color;
   const reduceMotion = useReducedMotion();
+  // Linear master clock 0→1; all motion derives from one continuous curve.
   const clock = useSharedValue(reduceMotion ? 1 : 0);
 
   useEffect(() => {
@@ -158,9 +139,10 @@ export function UpdateReadyMark({
       withSequence(
         withTiming(1, {
           duration: TOTAL_MS,
-          easing: Easing.linear,
+          // Single continuous inOut cubic — soft hold at start, settle at end.
+          easing: Easing.inOut(Easing.cubic),
         }),
-        // Hold the finished download glyph, then snap back for the next beat.
+        // Hold the finished download glyph, then snap back for the next loop.
         withDelay(holdMs, withTiming(0, { duration: 0 })),
       ),
       -1,
@@ -168,107 +150,69 @@ export function UpdateReadyMark({
     );
   }, [reduceMotion, clock]);
 
-  // —— Overall breath + settle scale (View wrapper; reliable at ~36px) ——
+  // —— Shared wrapper: one continuous scale track (no handoff discontinuity) ——
   const markStyle = useAnimatedStyle(() => {
-    const breathT = stageProgress(
-      clock.value,
-      0,
-      T.beatEnd,
-      "inOutCubic",
+    const p = clock.value;
+    // Gentle breath early → soft mid dip → settle overshoot → rest at 1.
+    const scale = interpolate(
+      p,
+      [0, 0.12, 0.42, 0.78, 1],
+      [1, 1.03, 0.985, 1.045, 1],
+      Extrapolation.CLAMP,
     );
-    // 0→0.5→1 maps to 1→1.04→1
-    const breath =
-      breathT <= 0.5
-        ? interpolate(breathT, [0, 0.5], [1, 1.04])
-        : interpolate(breathT, [0.5, 1], [1.04, 1]);
-
-    const settleT = stageProgress(
-      clock.value,
-      T.trayEnd,
-      T.settleEnd,
-      "outCubic",
-    );
-    const settle =
-      settleT <= 0.4
-        ? interpolate(settleT, [0, 0.4], [1, 1.055])
-        : interpolate(settleT, [0.4, 1], [1.055, 1]);
-
-    const scale = clock.value >= T.trayEnd ? settle : breath;
     return {
       transform: [{ scale }],
     };
   });
 
-  // —— Real logo: hold during beat, clean exit (opacity + scale) ——
+  // —— Logo: wide smoothstep fade + yield (scale down + slight rotate) ——
+  // Opacity out: progress 0.18 → 0.62 (long dissolve)
   const logoStyle = useAnimatedStyle(() => {
-    const fade = stageProgress(
-      clock.value,
-      T.beatEnd,
-      T.collapseEnd * 0.88,
-      "outCubic",
-    );
-    const scale = interpolate(fade, [0, 1], [1, 0.88]);
+    const p = clock.value;
+    const fadeOut = window01(p, 0.18, 0.62);
+    const morph = window01(p, 0.15, 0.7);
+    const scale = interpolate(morph, [0, 1], [1, 0.82]);
+    const rotate = interpolate(morph, [0, 1], [0, -8]);
     return {
-      opacity: 1 - fade,
-      transform: [{ scale }],
+      opacity: 1 - fadeOut,
+      transform: [{ scale }, { rotate: `${rotate}deg` }],
     };
   });
 
-  // —— Download stroke-draw (clean static paths) ——————————————
-  const shaftProps = useAnimatedProps(() => {
-    const p = stageProgress(
-      clock.value,
-      T.revealStart,
-      T.shaftEnd,
-      "outCubic",
-    );
-    const appear = stageProgress(
-      clock.value,
-      T.revealStart - 0.02,
-      T.revealStart,
-      "outQuad",
-    );
+  // —— Download layer: overlapping fade-in + complementary scale/rotate ——
+  // Opacity in: progress 0.28 → 0.72 (overlaps logo; mid ~0.45 both visible)
+  const downloadStyle = useAnimatedStyle(() => {
+    const p = clock.value;
+    const fadeIn = window01(p, 0.28, 0.72);
+    const morph = window01(p, 0.2, 0.78);
+    const scale = interpolate(morph, [0, 1], [0.82, 1]);
+    const rotate = interpolate(morph, [0, 1], [8, 0]);
     return {
-      strokeDashoffset: LEN_SHAFT * (1 - p),
-      opacity: appear,
+      opacity: fadeIn,
+      transform: [{ scale }, { rotate: `${rotate}deg` }],
+    };
+  });
+
+  // —— Stroke-draw synced to same progress (staggered, still overlaps fade) ——
+  const shaftProps = useAnimatedProps(() => {
+    const draw = window01(clock.value, 0.22, 0.55);
+    return {
+      strokeDashoffset: LEN_SHAFT * (1 - draw),
     };
   });
 
   const chevronProps = useAnimatedProps(() => {
-    const p = stageProgress(
-      clock.value,
-      T.chevronStart,
-      T.chevronEnd,
-      "outCubic",
-    );
-    const appear = stageProgress(
-      clock.value,
-      T.chevronStart - 0.02,
-      T.chevronStart,
-      "outQuad",
-    );
+    const draw = window01(clock.value, 0.32, 0.64);
     return {
-      strokeDashoffset: LEN_CHEVRON * (1 - p),
-      opacity: appear,
+      strokeDashoffset: LEN_CHEVRON * (1 - draw),
     };
   });
 
   const trayProps = useAnimatedProps(() => {
-    const p = stageProgress(
-      clock.value,
-      T.trayStart,
-      T.trayEnd,
-      "outCubic",
-    );
-    const appear = stageProgress(
-      clock.value,
-      T.trayStart - 0.02,
-      T.trayStart,
-      "outQuad",
-    );
+    const draw = window01(clock.value, 0.42, 0.76);
     return {
-      strokeDashoffset: LEN_TRAY * (1 - p),
-      opacity: 0.85 * appear,
+      strokeDashoffset: LEN_TRAY * (1 - draw),
+      opacity: 0.85,
     };
   });
 
@@ -286,54 +230,47 @@ export function UpdateReadyMark({
     >
       <Animated.Image
         source={LOGO}
-        style={[styles.logo, { width: size, height: size }, logoStyle]}
+        style={[styles.layer, { width: size, height: size }, logoStyle]}
         resizeMode="contain"
       />
-      <Svg
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="none"
-        style={styles.download}
+      <Animated.View
+        style={[styles.layer, { width: size, height: size }, downloadStyle]}
       >
-        <AnimatedPath
-          d={DL_SHAFT}
-          animatedProps={shaftProps}
-          stroke={color}
-          strokeWidth={1.35}
-          strokeLinecap="round"
-          strokeDasharray={`${LEN_SHAFT}`}
-        />
-        <AnimatedPath
-          d={DL_CHEVRON}
-          animatedProps={chevronProps}
-          stroke={color}
-          strokeWidth={1.3}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeDasharray={`${LEN_CHEVRON}`}
-        />
-        <AnimatedPath
-          d={DL_TRAY}
-          animatedProps={trayProps}
-          stroke={structure}
-          strokeWidth={1.15}
-          strokeLinecap="square"
-          strokeLinejoin="miter"
-          strokeDasharray={`${LEN_TRAY}`}
-        />
-      </Svg>
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <AnimatedPath
+            d={DL_SHAFT}
+            animatedProps={shaftProps}
+            stroke={color}
+            strokeWidth={1.35}
+            strokeLinecap="round"
+            strokeDasharray={`${LEN_SHAFT}`}
+          />
+          <AnimatedPath
+            d={DL_CHEVRON}
+            animatedProps={chevronProps}
+            stroke={color}
+            strokeWidth={1.3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray={`${LEN_CHEVRON}`}
+          />
+          <AnimatedPath
+            d={DL_TRAY}
+            animatedProps={trayProps}
+            stroke={structure}
+            strokeWidth={1.15}
+            strokeLinecap="square"
+            strokeLinejoin="miter"
+            strokeDasharray={`${LEN_TRAY}`}
+          />
+        </Svg>
+      </Animated.View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  logo: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-  },
-  download: {
+  layer: {
     position: "absolute",
     left: 0,
     top: 0,
