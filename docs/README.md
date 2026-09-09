@@ -17,6 +17,8 @@ New to Billion? Read the [architecture tour](architecture.md) for the data flow,
 | [Local government and Legistar](local-government-legistar.md) | Implemented ingestion and read API, San José policy, and remaining work        |
 | [Sharing and saves](virality.md)                              | Public previews, generated share images, bookmarks, and screenshot detection   |
 
+For local Android builds and the path to Google Play, read [Android development and release](android-release.md).
+
 ## Work on the project
 
 | Task                                   | Guide                                             |
