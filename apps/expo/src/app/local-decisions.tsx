@@ -1,9 +1,9 @@
 /**
- * "What San Jose Is Deciding" - the local-government decision list.
+ * "What {City} Is Deciding" - the local-government decision list.
  *
- * Jurisdiction-neutral: every place name comes from data or the user's saved
- * address, never from this file. The first-release ingestion pipeline covers
- * San Jose; other jurisdictions show honest empty states.
+ * Jurisdiction comes from the user's saved address via detectJurisdictionKey
+ * (San José / Santa Clara / Sunnyvale). Unsupported addresses redirect back
+ * to Elections — never invent a city.
  */
 import type { Href } from "expo-router";
 import { useMemo, useRef, useState } from "react";
@@ -52,16 +52,17 @@ export default function LocalDecisionsScreen() {
   const { address, isLoading: isAddressLoading } = useUserAddress();
 
   const detectedJurisdiction = detectJurisdictionKey(address);
-  const isSanJoseResident = detectedJurisdiction === "sanjose";
-  const jurisdiction = "sanjose" as const;
-  const jurisdictionName = JURISDICTION_FALLBACK_NAMES[jurisdiction];
+  const jurisdiction = detectedJurisdiction;
+  const jurisdictionName = jurisdiction
+    ? JURISDICTION_FALLBACK_NAMES[jurisdiction]
+    : null;
 
   const [tab, setTab] = useState<TimelineTab>("upcoming");
   const [topic, setTopic] = useState<string | null>(null);
 
   const listInput = useMemo(
     () => ({
-      jurisdiction,
+      jurisdiction: jurisdiction ?? "sanjose",
       timeline: tab,
       topic: topic ?? undefined,
       limit: PAGE_SIZE,
@@ -82,7 +83,7 @@ export default function LocalDecisionsScreen() {
     trpc.legistar.listDecisions.infiniteQueryOptions(
       { ...listInput, cursor: 0 },
       {
-        enabled: !isAddressLoading && isSanJoseResident,
+        enabled: !isAddressLoading && jurisdiction != null,
         initialCursor: 0,
         getNextPageParam: (lastPage, allPages) =>
           lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : null,
@@ -98,7 +99,7 @@ export default function LocalDecisionsScreen() {
       timeline: "all",
       limit: 100,
     }),
-    enabled: !isAddressLoading && isSanJoseResident,
+    enabled: !isAddressLoading && jurisdiction != null,
   });
   const availableTopics = useMemo(() => {
     const seen = new Set<string>();
@@ -110,7 +111,7 @@ export default function LocalDecisionsScreen() {
 
   const healthQuery = useQuery({
     ...trpc.legistar.getIngestionHealth.queryOptions({ jurisdiction }),
-    enabled: !isAddressLoading && isSanJoseResident,
+    enabled: !isAddressLoading && jurisdiction != null,
   });
   const latestRun = healthQuery.data?.latestRun ?? null;
   const syncFailed = latestRun?.status === "failed";
@@ -157,7 +158,7 @@ export default function LocalDecisionsScreen() {
     );
   }
 
-  if (!isSanJoseResident) {
+  if (!jurisdiction || !jurisdictionName) {
     return <Redirect href="/(tabs)/elections" />;
   }
 
