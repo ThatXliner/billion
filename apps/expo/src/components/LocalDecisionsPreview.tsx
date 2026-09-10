@@ -39,20 +39,21 @@ export function LocalDecisionsPreview({
   const router = useRouter();
 
   const jurisdiction = detectJurisdictionKey(address);
-  const isSanJoseResident = jurisdiction === "sanjose";
-  const jurisdictionName = JURISDICTION_FALLBACK_NAMES.sanjose;
+  const jurisdictionName = jurisdiction
+    ? JURISDICTION_FALLBACK_NAMES[jurisdiction]
+    : null;
 
   const query = useQuery({
     ...trpc.legistar.listDecisions.queryOptions({
-      jurisdiction: "sanjose",
+      jurisdiction: jurisdiction ?? "sanjose",
       timeline: "upcoming",
       limit: PREVIEW_COUNT,
     }),
-    enabled: isSanJoseResident,
+    enabled: jurisdiction != null,
   });
   const rows = query.data ?? [];
 
-  if (!isSanJoseResident) return null;
+  if (!jurisdiction || !jurisdictionName) return null;
 
   return (
     <TouchableOpacity
@@ -76,6 +77,10 @@ export function LocalDecisionsPreview({
           <View style={s.skeletonLine} />
           <View style={s.skeletonLine} />
         </>
+      ) : query.isError ? (
+        <RNText style={s.empty}>
+          Local decisions didn&apos;t load. Open the list to try again.
+        </RNText>
       ) : rows.length === 0 ? (
         <RNText style={s.empty}>
           No published meetings in the pipeline right now. Open the list for
