@@ -29,10 +29,17 @@ if (
 import type { RouterOutputs } from "~/utils/api";
 import { DigestGreetingBar } from "~/components/DigestGreetingBar";
 import { DigestPalette as P } from "~/components/DigestPalette";
+import { useContentJurisdiction } from "~/hooks/useContentJurisdiction";
+import { useUserAddress } from "~/hooks/useUserAddress";
 import { fontBody, fontDisplay } from "~/styles";
 import { trpc } from "~/utils/api";
 import { contentImageSource } from "~/utils/editorial-visuals";
-import { JURISDICTIONS, isStateJurisdiction } from "~/utils/jurisdiction";
+import {
+  JURISDICTIONS,
+  isStateJurisdiction,
+  jurisdictionFromAddress,
+  type StateJurisdiction,
+} from "~/utils/jurisdiction";
 
 const CANVAS = P.night;
 const CARD = P.card;
@@ -94,11 +101,25 @@ function coverMeta(item: DigestCard): string {
 export function DigestHome() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { address } = useUserAddress();
+  const { jurisdiction: browseJurisdiction } = useContentJurisdiction();
 
-  // Prefer featured for the local cover rail; fall back to typed CA bills.
+  // Local rail follows saved address → Browse state preference → CA fallback.
+  // Federal cover stays federal (Also Today).
+  const localJurisdiction = useMemo((): StateJurisdiction => {
+    const fromAddress = jurisdictionFromAddress(address ?? null);
+    if (fromAddress) return fromAddress;
+    if (isStateJurisdiction(browseJurisdiction)) return browseJurisdiction;
+    return "ca";
+  }, [address, browseJurisdiction]);
+  const localPlace = JURISDICTIONS[localJurisdiction].name;
+
+  // Prefer featured for the local cover rail; fall back to typed state bills.
   // GAP: no digest.getToday — chrome labels below are UI only.
   const featuredLocal = useQuery(
-    trpc.content.getFeaturedBills.queryOptions({ jurisdiction: "ca" }),
+    trpc.content.getFeaturedBills.queryOptions({
+      jurisdiction: localJurisdiction,
+    }),
   );
   const featuredEmpty =
     !featuredLocal.isLoading && (featuredLocal.data?.length ?? 0) === 0;
@@ -106,7 +127,7 @@ export function DigestHome() {
     ...trpc.content.getByType.queryOptions({
       type: "bill",
       limit: 6,
-      jurisdiction: "ca",
+      jurisdiction: localJurisdiction,
     }),
     enabled: featuredEmpty || !!featuredLocal.error,
   });
@@ -262,7 +283,7 @@ export function DigestHome() {
         <View style={s.sectionHead}>
           {/* GAP: no digest.getToday — section chrome only */}
           <Text style={s.sectionEyebrow}>THE DAILY BRIEF</Text>
-          <Text style={s.sectionTitle}>Today’s local news</Text>
+          <Text style={s.sectionTitle}>Today’s {localPlace} news</Text>
           <View style={s.sectionRule} />
         </View>
 
@@ -281,7 +302,7 @@ export function DigestHome() {
           <View style={s.emptyWrap}>
             <Text style={s.emptyTitle}>No featured local bills yet</Text>
             <Text style={s.emptySub}>
-              Check Browse for the full California feed.
+              Check Browse for the full {localPlace} feed.
             </Text>
           </View>
         ) : (
