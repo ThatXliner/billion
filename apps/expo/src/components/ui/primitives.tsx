@@ -23,8 +23,11 @@ import {
   fontSize,
   hair,
   planes,
-  useTheme,
 } from "~/styles";
+import {
+  DigestHair,
+  DigestPalette,
+} from "~/theme";
 import { Icon } from "./Icon";
 
 /* ---------- Badge — content-type uppercase pill ---------- */
@@ -194,16 +197,18 @@ export function Pill({
   onPress?: () => void;
   icon?: IconName;
 }) {
-  const { theme } = useTheme();
   return (
     <TouchableOpacity
       style={[
         s.pill,
         active
-          ? { backgroundColor: colors.white, borderColor: colors.white }
+          ? {
+              backgroundColor: DigestHair.tabActivePill,
+              borderColor: DigestPalette.spark,
+            }
           : {
               backgroundColor: "transparent",
-              borderColor: theme.border,
+              borderColor: DigestHair.sectionRule,
             },
       ]}
       onPress={onPress}
@@ -213,14 +218,15 @@ export function Pill({
         <Icon
           name={icon}
           size={14}
-          color={active ? planes.ink : theme.textSecondary}
+          color={active ? DigestPalette.spark : DigestPalette.quiet}
         />
       )}
       <Text
         style={[
           s.pillText,
-          { color: active ? planes.ink : theme.textSecondary },
+          { color: active ? DigestPalette.spark : DigestPalette.quiet },
         ]}
+        numberOfLines={1}
       >
         {label}
       </Text>
@@ -322,15 +328,19 @@ const s = StyleSheet.create({
     fontSize: fontSize.base,
   },
   pill: {
-    height: 38,
-    paddingHorizontal: 18,
+    // flexShrink: 0 — never compress "Briefings" into "Brief…" (CRAFT P2).
+    flexShrink: 0,
+    alignSelf: "flex-start",
+    height: 36,
+    paddingHorizontal: 12,
     borderRadius: 9999,
     borderWidth: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
+    gap: 6,
   },
   pillText: {
+    flexShrink: 0,
     fontFamily: fontBody.semibold,
     fontSize: fontSize.sm,
   },
