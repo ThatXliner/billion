@@ -95,7 +95,7 @@ export default function LocalDecisionsScreen() {
   // have decisions right now.
   const topicsProbe = useQuery({
     ...trpc.legistar.listDecisions.queryOptions({
-      jurisdiction,
+      jurisdiction: listInput.jurisdiction,
       timeline: "all",
       limit: 100,
     }),
@@ -110,7 +110,9 @@ export default function LocalDecisionsScreen() {
   }, [topicsProbe.data]);
 
   const healthQuery = useQuery({
-    ...trpc.legistar.getIngestionHealth.queryOptions({ jurisdiction }),
+    ...trpc.legistar.getIngestionHealth.queryOptions({
+      jurisdiction: listInput.jurisdiction,
+    }),
     enabled: !isAddressLoading && jurisdiction != null,
   });
   const latestRun = healthQuery.data?.latestRun ?? null;
