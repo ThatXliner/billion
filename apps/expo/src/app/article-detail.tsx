@@ -640,7 +640,7 @@ export default function ArticleDetailScreen() {
 
         {/* Zen pack: one editorial pull-quote when data exists, then timeline hugs — no fact-card chrome */}
         {mode === "explainer" && pullQuote ? (
-          <View style={s.pullQuote} accessibilityRole="blockquote">
+          <View style={s.pullQuote} accessibilityRole="summary">
             <PullQuoteMark size={26} />
             <Text style={s.pullQuoteText}>"{pullQuote.text.trim()}"</Text>
             {pullQuote.locator ? (
