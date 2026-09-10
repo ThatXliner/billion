@@ -1,12 +1,16 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  LayoutAnimation,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  UIManager,
+  useWindowDimensions,
   View,
   type LayoutChangeEvent,
 } from "react-native";
@@ -14,6 +18,13 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 import type { RouterOutputs } from "~/utils/api";
 import { DigestGreetingBar } from "~/components/DigestGreetingBar";
@@ -149,15 +160,27 @@ export function DigestHome() {
     router.push(`/article-detail?id=${id}`);
   };
 
+  const { width: windowWidth } = useWindowDimensions();
+
   // Dynamic rail height = active card only (short deks must not leave dead navy
   // above pagination dots — ScrollView otherwise sizes to tallest sibling).
+  // Height only settles after momentum ends so mid-swipe layout jumps don't
+  // fight the pan gesture.
   const [railIndex, setRailIndex] = useState(0);
   const [railHeight, setRailHeight] = useState<number | undefined>(undefined);
   const railHeightsRef = useRef<Record<number, number>>({});
+  const railIndexRef = useRef(0);
 
-  const applyRailHeight = useCallback((index: number) => {
+  const applyRailHeight = useCallback((index: number, animate: boolean) => {
     const h = railHeightsRef.current[index];
-    if (h != null) setRailHeight(h);
+    if (h == null) return;
+    setRailHeight((prev) => {
+      if (prev === h) return prev;
+      if (animate && prev != null) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      }
+      return h;
+    });
   }, []);
 
   const onRailCardLayout = useCallback(
@@ -167,46 +190,65 @@ export function DigestHome() {
       const prev = railHeightsRef.current[index];
       if (prev === h) return;
       railHeightsRef.current[index] = h;
-      if (index === railIndex) setRailHeight(h);
+      if (index === railIndexRef.current) applyRailHeight(index, false);
     },
-    [railIndex],
+    [applyRailHeight],
   );
 
-  const syncRailIndex = useCallback(
+  const indexFromOffset = useCallback(
     (offsetX: number) => {
-      if (localCards.length === 0) return;
-      const next = Math.max(
+      if (localCards.length === 0) return 0;
+      return Math.max(
         0,
-        Math.min(
-          localCards.length - 1,
-          Math.round(offsetX / RAIL_SNAP),
-        ),
+        Math.min(localCards.length - 1, Math.round(offsetX / RAIL_SNAP)),
       );
-      setRailIndex((cur) => (cur === next ? cur : next));
-      applyRailHeight(next);
     },
-    [applyRailHeight, localCards.length],
+    [localCards.length],
   );
 
+  // Dots track the finger; height waits until the snap settles.
   const onRailScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      syncRailIndex(e.nativeEvent.contentOffset.x);
+      const next = indexFromOffset(e.nativeEvent.contentOffset.x);
+      if (next === railIndexRef.current) return;
+      railIndexRef.current = next;
+      setRailIndex(next);
     },
-    [syncRailIndex],
+    [indexFromOffset],
   );
 
-  const onRailMomentumEnd = useCallback(
+  const onRailSettle = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      syncRailIndex(e.nativeEvent.contentOffset.x);
+      const next = indexFromOffset(e.nativeEvent.contentOffset.x);
+      railIndexRef.current = next;
+      setRailIndex(next);
+      applyRailHeight(next, true);
     },
-    [syncRailIndex],
+    [applyRailHeight, indexFromOffset],
   );
 
-  // Explicit offsets beat snapToInterval when content has paddingHorizontal —
+  // Only settle height when the drag ends without a fling; otherwise wait for
+  // momentum so we don't animate to an intermediate card mid-swipe.
+  const onRailScrollEndDrag = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const vx = e.nativeEvent.velocity?.x ?? 0;
+      if (Math.abs(vx) < 0.05) onRailSettle(e);
+    },
+    [onRailSettle],
+  );
+
+  // Explicit offsets beat snapToInterval when content has leading inset —
   // interval math alone can mis-align and desync railIndex vs visible card.
+  // Prefer margins over `gap`: gap has historically desynced snap math on iOS.
   const railSnapOffsets = useMemo(
     () => localCards.map((_, i) => i * RAIL_SNAP),
     [localCards],
+  );
+
+  // Enough trailing pad that the last card can rest on its snap offset.
+  const railTrailingPad = Math.max(
+    RAIL_INSET,
+    windowWidth - RAIL_INSET - RAIL_CARD_WIDTH,
   );
 
   return (
@@ -244,46 +286,37 @@ export function DigestHome() {
           </View>
         ) : (
           <>
-            {/* Absolute rail + pinned dots. Intrinsic ScrollView height must
-                NOT push dots down (tallest sibling). Parent height = active
-                card + dot cluster only. */}
-            <View
-              style={{
-                height: (railHeight ?? 360) + 38,
-                position: "relative",
-              }}
-            >
+            {/* Fixed-height H-scroll (active card) + dots in normal flow.
+                Avoid absolute positioning — it steals/fights nested pans. */}
+            <View>
               <ScrollView
                 horizontal
+                nestedScrollEnabled
+                directionalLockEnabled
                 showsHorizontalScrollIndicator={false}
                 decelerationRate="fast"
                 snapToOffsets={railSnapOffsets}
                 snapToAlignment="start"
                 disableIntervalMomentum
-                contentContainerStyle={s.rail}
-                style={[
-                  s.railScroll,
-                  {
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: railHeight ?? 360,
-                    overflow: "hidden",
-                  },
+                contentContainerStyle={[
+                  s.rail,
+                  { paddingRight: railTrailingPad },
                 ]}
+                style={[s.railScroll, { height: railHeight ?? 360 }]}
                 onScroll={onRailScroll}
-                onMomentumScrollEnd={onRailMomentumEnd}
+                onMomentumScrollEnd={onRailSettle}
+                onScrollEndDrag={onRailScrollEndDrag}
                 scrollEventThrottle={16}
               >
                 {localCards.map((card, index) => {
                   const img = contentImageSource(
                     card.imageUri ?? card.thumbnailUrl,
                   );
+                  const isLast = index === localCards.length - 1;
                   return (
                     <Pressable
                       key={card.id}
-                      style={s.card}
+                      style={[s.card, !isLast ? s.cardGap : null]}
                       onLayout={(e) => onRailCardLayout(index, e)}
                       onPress={() => openArticle(card.id)}
                       accessibilityRole="button"
@@ -325,17 +358,7 @@ export function DigestHome() {
                 })}
               </ScrollView>
 
-              <View
-                style={[
-                  s.dots,
-                  {
-                    position: "absolute",
-                    left: 0,
-                    right: 0,
-                    top: (railHeight ?? 360) + 22,
-                  },
-                ]}
-              >
+              <View style={s.dots}>
                 {localCards.slice(0, 6).map((card, i) => (
                   <View
                     key={card.id}
@@ -470,13 +493,11 @@ const s = StyleSheet.create({
     marginLeft: 12,
   },
   rail: {
-    paddingHorizontal: RAIL_INSET,
-    gap: RAIL_GAP,
+    paddingLeft: RAIL_INSET,
     paddingBottom: 0,
     alignItems: "flex-start",
   },
-  // flexGrow:0 only — do NOT set height:"100%" (that can stretch the
-  // active card and re-open empty navy under short deks). Outer wrap clips.
+  // Explicit height on the H-scroll — do NOT stretch to tallest sibling.
   railScroll: {
     flexGrow: 0,
   },
@@ -491,6 +512,9 @@ const s = StyleSheet.create({
     flexGrow: 0,
     flexShrink: 0,
     marginBottom: 0,
+  },
+  cardGap: {
+    marginRight: RAIL_GAP,
   },
   photo: {
     position: "relative",
@@ -554,7 +578,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: 6,
-    paddingTop: 0,
+    paddingTop: 22,
     paddingBottom: 0,
   },
   dot: {
