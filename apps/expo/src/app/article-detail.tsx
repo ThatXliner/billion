@@ -348,6 +348,7 @@ export default function ArticleDetailScreen() {
       ? (content.actions as { date: string; text: string }[])
       : [];
   const hasRealActions = actions.length > 0;
+  // Only render official actions from getById — never invent a completed path.
   const timeline = hasRealActions
     ? actions
         .slice()
@@ -358,33 +359,8 @@ export default function ArticleDetailScreen() {
           date: a.date,
           done: true,
         }))
-    : [
-        {
-          label: "Introduced",
-          fullText: "",
-          date: "",
-          done: true,
-        },
-        {
-          label: "Committee review",
-          fullText: "",
-          date: "",
-          done: true,
-        },
-        {
-          label: "Latest action",
-          fullText: "",
-          date: "",
-          done: true,
-        },
-        {
-          label: "Becomes law",
-          fullText: "",
-          date: "",
-          done: false,
-        },
-      ];
-  const currentTimelineIndex = hasRealActions ? timeline.length - 1 : 2;
+    : [];
+  const currentTimelineIndex = hasRealActions ? timeline.length - 1 : -1;
   // Actions are the official legislative record from the source (congress.gov).
   const timelineSourceUrl = hasRealActions ? content.url : undefined;
   const sponsor = content.type === "bill" ? content.sponsor : undefined;
@@ -623,9 +599,22 @@ export default function ArticleDetailScreen() {
               onViewSource={handleViewSource}
             />
           ) : mode === "explainer" && !brief ? (
-            // TRUST hide / no brief: do NOT dump the long AI markdown wall.
-            // Dek already sits above; timeline + pull-quote carry the fold.
-            <View testID="brief-trust-skipped" style={{ height: 0 }} />
+            // No trusted brief: fall back to getById articleContent (AI or
+            // source-derived). Never leave the explainer blank; never invent copy.
+            activeContent.trim().length > 0 ? (
+              renderMarkdown ? (
+                <Markdown style={markdownStyles} rules={markdownRules}>
+                  {activeContent}
+                </Markdown>
+              ) : (
+                <Text style={s.plainText}>{activeContent}</Text>
+              )
+            ) : (
+              <Text style={s.plainText} testID="brief-trust-skipped">
+                A structured brief isn&apos;t ready for this record yet. Use the
+                description above or open the official source.
+              </Text>
+            )
           ) : mode === "source" && sourceHighlight ? (
             <HighlightedSource
               content={content.originalContent}
@@ -639,13 +628,7 @@ export default function ArticleDetailScreen() {
             </Markdown>
           ) : mode === "source" ? (
             <Text style={s.plainText}>{activeContent}</Text>
-          ) : renderMarkdown ? (
-            <Markdown style={markdownStyles} rules={markdownRules}>
-              {activeContent}
-            </Markdown>
-          ) : (
-            <Text style={s.plainText}>{activeContent}</Text>
-          )}
+          ) : null}
         </View>
 
         {/* Lens only with a trusted brief — avoid unmatched AI dual-lens after TRUST hide. */}
@@ -668,7 +651,7 @@ export default function ArticleDetailScreen() {
           </View>
         ) : null}
 
-        {/* timeline */}
+        {/* timeline — official actions only */}
         <Kicker style={[s.timelineKicker, { color: P.spark, marginTop: 4 }]}>Where it stands</Kicker>
         <Card
           style={{
@@ -679,7 +662,13 @@ export default function ArticleDetailScreen() {
             borderColor: "rgba(22,19,26,0.10)",
           }}
         >
-          {timeline.map((step, i) => {
+          {!hasRealActions ? (
+            <Text style={s.timelineEmpty}>
+              No official actions are attached to this record yet. Check the
+              source for the latest status.
+            </Text>
+          ) : (
+            timeline.map((step, i) => {
             const expandable = !!step.fullText && step.label !== step.fullText;
             const isExpanded = expandedStep === i;
             const isCurrent = i === currentTimelineIndex;
@@ -743,7 +732,8 @@ export default function ArticleDetailScreen() {
                 </View>
               </TouchableOpacity>
             );
-          })}
+          })
+          )}
           {timelineSourceUrl && (
             <TouchableOpacity
               style={s.timelineSource}
@@ -1137,6 +1127,13 @@ const s = StyleSheet.create({
     color: P.ink,
   },
   timelineRow: { flexDirection: "row", gap: 12 },
+  timelineEmpty: {
+    fontFamily: fontBody.medium,
+    fontSize: 14,
+    lineHeight: 20,
+    color: P.quiet,
+    paddingVertical: 4,
+  },
   timelineKicker: {
     marginTop: 16,
     marginBottom: 8,
