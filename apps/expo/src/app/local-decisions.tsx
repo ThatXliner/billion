@@ -26,7 +26,13 @@ import { Icon } from "~/components/ui/Icon";
 import { NavHeader } from "~/components/ui/NavHeader";
 import { Segmented } from "~/components/ui/Segmented";
 import { useUserAddress } from "~/hooks/useUserAddress";
-import { colors, fontBody, fontDisplay, useTheme } from "~/styles";
+import { fontBody, fontDisplay } from "~/styles";
+import {
+  DigestHair,
+  DigestPalette,
+  DigestRadii,
+  DigestSpace,
+} from "~/theme";
 import { trpc } from "~/utils/api";
 import {
   detectJurisdictionKey,
@@ -43,7 +49,6 @@ type TimelineTab = "upcoming" | "recent";
 
 export default function LocalDecisionsScreen() {
   const router = useRouter();
-  const { theme } = useTheme();
   const { address, isLoading: isAddressLoading } = useUserAddress();
 
   const detectedJurisdiction = detectJurisdictionKey(address);
@@ -144,9 +149,9 @@ export default function LocalDecisionsScreen() {
 
   if (isAddressLoading) {
     return (
-      <View style={[s.screen, { backgroundColor: theme.background }]}>
+      <View style={[s.screen, { backgroundColor: DigestPalette.canvas }]}>
         <View style={s.center}>
-          <ActivityIndicator size="large" color={colors.white} />
+          <ActivityIndicator size="large" color={DigestPalette.inkOnNight} />
         </View>
       </View>
     );
@@ -157,7 +162,7 @@ export default function LocalDecisionsScreen() {
   }
 
   return (
-    <View style={[s.screen, { backgroundColor: theme.background }]}>
+    <View style={[s.screen, { backgroundColor: DigestPalette.canvas }]}>
       <NavHeader
         large
         title={`What ${jurisdictionName} Is Deciding`}
@@ -215,7 +220,7 @@ export default function LocalDecisionsScreen() {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={() => void handleRefresh()}
-            tintColor={colors.white}
+            tintColor={DigestPalette.inkOnNight}
           />
         }
         renderItem={({ item }) => (
@@ -232,12 +237,12 @@ export default function LocalDecisionsScreen() {
         onEndReachedThreshold={0.5}
         ListFooterComponent={
           isFetchingNextPage ? (
-            <ActivityIndicator color={colors.white} style={s.footerSpinner} />
+            <ActivityIndicator color={DigestPalette.inkOnNight} style={s.footerSpinner} />
           ) : null
         }
         ListEmptyComponent={
           isLoading ? (
-            <View style={{ paddingHorizontal: 20 }}>
+            <View style={{ paddingHorizontal: DigestSpace.screenPadX }}>
               <DecisionListSkeleton />
             </View>
           ) : error ? (
@@ -285,12 +290,11 @@ function SyncNote({
   syncFailed: boolean;
   lastSyncedAt: Date | string | null;
 }) {
-  const { theme } = useTheme();
   if (!visible) return null;
   return (
     <View style={s.syncNote}>
-      <Icon name="clock" size={12} color={colors.yellow[500]} />
-      <RNText style={[s.syncText, { color: theme.textSecondary }]}>
+      <Icon name="clock" size={12} color={DigestPalette.spark} />
+      <RNText style={[s.syncText, { color: DigestPalette.quiet }]}>
         {syncFailed
           ? `The last sync with ${jurisdictionName}'s official records failed, so this list may be out of date.`
           : lastSyncedAt
@@ -312,18 +316,17 @@ function ListState({
   actionLabel?: string;
   onAction?: () => void;
 }) {
-  const { theme } = useTheme();
   return (
     <View style={s.center}>
-      <Text style={[s.emptyTitle, { color: theme.foreground }]}>{title}</Text>
-      <Text style={[s.emptyBody, { color: theme.textSecondary }]}>{body}</Text>
+      <Text style={[s.emptyTitle, { color: DigestPalette.inkOnNight }]}>{title}</Text>
+      <Text style={[s.emptyBody, { color: DigestPalette.quiet }]}>{body}</Text>
       {actionLabel && onAction ? (
         <TouchableOpacity
-          style={[s.emptyAction, { borderColor: theme.border }]}
+          style={[s.emptyAction, { borderColor: DigestPalette.border }]}
           onPress={onAction}
           accessibilityRole="button"
         >
-          <Text style={[s.emptyActionText, { color: theme.foreground }]}>
+          <Text style={[s.emptyActionText, { color: DigestPalette.inkOnNight }]}>
             {actionLabel}
           </Text>
         </TouchableOpacity>
@@ -334,15 +337,15 @@ function ListState({
 
 const s = StyleSheet.create({
   screen: { flex: 1 },
-  controls: { paddingHorizontal: 20, paddingBottom: 10 },
+  controls: { paddingHorizontal: DigestSpace.screenPadX, paddingBottom: 10 },
   list: { flex: 1 },
-  listContent: { paddingHorizontal: 20, paddingBottom: 48, gap: 12 },
+  listContent: { paddingHorizontal: DigestSpace.screenPadX, paddingBottom: 48, gap: 12 },
   footerSpinner: { marginVertical: 16 },
   syncNote: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 20,
+    paddingHorizontal: DigestSpace.screenPadX,
     paddingBottom: 8,
   },
   syncText: {
@@ -372,6 +375,7 @@ const s = StyleSheet.create({
   emptyAction: {
     borderWidth: 1,
     borderRadius: 999,
+    borderColor: DigestPalette.border,
     paddingHorizontal: 18,
     paddingVertical: 10,
     marginTop: 10,
